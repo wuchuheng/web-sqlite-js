@@ -14,6 +14,9 @@ const createMockDB = (_name: string): DBInterface => ({
   query: async () => [],
   transaction: async <T>() => undefined as T,
   close: async () => undefined,
+  onLog: () => () => {
+    // Placeholder cancel function
+  },
   devTool: {
     release: async () => undefined,
     rollback: async () => undefined,

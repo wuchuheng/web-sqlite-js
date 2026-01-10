@@ -8,6 +8,7 @@ import type {
   transactionCallback,
   DbTarget,
   DevTool,
+  LogEntry,
 } from "../types/DB";
 import {
   DEFAULT_VERSION,
@@ -452,11 +453,20 @@ export const openReleaseDB = async ({
     rollback: devToolRollback,
   };
 
+  // Placeholder for onLog - will be implemented in TASK-208
+  const onLog = (_callback: (log: LogEntry) => void): (() => void) => {
+    // TODO: Implement log callback registration (TASK-208)
+    return () => {
+      // Placeholder cancel function
+    };
+  };
+
   const db: DBInterface = {
     exec,
     query,
     transaction,
     close,
+    onLog,
     devTool,
   };
 

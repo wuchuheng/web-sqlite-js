@@ -13,6 +13,21 @@ export type SqlValue =
 /** A bindable parameter collection: positional or named. */
 export type SQLParams = SqlValue[] | Record<string, SqlValue>;
 
+/**
+ * Log entry with level and structured data
+ */
+export type LogEntry = {
+  /**
+   * Log level: 'info' | 'debug' | 'error'
+   */
+  level: "info" | "debug" | "error";
+
+  /**
+   * Log data (SQL, timing, errors, events, etc.)
+   */
+  data: unknown;
+};
+
 export type DbTarget = "active" | "meta";
 
 export type ExecParams = { sql: string; bind?: SQLParams; target?: DbTarget };
@@ -105,6 +120,21 @@ export interface DBInterface {
 
   /** Close the database and release resources. */
   close(): Promise<void>;
+
+  /**
+   * Subscribe to log events
+   * Logs include SQL execution, timing, errors, and application events
+   *
+   * @param callback - Called for each log entry
+   * @returns Unsubscribe function
+   *
+   * @example
+   * const unsubscribe = db.onLog((log) => {
+   *     console.log(`[${log.level}]`, log.data);
+   * });
+   * // Later: unsubscribe();
+   */
+  onLog(callback: (log: LogEntry) => void): () => void;
 
   /** Dev tooling APIs for release testing. */
   devTool: DevTool;
