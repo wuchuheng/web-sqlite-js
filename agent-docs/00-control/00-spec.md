@@ -2,8 +2,8 @@
 
 **Project**: web-sqlite-js (web-sqlite-v2 repository)
 **Version**: 1.1.2
-**Last Updated**: 2026-01-10
-**Status**: Stage 7 Complete - v2.0.0 Architecture Ready for Implementation
+**Last Updated**: 2026-01-11
+**Status**: v2.0.0 Implementation In Progress (3/19 tasks complete)
 
 ---
 
@@ -125,6 +125,10 @@ agent-docs/
 └── 07-taskManager/                   # Stage 7: Roadmap & Tasks (✓ COMPLETE)
     ├── 01-roadmap.md           # Release strategy and timeline
     └── 02-task-catalog.md      # Task breakdown and Kanban board
+│
+└── 08-task/                          # Stage 8: Active Task Specs
+    └── active/                       # Micro-specs for tasks in progress
+        └── TASK-203.md               # Registry Integration spec
 ```
 
 **Doc Update Checklist**:

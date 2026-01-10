@@ -571,8 +571,8 @@ Output: `coverage/index.html`
 
 **Actual Test Coverage**:
 
-- **Unit tests**: 1 file (mutex) - ~200 lines of testable utility code
-- **E2E tests**: 6 test files covering all API surface and critical flows
+- **Unit tests**: 2 files (mutex, registry) - ~400 lines of testable utility code
+- **E2E tests**: 7 test files covering all API surface and critical flows
 
 ---
 
