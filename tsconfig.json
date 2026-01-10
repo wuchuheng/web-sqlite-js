@@ -30,8 +30,9 @@
     "src/**/*.tsx",
     "src/**/*.d.ts",
     "vite.config.ts",
-    "vitest.config.ts",
-    "src/sqlite3.d.mts"
+    "vitest.*.config.ts",
+    "src/sqlite3.d.mts",
+    "tests/**/*.ts"
   ],
   "exclude": ["node_modules", "dist", "**/*.type.test.ts"]
 }

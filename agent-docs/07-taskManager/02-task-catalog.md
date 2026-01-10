@@ -140,7 +140,7 @@
   - **Estimated**: 2 hours
   - **Micro-Spec**: [draft](../08-task/active/TASK-205.md)
 
-- [ ] **TASK-206**: [Namespace] Sync Namespace with Registry
+- [x] **TASK-206**: [Namespace] Sync Namespace with Registry
   - **Priority**: P0
   - **Dependencies**: TASK-205
   - **Boundary**: `src/registry/database-registry.ts`
@@ -154,6 +154,13 @@
     - Direct access to database instances works
     - Readonly enforced externally
   - **Estimated**: 2 hours
+  - **Completed**: 2026-01-11
+  - **Evidence**:
+    - ✅ Updated `src/registry/database-registry.ts` with namespace sync
+    - ✅ Fixed `src/global/namespace.ts` `_updateDatabases()` to properly clear old keys
+    - ✅ Created `tests/e2e/namespace-sync.e2e.test.ts` (5 tests)
+    - ✅ All 26 E2E tests passing
+  - **Micro-Spec**: [draft](../08-task/active/TASK-206.md)
 
 ### Phase 3: Structured Logging
 

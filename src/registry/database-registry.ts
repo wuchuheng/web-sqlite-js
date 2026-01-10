@@ -1,4 +1,5 @@
 import type { DBInterface } from "../types/DB";
+import { globalNamespace } from "../global/namespace";
 
 /**
  * Normalizes a database filename to ensure consistent registry keys.
@@ -80,6 +81,13 @@ class DatabaseRegistryImpl {
     }
     this.databases.set(normalized, db);
     this.locks.add(normalized);
+
+    // Sync namespace databases
+    const databasesRecord: Record<string, DBInterface> = {};
+    for (const [name, dbInstance] of this.databases) {
+      databasesRecord[name] = dbInstance;
+    }
+    globalNamespace._updateDatabases(databasesRecord);
   }
 
   /**
@@ -91,6 +99,13 @@ class DatabaseRegistryImpl {
     const normalized = normalizeDatabaseName(filename);
     this.databases.delete(normalized);
     this.locks.delete(normalized);
+
+    // Sync namespace databases
+    const databasesRecord: Record<string, DBInterface> = {};
+    for (const [name, dbInstance] of this.databases) {
+      databasesRecord[name] = dbInstance;
+    }
+    globalNamespace._updateDatabases(databasesRecord);
   }
 
   /**

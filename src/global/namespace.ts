@@ -86,7 +86,11 @@ function createNamespace(): WebSqliteNamespace {
     },
 
     _updateDatabases(databases: Record<string, DBInterface>): void {
-      // Update the databases record (still externally readonly)
+      // Clear existing keys first
+      for (const key of Object.keys(this.databases)) {
+        delete this.databases[key];
+      }
+      // Then add new keys
       Object.assign(this.databases, databases);
     },
 
