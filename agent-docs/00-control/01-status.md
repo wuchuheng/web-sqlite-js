@@ -48,6 +48,29 @@ gantt
 
 ## Current Tasks
 
+### Completed (2026-01-11)
+
+**TASK-203: Integrate Registry with openDB**
+
+- **Status**: ✅ COMPLETE
+- **Owner**: S8 Worker
+- **Started**: 2026-01-11
+- **Completed**: 2026-01-11
+- **Feature**: F-001 - Enhanced Logging and Direct Database Access
+- **Description**: Integrate Database Registry with openDB function
+- **Evidence**:
+  - ✅ Updated `src/main.ts` to import `DatabaseRegistry`
+  - ✅ Added `checkLock()` call before `openReleaseDB()`
+  - ✅ Added `register()` call after successful open
+  - ✅ Updated `src/release/release-manager.ts` with `unregister()` in `close()`
+  - ✅ Created `tests/e2e/registry-integration.e2e.test.ts` (6 tests)
+  - ✅ Updated `tests/e2e/query.e2e.test.ts` for new behavior
+  - ✅ All E2E tests passing (21 tests across 7 test files)
+- **Test Results**:
+  - 27 tests total (21 existing + 6 new registry integration tests)
+  - All E2E tests passing
+- **Notes**: Database registry fully integrated. Opening same database twice now throws `DatabaseAlreadyOpenError`. Database is automatically unregistered on close.
+
 ### Completed (2026-01-10)
 
 **TASK-201: Create Database Registry Module**
@@ -306,16 +329,16 @@ gantt
 
 | Feature                          | Status                | Tests      | Documentation | Notes                                       |
 | -------------------------------- | --------------------- | ---------- | ------------- | ------------------------------------------- |
-| Database Registry                | ✅ COMPLETE           | ✅ PASSING | ✅ COMPLETE   | TASK-201 & TASK-202 Complete                |
+| Database Registry                | ✅ COMPLETE           | ✅ PASSING | ✅ COMPLETE   | TASK-201 Complete                           |
 | Database Lock                    | ✅ COMPLETE           | ✅ PASSING | ✅ COMPLETE   | Included in Registry Module                 |
-| Registry Integration with openDB | 📋 PENDING (TASK-203) | ❌         | ✅ COMPLETE   | Ready to Start                              |
-| Global Namespace                 | 📋 DESIGN COMPLETE    | ❌         | ✅ COMPLETE   | Implementation ready (TASK-204 to TASK-206) |
+| Registry Integration with openDB | ✅ COMPLETE           | ✅ PASSING | ✅ COMPLETE   | TASK-203 Complete                           |
+| Global Namespace                 | 📋 PENDING (TASK-204)  | ❌         | ✅ COMPLETE   | Next Task                                   |
 | Structured Logging API (`onLog`) | 📋 DESIGN COMPLETE    | ❌         | ✅ COMPLETE   | Implementation ready (TASK-207 to TASK-210) |
 | Database Change Events           | 📋 DESIGN COMPLETE    | ❌         | ✅ COMPLETE   | Implementation ready (TASK-211 to TASK-213) |
 | Testing & Documentation          | 📋 DESIGN COMPLETE    | ❌         | ✅ COMPLETE   | Implementation ready (TASK-214 to TASK-219) |
 
 **v2.0.0 Total Tasks**: 19 tasks (61 estimated hours)
-**Status**: 2/19 tasks complete (~11%), Phase 1 (Registry & Lock) nearly complete
+**Status**: 3/19 tasks complete (~16%), Phase 1 (Registry & Lock) complete, Phase 2 (Global Namespace) ready to start
 
 ### Test Coverage
 

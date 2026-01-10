@@ -64,7 +64,7 @@
   - **Completed**: 2026-01-10 (Included in TASK-201 implementation)
   - **Notes**: Lock mechanism was implemented as part of TASK-201. Registry includes checkLock, acquireLock, releaseLock methods with comprehensive test coverage.
 
-- [ ] **TASK-203**: [Registry] Integrate Registry with openDB
+- [x] **TASK-203**: [Registry] Integrate Registry with openDB
   - **Priority**: P0 (Blocker)
   - **Dependencies**: TASK-201 (Lock mechanism available)
   - **Boundary**: `src/main.ts` (openDB function)
@@ -80,6 +80,15 @@
     - Database unregistered after close
     - E2E tests pass
   - **Estimated**: 3 hours
+  - **Completed**: 2026-01-11
+  - **Evidence**:
+    - ✅ Updated `src/main.ts` with checkLock() and register()
+    - ✅ Updated `src/release/release-manager.ts` with unregister()
+    - ✅ Created `tests/e2e/registry-integration.e2e.test.ts` (6 tests)
+    - ✅ Updated `tests/e2e/query.e2e.test.ts` for new behavior
+    - ✅ All 21 E2E tests passing
+  - **Notes**: Database registry fully integrated. Opening same database twice now throws `DatabaseAlreadyOpenError`. Database is automatically unregistered on close.
+  - **Micro-Spec**: [draft](../08-task/active/TASK-203.md)
 
 ### Phase 2: Global Namespace
 

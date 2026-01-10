@@ -3,6 +3,7 @@ import { createMutex } from "./utils/mutex/mutex";
 import type { DBInterface, OpenDBOptions } from "./types/DB";
 import { abilityCheck } from "./validations/shareBufferAbiliCheck";
 import { openReleaseDB } from "./release/release-manager";
+import { DatabaseRegistry } from "./registry/database-registry";
 
 /**
  * Opens a SQLite database connection with release-versioning support.
@@ -20,15 +21,23 @@ export const openDB = async (
 ): Promise<DBInterface> => {
   abilityCheck();
 
+  // Check lock before opening to prevent duplicate opens
+  DatabaseRegistry.checkLock(filename);
+
   const { sendMsg } = createWorkerBridge();
   const runMutex = createMutex();
 
-  return await openReleaseDB({
+  const db = await openReleaseDB({
     filename,
     options,
     sendMsg,
     runMutex,
   });
+
+  // Register after successful open
+  DatabaseRegistry.register(filename, db);
+
+  return db;
 };
 
 export default openDB;

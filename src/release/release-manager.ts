@@ -1,4 +1,5 @@
 import { OpenDBArgs, SqliteEvent, WorkerOpenDBOptions } from "../types/message";
+import { DatabaseRegistry } from "../registry/database-registry";
 import type {
   DBInterface,
   SQLParams,
@@ -375,6 +376,8 @@ export const openReleaseDB = async ({
   const close = async (): Promise<void> => {
     return runMutex(async () => {
       await sendMsg(SqliteEvent.CLOSE);
+      // Unregister from registry after close
+      DatabaseRegistry.unregister(normalizedFilename);
     });
   };
 
