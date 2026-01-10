@@ -36,12 +36,12 @@ const db = await openDB("mydb", {
 
 **What Gets Logged**:
 
--   Database initialization steps
--   Release migration application
--   SQL queries with syntax highlighting
--   Query execution timing
--   Worker message protocol
--   Dev tool operations (release, rollback)
+- Database initialization steps
+- Release migration application
+- SQL queries with syntax highlighting
+- Query execution timing
+- Worker message protocol
+- Dev tool operations (release, rollback)
 
 ### 1.2 Debug Output Format
 
@@ -50,24 +50,24 @@ const db = await openDB("mydb", {
 ```typescript
 // Source: src/utils/logger.ts
 export const configureLogger = (isDebug: boolean) => {
-    if (isDebug) {
-        console.debug = (...args: unknown[]) => {
-            const badgeText = "Debug";
-            const badgeStyle =
-                "background: #1976d2; color: white; padding: 2px 4px; border-radius: 4px; font-weight: bold;";
+  if (isDebug) {
+    console.debug = (...args: unknown[]) => {
+      const badgeText = "Debug";
+      const badgeStyle =
+        "background: #1976d2; color: white; padding: 2px 4px; border-radius: 4px; font-weight: bold;";
 
-            // Format SQL queries with syntax highlighting
-            if (isSqlLogInfo(firstArg)) {
-                const { sql, duration, bind } = firstArg;
-                // Highlight SQL keywords
-                // ...
-            }
+      // Format SQL queries with syntax highlighting
+      if (isSqlLogInfo(firstArg)) {
+        const { sql, duration, bind } = firstArg;
+        // Highlight SQL keywords
+        // ...
+      }
 
-            originalInfo.apply(console, [formatString, ...logArgs]);
-        };
-    } else {
-        console.debug = originalDebug;
-    }
+      originalInfo.apply(console, [formatString, ...logArgs]);
+    };
+  } else {
+    console.debug = originalDebug;
+  }
 };
 ```
 
@@ -120,16 +120,16 @@ console.debug(`[devTool.rollback] start ${version}`);
 
 ```typescript
 interface SqlLogInfo {
-    sql: string;
-    duration: number;
-    bind?: unknown;
+  sql: string;
+  duration: number;
+  bind?: unknown;
 }
 
 // Example:
 console.info({
-    sql: "SELECT * FROM users WHERE id = ?",
-    duration: 0.25,
-    bind: [1],
+  sql: "SELECT * FROM users WHERE id = ?",
+  duration: 0.25,
+  bind: [1],
 });
 ```
 
@@ -145,26 +145,26 @@ Debug:sql SELECT * FROM users WHERE id = ? [1] (0.25ms)
 
 ```typescript
 const sqlKeywords = new Set([
-    "SELECT",
-    "INSERT",
-    "UPDATE",
-    "DELETE",
-    "FROM",
-    "WHERE",
-    "AND",
-    "OR",
-    "LIMIT",
-    "ORDER",
-    "BY",
-    "GROUP",
-    "VALUES",
-    "SET",
-    "INTO",
-    "CREATE",
-    "TABLE",
-    "DROP",
-    "ALTER",
-    // ... more keywords
+  "SELECT",
+  "INSERT",
+  "UPDATE",
+  "DELETE",
+  "FROM",
+  "WHERE",
+  "AND",
+  "OR",
+  "LIMIT",
+  "ORDER",
+  "BY",
+  "GROUP",
+  "VALUES",
+  "SET",
+  "INTO",
+  "CREATE",
+  "TABLE",
+  "DROP",
+  "ALTER",
+  // ... more keywords
 ]);
 ```
 
@@ -211,11 +211,11 @@ const result = db.exec(sql);
 const duration = performance.now() - startTime;
 
 if (options?.debug) {
-    console.info({
-        sql,
-        duration,
-        bind: params,
-    } as SqlLogInfo);
+  console.info({
+    sql,
+    duration,
+    bind: params,
+  } as SqlLogInfo);
 }
 ```
 
@@ -252,7 +252,7 @@ const result = await db.query(sql, params);
 const duration = performance.now() - startTime;
 
 if (debug) {
-    console.info({ sql, duration, bind: params });
+  console.info({ sql, duration, bind: params });
 }
 ```
 
@@ -261,7 +261,7 @@ if (debug) {
 ```typescript
 const txStart = performance.now();
 await db.transaction(async (tx) => {
-    // ... transaction logic
+  // ... transaction logic
 });
 const txDuration = performance.now() - txStart;
 
@@ -335,22 +335,22 @@ Error: migrationSQL hash mismatch for 1.0.0
 
 ```typescript
 interface ErrorContext {
-    code: string;
-    message: string;
-    details?: unknown;
-    stack?: string;
+  code: string;
+  message: string;
+  details?: unknown;
+  stack?: string;
 }
 
 throw new Error(
-    JSON.stringify({
-        code: "MIGRATION_HASH_MISMATCH",
-        message: "migrationSQL hash mismatch for 1.0.0",
-        details: {
-            version: "1.0.0",
-            expected: "abc123",
-            actual: "def456",
-        },
-    } as ErrorContext)
+  JSON.stringify({
+    code: "MIGRATION_HASH_MISMATCH",
+    message: "migrationSQL hash mismatch for 1.0.0",
+    details: {
+      version: "1.0.0",
+      expected: "abc123",
+      actual: "def456",
+    },
+  } as ErrorContext),
 );
 ```
 
@@ -364,10 +364,10 @@ throw new Error(
 
 **Useful Tabs**:
 
--   **Console**: View debug logs
--   **Network**: Monitor worker messages
--   **Application**: Inspect OPFS storage
--   **Performance**: Profile query execution
+- **Console**: View debug logs
+- **Network**: Monitor worker messages
+- **Application**: Inspect OPFS storage
+- **Performance**: Profile query execution
 
 ### 6.2 OPFS Inspector
 
@@ -378,7 +378,7 @@ const root = await navigator.storage.getDirectory();
 const dirHandle = await root.getDirectoryHandle("mydb");
 
 for await (const entry of dirHandle.values()) {
-    console.log(entry.name, entry.kind);
+  console.log(entry.name, entry.kind);
 }
 ```
 
@@ -416,16 +416,16 @@ db.exec("PRAGMA table_list");
 import * as Sentry from "@sentry/browser";
 
 Sentry.init({
-    dsn: "YOUR_DSN",
-    environment: process.env.NODE_ENV,
+  dsn: "YOUR_DSN",
+  environment: process.env.NODE_ENV,
 });
 
 // Capture errors
 try {
-    await db.query(sql);
+  await db.query(sql);
 } catch (error) {
-    Sentry.captureException(error);
-    throw error;
+  Sentry.captureException(error);
+  throw error;
 }
 ```
 
@@ -451,12 +451,12 @@ const queryTimings: number[] = [];
 
 const originalQuery = db.query.bind(db);
 db.query = async (sql, params) => {
-    const start = performance.now();
-    const result = await originalQuery(sql, params);
-    const duration = performance.now() - start;
+  const start = performance.now();
+  const result = await originalQuery(sql, params);
+  const duration = performance.now() - start;
 
-    queryTimings.push(duration);
-    return result;
+  queryTimings.push(duration);
+  return result;
 };
 
 // Report metrics
@@ -498,7 +498,7 @@ const db = await openDB("mydb", {
 ```typescript
 // Check OPFS availability
 if (!navigator.storage?.getDirectory) {
-    console.error("OPFS not supported in this browser");
+  console.error("OPFS not supported in this browser");
 }
 ```
 
@@ -506,12 +506,12 @@ if (!navigator.storage?.getDirectory) {
 
 Before reporting issues, verify:
 
--   [ ] Debug mode enabled
--   [ ] Console logs reviewed
--   [ ] Worker console checked
--   [ ] OPFS contents inspected
--   [ ] Browser compatibility verified
--   [ ] COOP/COEP headers set
+- [ ] Debug mode enabled
+- [ ] Console logs reviewed
+- [ ] Worker console checked
+- [ ] OPFS contents inspected
+- [ ] Browser compatibility verified
+- [ ] COOP/COEP headers set
 
 ---
 
@@ -521,25 +521,25 @@ Before reporting issues, verify:
 
 **DO**:
 
--   Log at appropriate levels (debug, info, warn, error)
--   Include context in error messages
--   Use structured log formats
--   Log timing for performance-critical operations
+- Log at appropriate levels (debug, info, warn, error)
+- Include context in error messages
+- Use structured log formats
+- Log timing for performance-critical operations
 
 **DON'T**:
 
--   Log sensitive data (passwords, tokens)
--   Log excessive output in production
--   Use `console.log` (use `console.debug` for debug info)
--   Log in tight loops (avoid performance impact)
+- Log sensitive data (passwords, tokens)
+- Log excessive output in production
+- Use `console.log` (use `console.debug` for debug info)
+- Log in tight loops (avoid performance impact)
 
 ### 9.2 Performance Considerations
 
 **Debug Mode Overhead**:
 
--   Query timing: ~0.01ms overhead
--   Log formatting: ~0.05ms per log
--   SQL syntax highlighting: ~0.1ms per query
+- Query timing: ~0.01ms overhead
+- Log formatting: ~0.05ms per log
+- SQL syntax highlighting: ~0.1ms per query
 
 **Recommendation**: Disable debug mode in production
 
@@ -556,15 +556,15 @@ const db = await openDB("mydb", {
 
 ### Internal Documentation
 
--   [Build and Run Guide](./01-build-and-run.md) - Development workflow
--   [Test Plan](./02-test-plan.md) - Testing strategy
--   [Error Standards](../05-design/01-contracts/03-errors.md) - Error handling
+- [Build and Run Guide](./01-build-and-run.md) - Development workflow
+- [Test Plan](./02-test-plan.md) - Testing strategy
+- [Error Standards](../05-design/01-contracts/03-errors.md) - Error handling
 
 ### External Resources
 
--   [Chrome DevTools](https://developer.chrome.com/agent-docs/devtools/)
--   [OPFS Specification](https://fs.spec.whatwg.org/)
--   [Web Workers API](https://developer.mozilla.org/en-US/agent-docs/Web/API/Web_Workers_API)
+- [Chrome DevTools](https://developer.chrome.com/agent-docs/devtools/)
+- [OPFS Specification](https://fs.spec.whatwg.org/)
+- [Web Workers API](https://developer.mozilla.org/en-US/agent-docs/Web/API/Web_Workers_API)
 
 ---
 

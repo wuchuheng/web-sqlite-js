@@ -1,38 +1,38 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "type": "node",
-            "request": "launch",
-            "name": "Debug Current Test File",
-            "autoAttachChildProcesses": true,
-            "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
-            "program": "${workspaceRoot}/node_modules/vitest/vitest.mjs",
-            "args": [
-                "run",
-                "${file}",
-                "--config",
-                "${workspaceFolder}/vitest.e2e.config.ts",
-                "--no-file-parallelism"
-            ],
-            "smartStep": true,
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Debug All E2E Tests",
-            "type": "node",
-            "request": "launch",
-            "program": "${workspaceRoot}/node_modules/vitest/vitest.mjs",
-            "args": [
-                "run",
-                "--config",
-                "${workspaceFolder}/vitest.e2e.config.ts",
-                "--no-file-parallelism"
-            ],
-            "autoAttachChildProcesses": true,
-            "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
-            "smartStep": true,
-            "console": "integratedTerminal"
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Current Test File",
+      "autoAttachChildProcesses": true,
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "program": "${workspaceRoot}/node_modules/vitest/vitest.mjs",
+      "args": [
+        "run",
+        "${file}",
+        "--config",
+        "${workspaceFolder}/vitest.e2e.config.ts",
+        "--no-file-parallelism"
+      ],
+      "smartStep": true,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Debug All E2E Tests",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceRoot}/node_modules/vitest/vitest.mjs",
+      "args": [
+        "run",
+        "--config",
+        "${workspaceFolder}/vitest.e2e.config.ts",
+        "--no-file-parallelism"
+      ],
+      "autoAttachChildProcesses": true,
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "smartStep": true,
+      "console": "integratedTerminal"
+    }
+  ]
 }

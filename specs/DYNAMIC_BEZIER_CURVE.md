@@ -13,17 +13,17 @@ Implement a dynamic SVG-based Bezier curve that connects the SQL Console, the Wo
 - **End Point (P3):** A small green dot at the top center of the `ResultTable` component.
 - **The Curve:** A smooth curve starting at P1, passing through P2, and ending at P3.
 - **Coloring:**
-    - The dots should use the "Mac-style green" (`#c6f0b3` or similar, matching existing UI).
-    - The curve should be a solid `#2d2d2d` line to match the hand-drawn aesthetic.
+  - The dots should use the "Mac-style green" (`#c6f0b3` or similar, matching existing UI).
+  - The curve should be a solid `#2d2d2d` line to match the hand-drawn aesthetic.
 
 ### 2. Component Architecture
 
 - **`BezierCurve.vue`**: A new component that:
-    - Accepts three coordinate pairs (x, y) as props.
-    - Renders an SVG overlay covering the relevant area.
-    - Calculates the quadratic Bezier control point such that the curve passes through P2.
-    - Renders the two green points and the path.
-    - **Layering:** The SVG should have a `z-index` that places it behind the `WorkerConnector` but possibly above the background, ensuring the connector's label (with its background color) masks the curve.
+  - Accepts three coordinate pairs (x, y) as props.
+  - Renders an SVG overlay covering the relevant area.
+  - Calculates the quadratic Bezier control point such that the curve passes through P2.
+  - Renders the two green points and the path.
+  - **Layering:** The SVG should have a `z-index` that places it behind the `WorkerConnector` but possibly above the background, ensuring the connector's label (with its background color) masks the curve.
 
 ### 3. Coordinate Calculation
 
@@ -48,21 +48,21 @@ To ensure the quadratic Bezier curve $B(t)$ passes through $P_2$ at $t=0.5$:
 ## Implementation Plan
 
 1. **Step 1: Create `BezierCurve.vue`**
-    - Define props for `p1`, `p2`, `p3`.
-    - Implement the SVG logic and computed control point.
-    - Add styles for the green dots and the curve.
+   - Define props for `p1`, `p2`, `p3`.
+   - Implement the SVG logic and computed control point.
+   - Add styles for the green dots and the curve.
 
 2. **Step 2: Update `HomePage.vue`**
-    - Add `ref` to `SqlConsole`, `WorkerConnector`, and `ResultTable` (via a wrapper if necessary).
-    - Implement a `updatePoints` function that uses `getBoundingClientRect`.
-    - Add `resize` event listener to trigger `updatePoints`.
-    - Pass the calculated points to `BezierCurve.vue`.
+   - Add `ref` to `SqlConsole`, `WorkerConnector`, and `ResultTable` (via a wrapper if necessary).
+   - Implement a `updatePoints` function that uses `getBoundingClientRect`.
+   - Add `resize` event listener to trigger `updatePoints`.
+   - Pass the calculated points to `BezierCurve.vue`.
 
 3. **Step 3: Refine Styling and Layering**
-    - Ensure the curve matches the "hand-drawn" aesthetic of the project (solid `#2d2d2d` stroke).
-    - Match the green color precisely to the existing "traffic light" green in `SqlConsole.vue`.
-    - Set the `z-index` of the `BezierCurve` SVG to be lower than `SqlConsole` and `WorkerConnector`.
-    - Ensure `WorkerConnector` has a non-transparent background (it already has `#f7f4ec`) to effectively mask the curve as it passes "through" it.
+   - Ensure the curve matches the "hand-drawn" aesthetic of the project (solid `#2d2d2d` stroke).
+   - Match the green color precisely to the existing "traffic light" green in `SqlConsole.vue`.
+   - Set the `z-index` of the `BezierCurve` SVG to be lower than `SqlConsole` and `WorkerConnector`.
+   - Ensure `WorkerConnector` has a non-transparent background (it already has `#f7f4ec`) to effectively mask the curve as it passes "through" it.
 
 4. **Step 4: Cleanup**
-    - Remove or hide the existing static arrow in `WorkerConnector.vue` if it conflicts with the new dynamic curve.
+   - Remove or hide the existing static arrow in `WorkerConnector.vue` if it conflicts with the new dynamic curve.

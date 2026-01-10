@@ -22,30 +22,30 @@ _Note: While `sm` starts at 640px in standard rules, for our layout logic, we tr
 - **Column 1:** `SqlConsole` (50% width).
 - **Column 2:** `WorkerConnector` (20% width).
 - **Column 3:** Vertical Persistence Column (30% width).
-    - **Row 1:** `ResultTable` (100% width of Column 3).
-    - **Row 2:** `IO Connector` (Vertical orientation).
-    - **Row 3:** `OpfsExplorer` (Centrally aligned, 50% width of Column 3).
+  - **Row 1:** `ResultTable` (100% width of Column 3).
+  - **Row 2:** `IO Connector` (Vertical orientation).
+  - **Row 3:** `OpfsExplorer` (Centrally aligned, 50% width of Column 3).
 - **Data Flow:** Mixed (Horizontal from Console to Table, Vertical between Table and OPFS).
 
 ### 2. Medium Device (`md`)
 
 - **Structure:** Three main rows.
-    - **Row 1:** `SqlConsole` (Full width)
-    - **Row 2:** `WorkerConnector` (Full width)
-    - **Row 3:** Horizontal flow for persistence:
-        - `ResultTable`: 50%
-        - `IO Spacer`: 20%
-        - `OpfsExplorer`: 30%
+  - **Row 1:** `SqlConsole` (Full width)
+  - **Row 2:** `WorkerConnector` (Full width)
+  - **Row 3:** Horizontal flow for persistence:
+    - `ResultTable`: 50%
+    - `IO Spacer`: 20%
+    - `OpfsExplorer`: 30%
 - **Data Flow:** Mixed (Vertical from Console to Table, Horizontal from Table to OPFS).
 
 ### 3. Small Device (`sm`)
 
 - **Structure:** Full vertical stack (5 rows).
-    - **Row 1:** `SqlConsole`
-    - **Row 2:** `WorkerConnector`
-    - **Row 3:** `ResultTable`
-    - **Row 4:** `IO Connector` (Vertical arrow)
-    - **Row 5:** `OpfsExplorer`
+  - **Row 1:** `SqlConsole`
+  - **Row 2:** `WorkerConnector`
+  - **Row 3:** `ResultTable`
+  - **Row 4:** `IO Connector` (Vertical arrow)
+  - **Row 5:** `OpfsExplorer`
 - **Data Flow:** Fully Vertical (Top-to-Bottom).
 
 ## Technical Implementation
@@ -70,17 +70,17 @@ _Note: While `sm` starts at 640px in standard rules, for our layout logic, we tr
 ## Implementation Plan
 
 1. **Step 1: Implement Breakpoint Detection**
-    - Add a resize listener to `HomePage.vue`.
-    - Create a helper to map width to `deviceType`.
+   - Add a resize listener to `HomePage.vue`.
+   - Create a helper to map width to `deviceType`.
 
 2. **Step 2: Refactor HomePage.vue for Dynamic Layout**
-    - Replace static CSS layouts with dynamic bindings driven by `deviceType`.
-    - Ensure all sub-components receive the necessary state to adjust their internal presentation if needed.
+   - Replace static CSS layouts with dynamic bindings driven by `deviceType`.
+   - Ensure all sub-components receive the necessary state to adjust their internal presentation if needed.
 
 3. **Step 3: Update Connector Logic**
-    - Refactor `updatePoints` to use `deviceType` for determining connection sides.
-    - Ensure IO arrows handle the transition from horizontal (`md`) to vertical (`sm`, `lg`) correctly.
+   - Refactor `updatePoints` to use `deviceType` for determining connection sides.
+   - Ensure IO arrows handle the transition from horizontal (`md`) to vertical (`sm`, `lg`) correctly.
 
 4. **Step 4: Verification**
-    - Test across specific widths: 500px (`sm`), 850px (`md`), 1200px (`lg`).
-    - Verify that the green dots and arrows remain perfectly aligned and correctly oriented in all 3 modes.
+   - Test across specific widths: 500px (`sm`), 850px (`md`), 1200px (`lg`).
+   - Verify that the green dots and arrows remain perfectly aligned and correctly oriented in all 3 modes.

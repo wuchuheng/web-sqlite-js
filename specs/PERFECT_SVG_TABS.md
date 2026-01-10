@@ -10,9 +10,9 @@ Replace the CSS-transform-based tabs in `SqlConsole.vue` with an SVG-path-based 
 
 - **Shape:** A trapezoid where the bottom edge is the full width of the tab, and the top edge is inset by a fixed "slant" value (e.g., `12px`).
 - **Path Construction:**
-    - The path will render the **Left**, **Top**, and **Right** edges.
-    - The **Bottom** edge will remain open (no stroke) to allow for the Chrome-style "merge" effect.
-    - **Corners:** Use `stroke-linejoin="round"` and `stroke-linecap="round"` with a small radius (e.g., `4px` or handled via path arcs) to maintain the hand-drawn aesthetic.
+  - The path will render the **Left**, **Top**, and **Right** edges.
+  - The **Bottom** edge will remain open (no stroke) to allow for the Chrome-style "merge" effect.
+  - **Corners:** Use `stroke-linejoin="round"` and `stroke-linecap="round"` with a small radius (e.g., `4px` or handled via path arcs) to maintain the hand-drawn aesthetic.
 - **Stroke:** A consistent `2px` stroke matching `#2d2d2d`.
 
 ### 2. Implementation Strategy: Inline SVG Background
@@ -25,8 +25,8 @@ Replace the CSS-transform-based tabs in `SqlConsole.vue` with an SVG-path-based 
 
 - **The "Waist" Connection:** The SVG path will start at `(0, Height)` and end at `(Width, Height)`. This ensures that the 2px border of the toolbar meets the 2px border of the tab's slanted side at the exact same coordinate.
 - **The Sliding Mask:**
-    - The sliding mask will remain the primary method for "opening" the toolbar border.
-    - Because the SVG tabs are now mathematically aligned to the button's `offsetLeft` and `offsetWidth`, the mask will cover the toolbar border with 100% precision.
+  - The sliding mask will remain the primary method for "opening" the toolbar border.
+  - Because the SVG tabs are now mathematically aligned to the button's `offsetLeft` and `offsetWidth`, the mask will cover the toolbar border with 100% precision.
 
 ### 4. Visual Polish
 
@@ -39,13 +39,13 @@ Replace the CSS-transform-based tabs in `SqlConsole.vue` with an SVG-path-based 
 
 ```html
 <svg :viewBox="`0 0 ${width} ${height}`" preserveAspectRatio="none">
-    <path
-        :d="`M 0,${height} L ${slant},2 L ${width - slant},2 L ${width},${height}`"
-        fill="currentColor"
-        stroke="#2d2d2d"
-        stroke-width="2"
-        stroke-linejoin="round"
-    />
+  <path
+    :d="`M 0,${height} L ${slant},2 L ${width - slant},2 L ${width},${height}`"
+    fill="currentColor"
+    stroke="#2d2d2d"
+    stroke-width="2"
+    stroke-linejoin="round"
+  />
 </svg>
 ```
 

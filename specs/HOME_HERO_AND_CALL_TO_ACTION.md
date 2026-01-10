@@ -15,21 +15,21 @@ Elevate the documentation homepage by introducing a dedicated "Hero" section abo
 ### 2. Action Buttons (Call-to-Action)
 
 - **Primary Button (Quickstart):**
-    - **Label:** "Quickstart"
-    - **Visuals:** Hand-drawn border, slightly thicker than secondary. Filled with a subtle highlight color (e.g., `#d9f2d0` to match the dot color).
-    - **Behavior:** Links to the `/getting-started` page.
+  - **Label:** "Quickstart"
+  - **Visuals:** Hand-drawn border, slightly thicker than secondary. Filled with a subtle highlight color (e.g., `#d9f2d0` to match the dot color).
+  - **Behavior:** Links to the `/getting-started` page.
 - **Secondary Button (Dev Tools):**
-    - **Label:** "Dev Tools (Coming soon)"
-    - **Visuals:** Transparent background, hand-drawn border. Subtle grayed-out effect to indicate "Coming soon" state.
-    - **Behavior:** Unclickable or leads to a "Notify me" modal (for now, just a placeholder/coming soon style).
+  - **Label:** "Dev Tools (Coming soon)"
+  - **Visuals:** Transparent background, hand-drawn border. Subtle grayed-out effect to indicate "Coming soon" state.
+  - **Behavior:** Unclickable or leads to a "Notify me" modal (for now, just a placeholder/coming soon style).
 
 ### 3. Layout & Aesthetics
 
 - **Positioning:** At the very top of the `HomePage.vue` component, preceding the `main-flow` and its connectors.
 - **Visual Style:**
-    - **Hand-drawn Borders:** Use SVG path borders or `rough.js`-style CSS to match the sketch aesthetic of the SQL Console and OPFS folder.
-    - **Whitespace:** Use generous margins to maintain a "clean and elegant" feel.
-    - **Responsiveness:** Stack the buttons vertically on mobile ('sm') and horizontally on 'md'/'lg' layouts.
+  - **Hand-drawn Borders:** Use SVG path borders or `rough.js`-style CSS to match the sketch aesthetic of the SQL Console and OPFS folder.
+  - **Whitespace:** Use generous margins to maintain a "clean and elegant" feel.
+  - **Responsiveness:** Stack the buttons vertically on mobile ('sm') and horizontally on 'md'/'lg' layouts.
 
 ## Implementation Plan
 

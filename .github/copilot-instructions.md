@@ -38,8 +38,8 @@ Minimal example:
 
 ```ts
 const formatHour = (hour: number): string => {
-    // 3. Output handling
-    return `${hour}:00`;
+  // 3. Output handling
+  return `${hour}:00`;
 };
 ```
 
@@ -95,13 +95,13 @@ Example:
 ```tsx
 /** Renders a labeled time display. */
 type TimeProps = {
-    /** Hour in 0–23. */
-    hour: number;
+  /** Hour in 0–23. */
+  hour: number;
 };
 
 export function TimeLabel({ hour }: TimeProps) {
-    // 3. Output handling
-    return <span>{`${hour}:00`}</span>;
+  // 3. Output handling
+  return <span>{`${hour}:00`}</span>;
 }
 ```
 
@@ -114,13 +114,13 @@ export function TimeLabel({ hour }: TimeProps) {
 
 ```ts
 ipcMain.handle("log:add", async (_e, payload) => {
-    // 1. Input handling
-    if (!payload || typeof payload.message !== "string")
-        throw new Error("Invalid payload");
-    // 2. Core processing
-    const id = await logService.create(payload);
-    // 3. Output handling
-    return { id };
+  // 1. Input handling
+  if (!payload || typeof payload.message !== "string")
+    throw new Error("Invalid payload");
+  // 2. Core processing
+  const id = await logService.create(payload);
+  // 3. Output handling
+  return { id };
 });
 ```
 

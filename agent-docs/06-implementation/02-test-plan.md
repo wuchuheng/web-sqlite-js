@@ -39,15 +39,15 @@ This document defines the **comprehensive testing strategy** for the web-sqlite-
 
 ```typescript
 export default defineConfig({
-    test: {
-        include: ["**/*.unit.test.ts"],
+  test: {
+    include: ["**/*.unit.test.ts"],
+  },
+  resolve: {
+    alias: {
+      "@": srcDir,
+      "web-sqlite-js": resolve(srcDir, "main.ts"),
     },
-    resolve: {
-        alias: {
-            "@": srcDir,
-            "web-sqlite-js": resolve(srcDir, "main.ts"),
-        },
-    },
+  },
 });
 ```
 
@@ -55,23 +55,23 @@ export default defineConfig({
 
 ```typescript
 export default defineConfig({
-    test: {
-        include: ["**/*.e2e.test.ts"],
-        browser: {
-            enabled: true,
-            instances: [{ browser: "chromium" }],
-            provider: playwright(),
-            headless: process.env.HEADERS === "true",
-        },
-        testTimeout: 1000 * 60 * 3, // 3 minutes
+  test: {
+    include: ["**/*.e2e.test.ts"],
+    browser: {
+      enabled: true,
+      instances: [{ browser: "chromium" }],
+      provider: playwright(),
+      headless: process.env.HEADERS === "true",
     },
-    server: {
-        headers: {
-            "Cross-Origin-Opener-Policy": "same-origin",
-            "Cross-Origin-Embedder-Policy": "require-corp",
-            "Access-Control-Allow-Origin": "*",
-        },
+    testTimeout: 1000 * 60 * 3, // 3 minutes
+  },
+  server: {
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Access-Control-Allow-Origin": "*",
     },
+  },
 });
 ```
 
@@ -92,6 +92,7 @@ flowchart TB
 **Why E2E-First?**
 
 Most of the code depends on browser-specific APIs that are extremely difficult to mock:
+
 - **Web Worker API**: Worker creation, message passing, SharedArrayBuffer
 - **OPFS (Origin Private File System)**: File system operations only available in secure contexts
 - **SQLite WASM**: Compiled WebAssembly module requiring specific browser features
@@ -113,10 +114,10 @@ Most of the code depends on browser-specific APIs that are extremely difficult t
 
 ### 2.2 Test Categories
 
-| Category        | Purpose                     | Examples                       | File Pattern            | Notes                                    |
-| --------------- | --------------------------- | ------------------------------ | ----------------------- | ---------------------------------------- |
-| **Unit**        | Test pure utility functions | Mutex queue, hash utils        | `*.unit.test.ts`        | Only for code not requiring browser APIs |
-| **E2E**         | Test critical user flows    | openDB, transactions, rollback | `*.e2e.test.ts`         | Primary testing approach                 |
+| Category | Purpose                     | Examples                       | File Pattern     | Notes                                    |
+| -------- | --------------------------- | ------------------------------ | ---------------- | ---------------------------------------- |
+| **Unit** | Test pure utility functions | Mutex queue, hash utils        | `*.unit.test.ts` | Only for code not requiring browser APIs |
+| **E2E**  | Test critical user flows    | openDB, transactions, rollback | `*.e2e.test.ts`  | Primary testing approach                 |
 
 ---
 
@@ -138,41 +139,41 @@ import { describe, it, expect } from "vitest";
 import { createMutex } from "./mutex";
 
 describe("createMutex", () => {
-    it("should execute tasks sequentially", async () => {
-        const mutex = createMutex();
-        const results: number[] = [];
+  it("should execute tasks sequentially", async () => {
+    const mutex = createMutex();
+    const results: number[] = [];
 
-        await Promise.all([
-            mutex(async () => {
-                results.push(1);
-                await new Promise((resolve) => setTimeout(resolve, 10));
-            }),
-            mutex(async () => {
-                results.push(2);
-            }),
-        ]);
+    await Promise.all([
+      mutex(async () => {
+        results.push(1);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }),
+      mutex(async () => {
+        results.push(2);
+      }),
+    ]);
 
-        expect(results).toEqual([1, 2]);
-    });
+    expect(results).toEqual([1, 2]);
+  });
 
-    it("should handle errors without breaking the queue", async () => {
-        const mutex = createMutex();
-        let errorThrown = false;
+  it("should handle errors without breaking the queue", async () => {
+    const mutex = createMutex();
+    let errorThrown = false;
 
-        try {
-            await mutex(async () => {
-                throw new Error("Task failed");
-            });
-        } catch (error) {
-            errorThrown = true;
-        }
+    try {
+      await mutex(async () => {
+        throw new Error("Task failed");
+      });
+    } catch (error) {
+      errorThrown = true;
+    }
 
-        expect(errorThrown).toBe(true);
+    expect(errorThrown).toBe(true);
 
-        // Next task should still execute
-        const result = await mutex(async () => "success");
-        expect(result).toBe("success");
-    });
+    // Next task should still execute
+    const result = await mutex(async () => "success");
+    expect(result).toBe("success");
+  });
 });
 ```
 
@@ -184,23 +185,24 @@ When code depends on complex browser environments (workers, OPFS, WASM, COOP/COE
 
 **Unit Test Coverage Targets** (only for pure utilities):
 
-| Module          | Coverage Target | Notes                          |
-| --------------- | --------------- | ------------------------------ |
-| Mutex Utils     | 100%            | Pure utility, no dependencies  |
-| Hash Utils      | 90%             | Pure utility, no dependencies  |
-| Other utilities | Only if simple  | Must have zero browser deps    |
+| Module          | Coverage Target | Notes                         |
+| --------------- | --------------- | ----------------------------- |
+| Mutex Utils     | 100%            | Pure utility, no dependencies |
+| Hash Utils      | 90%             | Pure utility, no dependencies |
+| Other utilities | Only if simple  | Must have zero browser deps   |
 
 **Explicitly NOT Unit Tested** (E2E only):
 
-| Module                   | Reason                                      | Testing Approach |
-| ------------------------ | ------------------------------------------- | ---------------- |
-| ❌ Worker bridge         | Requires Web Worker API, complex to mock    | E2E tests        |
-| ❌ Release manager       | Requires OPFS + worker communication        | E2E tests        |
-| ❌ OPFS utilities        | Requires browser file system APIs           | E2E tests        |
-| ❌ Main API (openDB)     | Requires full worker + OPFS integration     | E2E tests        |
-| ❌ Worker implementation | Requires WASM + SQLite + SharedArrayBuffer  | E2E tests        |
+| Module                   | Reason                                     | Testing Approach |
+| ------------------------ | ------------------------------------------ | ---------------- |
+| ❌ Worker bridge         | Requires Web Worker API, complex to mock   | E2E tests        |
+| ❌ Release manager       | Requires OPFS + worker communication       | E2E tests        |
+| ❌ OPFS utilities        | Requires browser file system APIs          | E2E tests        |
+| ❌ Main API (openDB)     | Requires full worker + OPFS integration    | E2E tests        |
+| ❌ Worker implementation | Requires WASM + SQLite + SharedArrayBuffer | E2E tests        |
 
 **Rationale**: Mocking Web Worker, OPFS, and WASM APIs is:
+
 - **Time-consuming**: Complex setup that breaks easily
 - **Unreliable**: Mocks don't match real browser behavior
 - **High maintenance**: Mocks need constant updates
@@ -211,6 +213,7 @@ When code depends on complex browser environments (workers, OPFS, WASM, COOP/COE
 **Step 1: Analyze the Code**
 
 Before writing tests, ask these questions:
+
 1. What are the external dependencies?
 2. How complex would mocking be?
 3. Is there existing mocking infrastructure?
@@ -251,19 +254,20 @@ flowchart TD
 
 **Step 3: Make the Decision**
 
-| Scenario | Analysis | Decision |
-|----------|----------|----------|
-| Pure utility, no deps | Trivial to test | ✅ Unit test |
+| Scenario                   | Analysis                  | Decision                      |
+| -------------------------- | ------------------------- | ----------------------------- |
+| Pure utility, no deps      | Trivial to test           | ✅ Unit test                  |
 | Simple browser API wrapper | 30min to mock, high value | ✅ Unit test (if mocks exist) |
-| Complex worker integration | >1hr to mock, fragile | ❌ Use E2E |
-| OPFS operations | Complex, unreliable mocks | ❌ Use E2E |
-| Module integration | Multiple mocks needed | ❌ Use E2E |
+| Complex worker integration | >1hr to mock, fragile     | ❌ Use E2E                    |
+| OPFS operations            | Complex, unreliable mocks | ❌ Use E2E                    |
+| Module integration         | Multiple mocks needed     | ❌ Use E2E                    |
 
 **Key Principle**: If the analysis shows mocking is too complicated or time-consuming, use E2E tests instead. Don't force unit tests when they don't make practical sense.
 
 ### 3.4 When to Write Unit Tests
 
 **After Analysis: Write Unit Tests When**:
+
 - ✅ Pure utility functions (mutex, hash, string manipulation) - Trivial
 - ✅ Business logic with zero external dependencies - Trivial
 - ✅ Algorithms that can be tested in isolation - Trivial
@@ -273,6 +277,7 @@ flowchart TD
   - Value outweighs maintenance cost
 
 **After Analysis: Use E2E Tests When**:
+
 - ❌ Code touches `window.Worker` or `new Worker()` - Complex mocking
 - ❌ Code uses `navigator.storage.getDirectory()` (OPFS) - Unreliable mocks
 - ❌ Code uses `SharedArrayBuffer` - Requires COOP/COEP
@@ -284,17 +289,18 @@ flowchart TD
 
 Before writing any tests, complete this analysis:
 
-| Question | Yes → | No → |
-|----------|-------|------|
-| 1. Does the code have external dependencies? | Go to Q2 | ✅ Write Unit Test |
-| 2. Are dependencies browser APIs? | Go to Q3 | ⚠️ Consider if simple |
-| 3. Is there existing mock infrastructure? | Go to Q4 | Go to Q5 |
-| 4. Are mocks stable and reliable? | ✅ Consider Unit Test | Go to Q5 |
-| 5. Would mocking take < 30 minutes? | ⚠️ Maybe Unit Test | ❌ Use E2E |
-| 6. Would E2E tests be equally effective? | Go to Q7 | ✅ Write Unit Test |
-| 7. Is E2E test simpler to write? | ❌ Use E2E | ⚠️ Consider both |
+| Question                                     | Yes →                 | No →                  |
+| -------------------------------------------- | --------------------- | --------------------- |
+| 1. Does the code have external dependencies? | Go to Q2              | ✅ Write Unit Test    |
+| 2. Are dependencies browser APIs?            | Go to Q3              | ⚠️ Consider if simple |
+| 3. Is there existing mock infrastructure?    | Go to Q4              | Go to Q5              |
+| 4. Are mocks stable and reliable?            | ✅ Consider Unit Test | Go to Q5              |
+| 5. Would mocking take < 30 minutes?          | ⚠️ Maybe Unit Test    | ❌ Use E2E            |
+| 6. Would E2E tests be equally effective?     | Go to Q7              | ✅ Write Unit Test    |
+| 7. Is E2E test simpler to write?             | ❌ Use E2E            | ⚠️ Consider both      |
 
 **Analysis Outcomes**:
+
 - **Green path** (mostly ✅): Write unit tests
 - **Red path** (mostly ❌): Use E2E tests
 - **Yellow path** (mixed ⚠️): Use judgment, prefer E2E for simplicity
@@ -304,26 +310,26 @@ Before writing any tests, complete this analysis:
 ```typescript
 // ✅ UNIT TEST - Pure function, no dependencies
 export function hashString(input: string): string {
-    // ... pure logic
+  // ... pure logic
 }
 
 // ❌ NO UNIT TEST - Requires Worker API
 export async function createWorkerBridge(): Promise<WorkerBridge> {
-    const worker = new Worker(/* ... */);  // Browser API
-    // ...
+  const worker = new Worker(/* ... */); // Browser API
+  // ...
 }
 
 // ❌ NO UNIT TEST - Requires OPFS
 export async function getOPFSFile(path: string): Promise<FileHandle> {
-    const root = await navigator.storage.getDirectory();  // Browser API
-    // ...
+  const root = await navigator.storage.getDirectory(); // Browser API
+  // ...
 }
 
 // ❌ NO UNIT TEST - Integration of multiple modules
 export async function openDB(name: string): Promise<DBInterface> {
-    const worker = await createWorkerBridge();  // Worker-dependent
-    const releaseManager = await createReleaseManager();  // OPFS-dependent
-    // ...
+  const worker = await createWorkerBridge(); // Worker-dependent
+  const releaseManager = await createReleaseManager(); // OPFS-dependent
+  // ...
 }
 ```
 
@@ -336,6 +342,7 @@ export async function openDB(name: string): Promise<DBInterface> {
 ### Why No Separate Integration Tests?
 
 Integration tests for worker-dependent code face the same challenges as unit tests:
+
 - Requires Web Worker API mocking
 - Requires OPFS API mocking
 - Mocking these browser-specific APIs is complex and unreliable
@@ -344,6 +351,7 @@ Integration tests for worker-dependent code face the same challenges as unit tes
 ### 4.1 Alternative: E2E Integration Coverage
 
 The E2E test suite effectively covers integration scenarios:
+
 - Worker message protocol is tested through actual API calls
 - OPFS operations are tested with real file system
 - Module interactions are tested in production environment
@@ -379,26 +387,25 @@ flowchart TB
 
 ```typescript
 describe("openDB", () => {
-    it("should open database with release migrations", async () => {
-        const db = await openDB("test-db", {
-            releases: [
-                {
-                    version: "1.0.0",
-                    migrationSQL:
-                        "CREATE TABLE users (id INTEGER PRIMARY KEY);",
-                },
-            ],
-        });
-
-        const result = await db.query<{ name: string }>(
-            "SELECT name FROM sqlite_master WHERE type='table'",
-        );
-
-        expect(result).toHaveLength(1);
-        expect(result[0].name).toBe("users");
-
-        await db.close();
+  it("should open database with release migrations", async () => {
+    const db = await openDB("test-db", {
+      releases: [
+        {
+          version: "1.0.0",
+          migrationSQL: "CREATE TABLE users (id INTEGER PRIMARY KEY);",
+        },
+      ],
     });
+
+    const result = await db.query<{ name: string }>(
+      "SELECT name FROM sqlite_master WHERE type='table'",
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe("users");
+
+    await db.close();
+  });
 });
 ```
 
@@ -406,41 +413,37 @@ describe("openDB", () => {
 
 ```typescript
 describe("transaction", () => {
-    it("should execute transactions atomically", async () => {
-        const db = await openDB("test-db");
+  it("should execute transactions atomically", async () => {
+    const db = await openDB("test-db");
 
-        await db.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)");
+    await db.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)");
 
-        // Successful transaction
-        await db.transaction(async (tx) => {
-            await tx.exec("INSERT INTO users (name) VALUES (?)", ["Alice"]);
-            await tx.exec("INSERT INTO users (name) VALUES (?)", ["Bob"]);
-        });
-
-        const users = await db.query<{ name: string }>(
-            "SELECT name FROM users",
-        );
-        expect(users).toHaveLength(2);
-
-        // Failed transaction (rollback)
-        try {
-            await db.transaction(async (tx) => {
-                await tx.exec("INSERT INTO users (name) VALUES (?)", [
-                    "Charlie",
-                ]);
-                throw new Error("Intentional error");
-            });
-        } catch (error) {
-            // Expected error
-        }
-
-        const usersAfter = await db.query<{ name: string }>(
-            "SELECT name FROM users",
-        );
-        expect(usersAfter).toHaveLength(2); // No new users added
-
-        await db.close();
+    // Successful transaction
+    await db.transaction(async (tx) => {
+      await tx.exec("INSERT INTO users (name) VALUES (?)", ["Alice"]);
+      await tx.exec("INSERT INTO users (name) VALUES (?)", ["Bob"]);
     });
+
+    const users = await db.query<{ name: string }>("SELECT name FROM users");
+    expect(users).toHaveLength(2);
+
+    // Failed transaction (rollback)
+    try {
+      await db.transaction(async (tx) => {
+        await tx.exec("INSERT INTO users (name) VALUES (?)", ["Charlie"]);
+        throw new Error("Intentional error");
+      });
+    } catch (error) {
+      // Expected error
+    }
+
+    const usersAfter = await db.query<{ name: string }>(
+      "SELECT name FROM users",
+    );
+    expect(usersAfter).toHaveLength(2); // No new users added
+
+    await db.close();
+  });
 });
 ```
 
@@ -448,39 +451,39 @@ describe("transaction", () => {
 
 ```typescript
 describe("devTool.rollback", () => {
-    it("should rollback to previous version", async () => {
-        const db = await openDB("test-db", {
-            releases: [
-                {
-                    version: "1.0.0",
-                    migrationSQL: "CREATE TABLE v1 (id INTEGER);",
-                },
-            ],
-        });
-
-        // Create dev version
-        await db.devTool.release({
-            version: "1.0.1",
-            migrationSQL: "ALTER TABLE v1 ADD COLUMN name TEXT;",
-        });
-
-        // Verify schema
-        const columns = await db.query<{ sql: string }>(
-            "SELECT sql FROM sqlite_master WHERE type='table'",
-        );
-        expect(columns[0].sql).toContain("name TEXT");
-
-        // Rollback
-        await db.devTool.rollback("1.0.0");
-
-        // Verify rollback
-        const columnsAfter = await db.query<{ sql: string }>(
-            "SELECT sql FROM sqlite_master WHERE type='table'",
-        );
-        expect(columnsAfter[0].sql).not.toContain("name TEXT");
-
-        await db.close();
+  it("should rollback to previous version", async () => {
+    const db = await openDB("test-db", {
+      releases: [
+        {
+          version: "1.0.0",
+          migrationSQL: "CREATE TABLE v1 (id INTEGER);",
+        },
+      ],
     });
+
+    // Create dev version
+    await db.devTool.release({
+      version: "1.0.1",
+      migrationSQL: "ALTER TABLE v1 ADD COLUMN name TEXT;",
+    });
+
+    // Verify schema
+    const columns = await db.query<{ sql: string }>(
+      "SELECT sql FROM sqlite_master WHERE type='table'",
+    );
+    expect(columns[0].sql).toContain("name TEXT");
+
+    // Rollback
+    await db.devTool.rollback("1.0.0");
+
+    // Verify rollback
+    const columnsAfter = await db.query<{ sql: string }>(
+      "SELECT sql FROM sqlite_master WHERE type='table'",
+    );
+    expect(columnsAfter[0].sql).not.toContain("name TEXT");
+
+    await db.close();
+  });
 });
 ```
 
@@ -567,6 +570,7 @@ Output: `coverage/index.html`
 | E2E Flows  | 100%   | All critical API paths covered |
 
 **Actual Test Coverage**:
+
 - **Unit tests**: 1 file (mutex) - ~200 lines of testable utility code
 - **E2E tests**: 6 test files covering all API surface and critical flows
 
@@ -583,14 +587,14 @@ Output: `coverage/index.html`
 ```typescript
 // tests/fixtures/releases.ts
 export const TEST_RELEASES = [
-    {
-        version: "1.0.0",
-        migrationSQL: "CREATE TABLE users (id INTEGER PRIMARY KEY);",
-    },
-    {
-        version: "1.1.0",
-        migrationSQL: "ALTER TABLE users ADD COLUMN name TEXT;",
-    },
+  {
+    version: "1.0.0",
+    migrationSQL: "CREATE TABLE users (id INTEGER PRIMARY KEY);",
+  },
+  {
+    version: "1.1.0",
+    migrationSQL: "ALTER TABLE users ADD COLUMN name TEXT;",
+  },
 ];
 ```
 
@@ -606,19 +610,19 @@ export const TEST_RELEASES = [
 
 ```typescript
 describe("Database Tests", () => {
-    const dbName = `test-db-${Math.random()}`;
+  const dbName = `test-db-${Math.random()}`;
 
-    afterEach(async () => {
-        // Clean up OPFS
-        const root = await navigator.storage.getDirectory();
-        // ... cleanup logic
-    });
+  afterEach(async () => {
+    // Clean up OPFS
+    const root = await navigator.storage.getDirectory();
+    // ... cleanup logic
+  });
 
-    it("should create database", async () => {
-        const db = await openDB(dbName);
-        // ... test logic
-        await db.close();
-    });
+  it("should create database", async () => {
+    const db = await openDB(dbName);
+    // ... test logic
+    await db.close();
+  });
 });
 ```
 

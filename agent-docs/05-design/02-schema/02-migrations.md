@@ -215,13 +215,13 @@ sequenceDiagram
 
 ```typescript
 async function computeHash(sql: string | undefined | null): Promise<string> {
-    if (!sql) return "";
-    const normalized = sql.trim();
-    const encoder = new TextEncoder();
-    const data = encoder.encode(normalized);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  if (!sql) return "";
+  const normalized = sql.trim();
+  const encoder = new TextEncoder();
+  const data = encoder.encode(normalized);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 ```
 
@@ -229,13 +229,13 @@ async function computeHash(sql: string | undefined | null): Promise<string> {
 
 ```typescript
 for (const row of releaseRows) {
-    const config = configByVersion.get(row.version);
-    if (config.migrationSQLHash !== row.migrationSQLHash) {
-        throw new Error(`migrationSQL hash mismatch for ${row.version}`);
-    }
-    if (config.seedSQLHash !== row.seedSQLHash) {
-        throw new Error(`seedSQL hash mismatch for ${row.version}`);
-    }
+  const config = configByVersion.get(row.version);
+  if (config.migrationSQLHash !== row.migrationSQLHash) {
+    throw new Error(`migrationSQL hash mismatch for ${row.version}`);
+  }
+  if (config.seedSQLHash !== row.seedSQLHash) {
+    throw new Error(`seedSQL hash mismatch for ${row.version}`);
+  }
 }
 ```
 
@@ -251,12 +251,12 @@ const VERSION_RE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 ```typescript
 function compareVersions(v1: string, v2: string): number {
-    const [major1, minor1, patch1] = parseVersion(v1);
-    const [major2, minor2, patch2] = parseVersion(v2);
+  const [major1, minor1, patch1] = parseVersion(v1);
+  const [major2, minor2, patch2] = parseVersion(v2);
 
-    if (major1 !== major2) return major1 - major2;
-    if (minor1 !== minor2) return minor1 - minor2;
-    return patch1 - patch2;
+  if (major1 !== major2) return major1 - major2;
+  if (minor1 !== minor2) return minor1 - minor2;
+  return patch1 - patch2;
 }
 ```
 
@@ -364,18 +364,18 @@ flowchart TD
 ```typescript
 // Don't do this
 [
-    {
-        version: "1.0.0",
-        migrationSQL: "CREATE TABLE users (id INTEGER PRIMARY KEY);",
-    },
-    {
-        version: "1.0.1",
-        migrationSQL: "ALTER TABLE users ADD COLUMN name TEXT;",
-    },
-    {
-        version: "1.0.2",
-        migrationSQL: "CREATE INDEX users_name_idx ON users(name);",
-    },
+  {
+    version: "1.0.0",
+    migrationSQL: "CREATE TABLE users (id INTEGER PRIMARY KEY);",
+  },
+  {
+    version: "1.0.1",
+    migrationSQL: "ALTER TABLE users ADD COLUMN name TEXT;",
+  },
+  {
+    version: "1.0.2",
+    migrationSQL: "CREATE INDEX users_name_idx ON users(name);",
+  },
 ];
 ```
 
@@ -429,24 +429,23 @@ DROP COLUMN age;
 ```typescript
 // Initial deployment
 openDB("myapp", {
-    releases: [
-        {
-            version: "1.0.0",
-            migrationSQL:
-                "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
-        },
-    ],
+  releases: [
+    {
+      version: "1.0.0",
+      migrationSQL: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
+    },
+  ],
 });
 
 // Later attempt to modify (FAILS)
 openDB("myapp", {
-    releases: [
-        {
-            version: "1.0.0",
-            migrationSQL:
-                "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT);",
-        }, // Hash mismatch!
-    ],
+  releases: [
+    {
+      version: "1.0.0",
+      migrationSQL:
+        "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT);",
+    }, // Hash mismatch!
+  ],
 });
 ```
 
@@ -454,17 +453,16 @@ openDB("myapp", {
 
 ```typescript
 openDB("myapp", {
-    releases: [
-        {
-            version: "1.0.0",
-            migrationSQL:
-                "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
-        },
-        {
-            version: "1.1.0",
-            migrationSQL: "ALTER TABLE users ADD COLUMN email TEXT;",
-        },
-    ],
+  releases: [
+    {
+      version: "1.0.0",
+      migrationSQL: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
+    },
+    {
+      version: "1.1.0",
+      migrationSQL: "ALTER TABLE users ADD COLUMN email TEXT;",
+    },
+  ],
 });
 ```
 
@@ -478,13 +476,12 @@ openDB("myapp", {
 
 ```typescript
 const db = await openDB("myapp", {
-    releases: [
-        {
-            version: "1.0.0",
-            migrationSQL:
-                "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
-        },
-    ],
+  releases: [
+    {
+      version: "1.0.0",
+      migrationSQL: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
+    },
+  ],
 });
 ```
 
@@ -492,9 +489,9 @@ const db = await openDB("myapp", {
 
 ```typescript
 await db.devTool.release({
-    version: "1.0.1",
-    migrationSQL: "ALTER TABLE users ADD COLUMN email TEXT;",
-    seedSQL: "UPDATE users SET email = 'test@example.com' WHERE email IS NULL;",
+  version: "1.0.1",
+  migrationSQL: "ALTER TABLE users ADD COLUMN email TEXT;",
+  seedSQL: "UPDATE users SET email = 'test@example.com' WHERE email IS NULL;",
 });
 ```
 
@@ -502,8 +499,8 @@ await db.devTool.release({
 
 ```typescript
 await db.exec("INSERT INTO users (name, email) VALUES (?, ?)", [
-    "Alice",
-    "alice@example.com",
+  "Alice",
+  "alice@example.com",
 ]);
 const users = await db.query("SELECT * FROM users");
 console.log(users); // [{ id: 1, name: "Alice", email: "alice@example.com" }]
@@ -521,8 +518,8 @@ await db.devTool.rollback("1.0.0");
 ```typescript
 // Create new dev version with fixes
 await db.devTool.release({
-    version: "1.0.2",
-    migrationSQL: "ALTER TABLE users ADD COLUMN email TEXT UNIQUE;", // Added UNIQUE constraint
+  version: "1.0.2",
+  migrationSQL: "ALTER TABLE users ADD COLUMN email TEXT UNIQUE;", // Added UNIQUE constraint
 });
 ```
 
@@ -531,17 +528,16 @@ await db.devTool.release({
 ```typescript
 // In production config
 const db = await openDB("myapp", {
-    releases: [
-        {
-            version: "1.0.0",
-            migrationSQL:
-                "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
-        },
-        {
-            version: "1.1.0",
-            migrationSQL: "ALTER TABLE users ADD COLUMN email TEXT UNIQUE;",
-        },
-    ],
+  releases: [
+    {
+      version: "1.0.0",
+      migrationSQL: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
+    },
+    {
+      version: "1.1.0",
+      migrationSQL: "ALTER TABLE users ADD COLUMN email TEXT UNIQUE;",
+    },
+  ],
 });
 ```
 
@@ -804,24 +800,24 @@ Error: migrationSQL hash mismatch for 1.0.0
 
 ```typescript
 const db = await openDB("myapp", {
-    releases: [
-        {
-            version: "1.0.0",
-            migrationSQL: `
+  releases: [
+    {
+      version: "1.0.0",
+      migrationSQL: `
         CREATE TABLE users (
           id INTEGER PRIMARY KEY,
           name TEXT NOT NULL
         );
       `,
-        },
-        {
-            version: "1.1.0",
-            migrationSQL: `
+    },
+    {
+      version: "1.1.0",
+      migrationSQL: `
         ALTER TABLE users ADD COLUMN email TEXT;
         CREATE INDEX users_email_idx ON users(email);
       `,
-        },
-    ],
+    },
+  ],
 });
 ```
 
@@ -831,20 +827,20 @@ const db = await openDB("myapp", {
 
 ```typescript
 const db = await openDB("myapp", {
-    releases: [
-        {
-            version: "1.0.0",
-            migrationSQL: `
+  releases: [
+    {
+      version: "1.0.0",
+      migrationSQL: `
         CREATE TABLE users (
           id INTEGER PRIMARY KEY,
           name TEXT NOT NULL
         );
         INSERT INTO users (name) VALUES ('Alice Smith'), ('Bob Jones');
       `,
-        },
-        {
-            version: "1.1.0",
-            migrationSQL: `
+    },
+    {
+      version: "1.1.0",
+      migrationSQL: `
         ALTER TABLE users ADD COLUMN firstName TEXT;
         ALTER TABLE users ADD COLUMN lastName TEXT;
 
@@ -855,8 +851,8 @@ const db = await openDB("myapp", {
         CREATE INDEX users_firstName_idx ON users(firstName);
         CREATE INDEX users_lastName_idx ON users(lastName);
       `,
-        },
-    ],
+    },
+  ],
 });
 ```
 
@@ -866,19 +862,19 @@ const db = await openDB("myapp", {
 
 ```typescript
 const db = await openDB("myapp", {
-    releases: [
-        {
-            version: "1.0.0",
-            migrationSQL: `
+  releases: [
+    {
+      version: "1.0.0",
+      migrationSQL: `
         CREATE TABLE users (
           id INTEGER PRIMARY KEY,
           name TEXT NOT NULL
         );
       `,
-        },
-        {
-            version: "1.1.0",
-            migrationSQL: `
+    },
+    {
+      version: "1.1.0",
+      migrationSQL: `
         CREATE TABLE posts (
           id INTEGER PRIMARY KEY,
           title TEXT NOT NULL,
@@ -887,13 +883,13 @@ const db = await openDB("myapp", {
         );
         CREATE INDEX posts_authorId_idx ON posts(authorId);
       `,
-            seedSQL: `
+      seedSQL: `
         INSERT INTO posts (title, authorId) VALUES
           ('Hello World', 1),
           ('Second Post', 1);
       `,
-        },
-    ],
+    },
+  ],
 });
 ```
 
@@ -904,25 +900,24 @@ const db = await openDB("myapp", {
 ```typescript
 // Start with version 1.0.0
 const db = await openDB("myapp", {
-    releases: [
-        {
-            version: "1.0.0",
-            migrationSQL:
-                "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
-        },
-    ],
+  releases: [
+    {
+      version: "1.0.0",
+      migrationSQL: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
+    },
+  ],
 });
 
 // Create dev version for testing
 await db.devTool.release({
-    version: "1.0.1",
-    migrationSQL: "ALTER TABLE users ADD COLUMN email TEXT;",
+  version: "1.0.1",
+  migrationSQL: "ALTER TABLE users ADD COLUMN email TEXT;",
 });
 
 // Test application
 await db.exec("INSERT INTO users (name, email) VALUES (?, ?)", [
-    "Alice",
-    "alice@example.com",
+  "Alice",
+  "alice@example.com",
 ]);
 const users = await db.query("SELECT * FROM users");
 console.log(users); // [{ id: 1, name: "Alice", email: "alice@example.com" }]
@@ -932,23 +927,22 @@ await db.devTool.rollback("1.0.0");
 
 // Create new dev version with fixes
 await db.devTool.release({
-    version: "1.0.2",
-    migrationSQL: "ALTER TABLE users ADD COLUMN email TEXT UNIQUE;", // Added UNIQUE
+  version: "1.0.2",
+  migrationSQL: "ALTER TABLE users ADD COLUMN email TEXT UNIQUE;", // Added UNIQUE
 });
 
 // Deploy as release when stable
 const dbProd = await openDB("myapp", {
-    releases: [
-        {
-            version: "1.0.0",
-            migrationSQL:
-                "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
-        },
-        {
-            version: "1.1.0",
-            migrationSQL: "ALTER TABLE users ADD COLUMN email TEXT UNIQUE;",
-        },
-    ],
+  releases: [
+    {
+      version: "1.0.0",
+      migrationSQL: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
+    },
+    {
+      version: "1.1.0",
+      migrationSQL: "ALTER TABLE users ADD COLUMN email TEXT UNIQUE;",
+    },
+  ],
 });
 ```
 

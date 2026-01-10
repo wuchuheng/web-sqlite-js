@@ -19,13 +19,13 @@ The `SqlConsole.vue` component currently features an "auto-typing" demo mode tha
 - **Event Listener:** Add a click listener to the root element of the `SqlConsole.vue` component.
 
 - **Interruption Logic:**
-    - Check if `isAutoTyping` is currently `true`.
+  - Check if `isAutoTyping` is currently `true`.
 
-    - If so, call `cancelAutoTyping()`.
+  - If so, call `cancelAutoTyping()`.
 
-    - Emit the `user-input` event to notify the parent component (`HomePage.vue`) to halt the entire demo loop (`stopAutoDemo`).
+  - Emit the `user-input` event to notify the parent component (`HomePage.vue`) to halt the entire demo loop (`stopAutoDemo`).
 
-    - **Always call `focusEditor()`** to ensure the cursor is active.
+  - **Always call `focusEditor()`** to ensure the cursor is active.
 
 - **Bubbling & Capturing:** The click listener should be efficient and not interfere with other interactive elements like tabs or the "Run" hint (though stopping the demo is desired in those cases as well).
 

@@ -50,12 +50,8 @@ For quick demos or plain HTML pages you can load the prebuilt module directly:
 
 ```html
 <script type="module">
-    <<<<<<< HEAD
-        import openDB from "https://cdn.jsdelivr.net/npm/web-sqlite-js@1.0.9/dist/index.js";
-    =======
-        import openDB from "https://cdn.jsdelivr.net/npm/web-sqlite-js@1.0.6/dist/index.js";
-    >>>>>>> main
-        // ...
+  import openDB from "https://cdn.jsdelivr.net/npm/web-sqlite-js@1.0.9/dist/index.js";
+  // ...
 </script>
 ```
 
@@ -83,18 +79,18 @@ Update your `vite.config.ts`:
 import { defineConfig } from "vite";
 
 export default defineConfig({
-    server: {
-        headers: {
-            "Cross-Origin-Opener-Policy": "same-origin",
-            "Cross-Origin-Embedder-Policy": "require-corp",
-        },
+  server: {
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "require-corp",
     },
-    preview: {
-        headers: {
-            "Cross-Origin-Opener-Policy": "same-origin",
-            "Cross-Origin-Embedder-Policy": "require-corp",
-        },
+  },
+  preview: {
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "require-corp",
     },
+  },
 });
 ```
 
@@ -108,23 +104,23 @@ Update your `next.config.js`:
 ```javascript
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    async headers() {
-        return [
-            {
-                source: "/(.*)",
-                headers: [
-                    {
-                        key: "Cross-Origin-Opener-Policy",
-                        value: "same-origin",
-                    },
-                    {
-                        key: "Cross-Origin-Embedder-Policy",
-                        value: "require-corp",
-                    },
-                ],
-            },
-        ];
-    },
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin",
+          },
+          {
+            key: "Cross-Origin-Embedder-Policy",
+            value: "require-corp",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;
@@ -139,13 +135,13 @@ Update your `webpack.config.js`:
 
 ```javascript
 module.exports = {
-    // ...
-    devServer: {
-        headers: {
-            "Cross-Origin-Opener-Policy": "same-origin",
-            "Cross-Origin-Embedder-Policy": "require-corp",
-        },
+  // ...
+  devServer: {
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "require-corp",
     },
+  },
 };
 ```
 
@@ -177,9 +173,9 @@ const express = require("express");
 const app = express();
 
 app.use((req, res, next) => {
-    res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
-    res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
-    next();
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+  next();
 });
 
 // ...
@@ -215,12 +211,12 @@ await db.exec(`
 
 // 3. Insert data (Parameterized)
 await db.exec("INSERT INTO users (name, email) VALUES (?, ?)", [
-    "Alice",
-    "alice@example.com",
+  "Alice",
+  "alice@example.com",
 ]);
 await db.exec("INSERT INTO users (name, email) VALUES ($name, $email)", {
-    $name: "Bob",
-    $email: "bob@example.com",
+  $name: "Bob",
+  $email: "bob@example.com",
 });
 
 // 4. Query data
@@ -254,12 +250,12 @@ Transactions are atomic. If any command inside the callback fails, the entire tr
 
 ```typescript
 await db.transaction(async (tx) => {
-    await tx.exec("INSERT INTO users (name) VALUES (?)", ["Charlie"]);
+  await tx.exec("INSERT INTO users (name) VALUES (?)", ["Charlie"]);
 
-    // You can perform multiple operations safely
-    await tx.exec("INSERT INTO logs (action) VALUES (?)", ["User Created"]);
+  // You can perform multiple operations safely
+  await tx.exec("INSERT INTO logs (action) VALUES (?)", ["User Created"]);
 
-    // If you throw an error here, both INSERTs will be rolled back!
-    // throw new Error('Something went wrong');
+  // If you throw an error here, both INSERTs will be rolled back!
+  // throw new Error('Something went wrong');
 });
 ```

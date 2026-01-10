@@ -6,14 +6,14 @@
 
 **Links to Contracts**:
 
--   API: `agent-docs/05-design/01-contracts/01-api.md#module-dev-tooling-devtool`
--   Events: `agent-docs/05-design/01-contracts/02-events.md#event-version-application`
--   Errors: `agent-docs/05-design/01-contracts/03-errors.md#category-2-release-validation-errors`
+- API: `agent-docs/05-design/01-contracts/01-api.md#module-dev-tooling-devtool`
+- Events: `agent-docs/05-design/01-contracts/02-events.md#event-version-application`
+- Errors: `agent-docs/05-design/01-contracts/03-errors.md#category-2-release-validation-errors`
 
 **Links to Schema**:
 
--   Database: `agent-docs/05-design/02-schema/01-database.md#module-release-metadata-database`
--   Migrations: `agent-docs/05-design/02-schema/02-migrations.md`
+- Database: `agent-docs/05-design/02-schema/01-database.md#module-release-metadata-database`
+- Migrations: `agent-docs/05-design/02-schema/02-migrations.md`
 
 ---
 
@@ -30,10 +30,10 @@
 
 ### Cross-Cutting Concerns
 
--   **Atomicity**: All version operations in transactions
--   **Isolation**: Metadata lock prevents concurrent modifications
--   **Consistency**: Hash validation ensures release integrity
--   **Durability**: OPFS provides persistent storage
+- **Atomicity**: All version operations in transactions
+- **Isolation**: Metadata lock prevents concurrent modifications
+- **Consistency**: Hash validation ensures release integrity
+- **Durability**: OPFS provides persistent storage
 
 ---
 
@@ -49,10 +49,10 @@
 
 ```typescript
 type ReleaseManagerDeps = {
-    filename: string;
-    options?: OpenDBOptions;
-    sendMsg: <TRes, TReq>(event: SqliteEvent, payload?: TReq) => Promise<TRes>;
-    runMutex: <T>(callback: () => Promise<T>) => Promise<T>;
+  filename: string;
+  options?: OpenDBOptions;
+  sendMsg: <TRes, TReq>(event: SqliteEvent, payload?: TReq) => Promise<TRes>;
+  runMutex: <T>(callback: () => Promise<T>) => Promise<T>;
 };
 ```
 
@@ -103,9 +103,9 @@ flowchart TD
 
 ```typescript
 type ReleaseConfig = {
-    version: string;
-    migrationSQL: string;
-    seedSQL?: string | null;
+  version: string;
+  migrationSQL: string;
+  seedSQL?: string | null;
 };
 ```
 
@@ -122,16 +122,14 @@ type ReleaseConfig = {
 
 ```typescript
 async function hashSQL(value: string): Promise<string> {
-    const data = new TextEncoder().encode(value);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  const data = new TextEncoder().encode(value);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 const normalizedSeedSQL =
-    seedSQL === undefined || seedSQL === null || seedSQL === ""
-        ? null
-        : seedSQL;
+  seedSQL === undefined || seedSQL === null || seedSQL === "" ? null : seedSQL;
 const migrationSQLHash = await hashSQL(migrationSQL);
 const seedSQLHash = normalizedSeedSQL ? await hashSQL(normalizedSeedSQL) : null;
 ```
@@ -170,11 +168,11 @@ flowchart TD
 
 ```typescript
 type ReleaseConfigWithHash = {
-    version: string;
-    migrationSQL: string;
-    normalizedSeedSQL: string;
-    migrationSQLHash: string;
-    seedSQLHash: string;
+  version: string;
+  migrationSQL: string;
+  normalizedSeedSQL: string;
+  migrationSQLHash: string;
+  seedSQLHash: string;
 };
 ```
 
@@ -208,65 +206,65 @@ flowchart TD
 
 **Error Handling**:
 
--   SQL execution error: ROLLBACK, remove version directory, rethrow error
--   OPFS error: Cleanup partial files, rethrow error
--   Metadata error: Transaction rollback, rethrow error
+- SQL execution error: ROLLBACK, remove version directory, rethrow error
+- OPFS error: Cleanup partial files, rethrow error
+- Metadata error: Transaction rollback, rethrow error
 
 **Code**:
 
 ```typescript
 const applyVersion = async (
-    config: ReleaseConfigWithHash,
-    mode: "release" | "dev"
+  config: ReleaseConfigWithHash,
+  mode: "release" | "dev",
 ): Promise<void> => {
-    const versionDir = await baseDir.getDirectoryHandle(config.version, {
-        create: true,
-    });
-    const destDbHandle = await versionDir.getFileHandle("db.sqlite3", {
-        create: true,
-    });
+  const versionDir = await baseDir.getDirectoryHandle(config.version, {
+    create: true,
+  });
+  const destDbHandle = await versionDir.getFileHandle("db.sqlite3", {
+    create: true,
+  });
 
-    await copyFileHandle(latestDbHandle, destDbHandle);
-    await writeTextFile(versionDir, "migration.sql", config.migrationSQL);
+  await copyFileHandle(latestDbHandle, destDbHandle);
+  await writeTextFile(versionDir, "migration.sql", config.migrationSQL);
+  if (config.normalizedSeedSQL) {
+    await writeTextFile(versionDir, "seed.sql", config.normalizedSeedSQL);
+  }
+
+  await openActiveDb(
+    getDbPathForVersion(normalizedFilename, config.version),
+    true,
+  );
+
+  try {
+    await _exec("BEGIN", undefined, "active");
+    await _exec(config.migrationSQL, undefined, "active");
     if (config.normalizedSeedSQL) {
-        await writeTextFile(versionDir, "seed.sql", config.normalizedSeedSQL);
+      await _exec(config.normalizedSeedSQL, undefined, "active");
     }
-
+    await _exec("COMMIT", undefined, "active");
+  } catch (error) {
+    await _exec("ROLLBACK", undefined, "active");
     await openActiveDb(
-        getDbPathForVersion(normalizedFilename, config.version),
-        true
+      getDbPathForVersion(normalizedFilename, latestVersion),
+      true,
     );
+    await removeDir(baseDir, config.version);
+    throw error;
+  }
 
-    try {
-        await _exec("BEGIN", undefined, "active");
-        await _exec(config.migrationSQL, undefined, "active");
-        if (config.normalizedSeedSQL) {
-            await _exec(config.normalizedSeedSQL, undefined, "active");
-        }
-        await _exec("COMMIT", undefined, "active");
-    } catch (error) {
-        await _exec("ROLLBACK", undefined, "active");
-        await openActiveDb(
-            getDbPathForVersion(normalizedFilename, latestVersion),
-            true
-        );
-        await removeDir(baseDir, config.version);
-        throw error;
-    }
+  await metaExec(
+    "INSERT INTO release (version, migrationSQLHash, seedSQLHash, mode, createdAt) VALUES (?, ?, ?, ?, ?)",
+    [
+      config.version,
+      config.migrationSQLHash,
+      config.seedSQLHash,
+      mode,
+      new Date().toISOString(),
+    ],
+  );
 
-    await metaExec(
-        "INSERT INTO release (version, migrationSQLHash, seedSQLHash, mode, createdAt) VALUES (?, ?, ?, ?, ?)",
-        [
-            config.version,
-            config.migrationSQLHash,
-            config.seedSQLHash,
-            mode,
-            new Date().toISOString(),
-        ]
-    );
-
-    latestVersion = config.version;
-    latestDbHandle = destDbHandle;
+  latestVersion = config.version;
+  latestDbHandle = destDbHandle;
 };
 ```
 
@@ -306,12 +304,12 @@ flowchart TD
 
 ```typescript
 try {
-    await metaExec("BEGIN IMMEDIATE");
+  await metaExec("BEGIN IMMEDIATE");
 } catch (error) {
-    if (isLockError(error)) {
-        throw new Error("Release operation already in progress");
-    }
-    throw error;
+  if (isLockError(error)) {
+    throw new Error("Release operation already in progress");
+  }
+  throw error;
 }
 ```
 
@@ -319,30 +317,30 @@ try {
 
 ```typescript
 const withReleaseLock = async <T>(fn: () => Promise<T>): Promise<T> => {
-    try {
-        await metaExec("BEGIN IMMEDIATE");
-    } catch (error) {
-        if (isLockError(error)) {
-            throw new Error("Release operation already in progress");
-        }
-        throw error;
+  try {
+    await metaExec("BEGIN IMMEDIATE");
+  } catch (error) {
+    if (isLockError(error)) {
+      throw new Error("Release operation already in progress");
     }
-    await metaExec(
-        "INSERT OR REPLACE INTO release_lock (id, lockedAt) VALUES (1, ?)",
-        [new Date().toISOString()]
-    );
+    throw error;
+  }
+  await metaExec(
+    "INSERT OR REPLACE INTO release_lock (id, lockedAt) VALUES (1, ?)",
+    [new Date().toISOString()],
+  );
+  try {
+    const result = await fn();
+    await metaExec("COMMIT");
+    return result;
+  } catch (error) {
     try {
-        const result = await fn();
-        await metaExec("COMMIT");
-        return result;
-    } catch (error) {
-        try {
-            await metaExec("ROLLBACK");
-        } catch {
-            // ignore rollback errors
-        }
-        throw error;
+      await metaExec("ROLLBACK");
+    } catch {
+      // ignore rollback errors
     }
+    throw error;
+  }
 };
 ```
 
@@ -389,20 +387,20 @@ VALUES ('default', NULL, NULL, 'release', '<timestamp>');
 
 ```typescript
 const ensureMetadata = async (): Promise<void> => {
-    await metaExec(RELEASE_TABLE_SQL);
-    await metaExec(RELEASE_INDEX_SQL);
-    await metaExec(RELEASE_LOCK_TABLE_SQL);
+  await metaExec(RELEASE_TABLE_SQL);
+  await metaExec(RELEASE_INDEX_SQL);
+  await metaExec(RELEASE_LOCK_TABLE_SQL);
 
-    const defaults = await metaQuery<{ id: number }>(
-        "SELECT id FROM release WHERE version = ? LIMIT 1",
-        [DEFAULT_VERSION]
+  const defaults = await metaQuery<{ id: number }>(
+    "SELECT id FROM release WHERE version = ? LIMIT 1",
+    [DEFAULT_VERSION],
+  );
+  if (defaults.length === 0) {
+    await metaExec(
+      "INSERT INTO release (version, migrationSQLHash, seedSQLHash, mode, createdAt) VALUES (?, ?, ?, ?, ?)",
+      [DEFAULT_VERSION, null, null, "release", new Date().toISOString()],
     );
-    if (defaults.length === 0) {
-        await metaExec(
-            "INSERT INTO release (version, migrationSQLHash, seedSQLHash, mode, createdAt) VALUES (?, ?, ?, ?, ?)",
-            [DEFAULT_VERSION, null, null, "release", new Date().toISOString()]
-        );
-    }
+  }
 };
 ```
 
@@ -418,33 +416,33 @@ const ensureMetadata = async (): Promise<void> => {
 
 ```typescript
 export function compareVersions(v1: string, v2: string): number {
-    const parse = (v: string) => {
-        const match = v.match(/^(\d+)\.(\d+)\.(\d+)/);
-        return match
-            ? [parseInt(match[1]), parseInt(match[2]), parseInt(match[3])]
-            : [0, 0, 0];
-    };
+  const parse = (v: string) => {
+    const match = v.match(/^(\d+)\.(\d+)\.(\d+)/);
+    return match
+      ? [parseInt(match[1]), parseInt(match[2]), parseInt(match[3])]
+      : [0, 0, 0];
+  };
 
-    const [major1, minor1, patch1] = parse(v1);
-    const [major2, minor2, patch2] = parse(v2);
+  const [major1, minor1, patch1] = parse(v1);
+  const [major2, minor2, patch2] = parse(v2);
 
-    if (major1 !== major2) return major1 - major2;
-    if (minor1 !== minor2) return minor1 - minor2;
-    return patch1 - patch2;
+  if (major1 !== major2) return major1 - major2;
+  if (minor1 !== minor2) return minor1 - minor2;
+  return patch1 - patch2;
 }
 ```
 
 **Return Values**:
 
--   `< 0`: v1 < v2
--   `= 0`: v1 = v2
--   `> 0`: v1 > v2
+- `< 0`: v1 < v2
+- `= 0`: v1 = v2
+- `> 0`: v1 > v2
 
 **Usage**:
 
 ```typescript
 if (compareVersions(config.version, latestVersion) <= 0) {
-    throw new Error("Version must be greater than latest");
+  throw new Error("Version must be greater than latest");
 }
 ```
 
@@ -464,10 +462,10 @@ Create or get directory handle.
 
 ```typescript
 export const ensureDir = async (
-    root: FileSystemDirectoryHandle,
-    name: string
+  root: FileSystemDirectoryHandle,
+  name: string,
 ): Promise<FileSystemDirectoryHandle> => {
-    return await root.getDirectoryHandle(name, { create: true });
+  return await root.getDirectoryHandle(name, { create: true });
 };
 ```
 
@@ -477,10 +475,10 @@ Create or get file handle.
 
 ```typescript
 export const ensureFile = async (
-    dir: FileSystemDirectoryHandle,
-    name: string
+  dir: FileSystemDirectoryHandle,
+  name: string,
 ): Promise<FileSystemFileHandle> => {
-    return await dir.getFileHandle(name, { create: true });
+  return await dir.getFileHandle(name, { create: true });
 };
 ```
 
@@ -490,14 +488,14 @@ Copy file contents from source to destination.
 
 ```typescript
 export const copyFileHandle = async (
-    src: FileSystemFileHandle,
-    dest: FileSystemFileHandle
+  src: FileSystemFileHandle,
+  dest: FileSystemFileHandle,
 ): Promise<void> => {
-    const srcFile = await src.getFile();
-    const srcData = await srcFile.arrayBuffer();
-    const destWritable = await dest.createWritable();
-    await destWritable.write(srcData);
-    await destWritable.close();
+  const srcFile = await src.getFile();
+  const srcData = await srcFile.arrayBuffer();
+  const destWritable = await dest.createWritable();
+  await destWritable.write(srcData);
+  await destWritable.close();
 };
 ```
 
@@ -507,14 +505,14 @@ Write text contents to file.
 
 ```typescript
 export const writeTextFile = async (
-    dir: FileSystemDirectoryHandle,
-    name: string,
-    contents: string
+  dir: FileSystemDirectoryHandle,
+  name: string,
+  contents: string,
 ): Promise<void> => {
-    const fileHandle = await dir.getFileHandle(name, { create: true });
-    const writable = await fileHandle.createWritable();
-    await writable.write(contents);
-    await writable.close();
+  const fileHandle = await dir.getFileHandle(name, { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(contents);
+  await writable.close();
 };
 ```
 
@@ -524,15 +522,15 @@ Remove directory and all contents.
 
 ```typescript
 export const removeDir = async (
-    baseDir: FileSystemDirectoryHandle,
-    name: string
+  baseDir: FileSystemDirectoryHandle,
+  name: string,
 ): Promise<void> => {
-    const dirHandle = await baseDir.getDirectoryHandle(name);
-    // Recursively remove all entries
-    for await (const entry of dirHandle.values()) {
-        await dirHandle.removeEntry(entry.name, { recursive: true });
-    }
-    await baseDir.removeEntry(name);
+  const dirHandle = await baseDir.getDirectoryHandle(name);
+  // Recursively remove all entries
+  for await (const entry of dirHandle.values()) {
+    await dirHandle.removeEntry(entry.name, { recursive: true });
+  }
+  await baseDir.removeEntry(name);
 };
 ```
 
@@ -548,11 +546,10 @@ export const removeDir = async (
 
 ```typescript
 export const isLockError = (error: unknown): boolean => {
-    const message = error instanceof Error ? error.message : String(error);
-    return (
-        message.includes("database is locked") ||
-        message.includes("SQLITE_BUSY")
-    );
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("database is locked") || message.includes("SQLITE_BUSY")
+  );
 };
 ```
 
@@ -560,12 +557,12 @@ export const isLockError = (error: unknown): boolean => {
 
 ```typescript
 try {
-    await metaExec("BEGIN IMMEDIATE");
+  await metaExec("BEGIN IMMEDIATE");
 } catch (error) {
-    if (isLockError(error)) {
-        throw new Error("Release operation already in progress");
-    }
-    throw error;
+  if (isLockError(error)) {
+    throw new Error("Release operation already in progress");
+  }
+  throw error;
 }
 ```
 
@@ -704,14 +701,14 @@ sequenceDiagram
 
 ```typescript
 try {
-    await _exec("BEGIN");
-    await _exec(migrationSQL);
-    await _exec(seedSQL);
-    await _exec("COMMIT");
+  await _exec("BEGIN");
+  await _exec(migrationSQL);
+  await _exec(seedSQL);
+  await _exec("COMMIT");
 } catch (error) {
-    await _exec("ROLLBACK");
-    await removeDir(baseDir, version);
-    throw error;
+  await _exec("ROLLBACK");
+  await removeDir(baseDir, version);
+  throw error;
 }
 ```
 
@@ -719,12 +716,12 @@ try {
 
 ```typescript
 try {
-    await metaExec("BEGIN IMMEDIATE");
+  await metaExec("BEGIN IMMEDIATE");
 } catch (error) {
-    if (isLockError(error)) {
-        throw new Error("Release operation already in progress");
-    }
-    throw error;
+  if (isLockError(error)) {
+    throw new Error("Release operation already in progress");
+  }
+  throw error;
 }
 ```
 
@@ -749,10 +746,10 @@ try {
 
 **Per Version Overhead**:
 
--   Database file: Same as latest database size
--   migration.sql: Typically < 100KB
--   seed.sql: Typically < 100KB (if present)
--   Metadata row: < 1KB
+- Database file: Same as latest database size
+- migration.sql: Typically < 100KB
+- seed.sql: Typically < 100KB (if present)
+- Metadata row: < 1KB
 
 **Total Storage Estimation**:
 
@@ -762,9 +759,9 @@ Total = (Database Size × Version Count) + (SQL Files × Version Count)
 
 Example: 50MB database, 15 versions
 
--   Database storage: 50MB × 15 = 750MB
--   SQL files: 50KB × 15 = 750KB
--   Total: ~750MB
+- Database storage: 50MB × 15 = 750MB
+- SQL files: 50KB × 15 = 750KB
+- Total: ~750MB
 
 ---
 
@@ -784,9 +781,9 @@ src/release/release-manager.ts
 
 ### External Dependencies
 
--   **Browser APIs**: OPFS, Web Crypto
--   **Worker Protocol**: SqliteEvent, sendMsg
--   **Mutex**: runMutex for serialization
+- **Browser APIs**: OPFS, Web Crypto
+- **Worker Protocol**: SqliteEvent, sendMsg
+- **Mutex**: runMutex for serialization
 
 ---
 
@@ -794,22 +791,21 @@ src/release/release-manager.ts
 
 ### Unit Tests
 
--   No dedicated unit tests for release hashing/versioning yet.
--   Coverage is exercised via E2E release tests (hash mismatch, release apply, rollback).
+- No dedicated unit tests for release hashing/versioning yet.
+- Coverage is exercised via E2E release tests (hash mismatch, release apply, rollback).
 
 ### E2E Tests
 
--   **Release Application**: `tests/e2e/release.e2e.test.ts`
+- **Release Application**: `tests/e2e/release.e2e.test.ts`
+  - Migration application
+  - Hash validation
+  - Metadata row creation
+  - Version directory creation
 
-    -   Migration application
-    -   Hash validation
-    -   Metadata row creation
-    -   Version directory creation
-
--   **Dev Tooling**: `tests/e2e/release.e2e.test.ts`
-    -   devTool.release() creation
-    -   devTool.rollback() behavior
-    -   Rollback constraints
+- **Dev Tooling**: `tests/e2e/release.e2e.test.ts`
+  - devTool.release() creation
+  - devTool.rollback() behavior
+  - Rollback constraints
 
 ---
 
@@ -831,9 +827,9 @@ src/release/release-manager.ts
 
 **Enforcement**:
 
--   Release configs validated against metadata on every open
--   Hash mismatch throws error
--   Cannot modify released SQL (only add new versions)
+- Release configs validated against metadata on every open
+- Hash mismatch throws error
+- Cannot modify released SQL (only add new versions)
 
 ### Metadata Lock
 
@@ -855,17 +851,17 @@ src/release/release-manager.ts
 
 **Related Design Documents**:
 
--   [Back to Modules](./)
--   [Database Schema](../02-schema/01-database.md) - Metadata database structure
+- [Back to Modules](./)
+- [Database Schema](../02-schema/01-database.md) - Metadata database structure
 
 **All Design Documents**:
 
--   [Contracts](../01-contracts/) - API, Events, Errors
--   [Schema](../02-schema/) - Database, Migrations
+- [Contracts](../01-contracts/) - API, Events, Errors
+- [Schema](../02-schema/) - Database, Migrations
 
 **Related ADRs**:
 
--   [ADR-0004: Release Versioning](../../04-adr/0004-release-versioning-system.md) - Versioning system
--   [ADR-0003: Mutex Queue](../../04-adr/0003-mutex-queue-concurrency.md) - Metadata lock
+- [ADR-0004: Release Versioning](../../04-adr/0004-release-versioning-system.md) - Versioning system
+- [ADR-0003: Mutex Queue](../../04-adr/0003-mutex-queue-concurrency.md) - Metadata lock
 
 **Back to**: [Spec Index](../../00-control/00-spec.md)

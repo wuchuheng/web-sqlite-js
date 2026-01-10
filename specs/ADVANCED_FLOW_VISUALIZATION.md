@@ -10,17 +10,17 @@ Enhance the homepage demo by transforming static connectors into "Active Data Pi
 
 - **Component:** Create (or refactor into) `SmartConnector.vue`.
 - **Logic:**
-    - If components are in a single row/column, use a **Straight Path**.
-    - If components are offset (e.g., Console to Table in LG layout), use a **Cubic Bezier Path** for a more "organic" feel than the current quadratic one.
+  - If components are in a single row/column, use a **Straight Path**.
+  - If components are offset (e.g., Console to Table in LG layout), use a **Cubic Bezier Path** for a more "organic" feel than the current quadratic one.
 - **Wobble Effect:** Introduce a slight "hand-drawn" variance to the SVG paths using a small perturbation algorithm (simulating `Rough.js` style) to match the project's sketch aesthetic.
 
 ### 2. Flow Animation System
 
 - **Packets:** Small circles (matches dot style) that move along the SVG path.
 - **Trigger:** When `runQuery` is called in `HomePage.vue`, a sequence of packets is spawned:
-    1. `Console` -> `Worker` (Command packet).
-    2. `Worker` <-> `OPFS` (I/O packets, bidirectional).
-    3. `Worker` -> `Table` (Result packet).
+  1. `Console` -> `Worker` (Command packet).
+  2. `Worker` <-> `OPFS` (I/O packets, bidirectional).
+  3. `Worker` -> `Table` (Result packet).
 - **Non-Blocking Visualization:** Even while packets are moving between Worker and OPFS, the Console should remain interactable (e.g., hover effects or cursor blinking) to reinforce the "non-blocking" message.
 
 ### 3. Reactive States
@@ -43,11 +43,11 @@ Use the `<animateMotion>` element or a CSS `offset-path` approach:
 
 ```html
 <circle r="3" fill="#c6f0b3">
-    <animateMotion
-        dur="0.8s"
-        repeatCount="1"
-        path="...same as connector path..."
-    />
+  <animateMotion
+    dur="0.8s"
+    repeatCount="1"
+    path="...same as connector path..."
+  />
 </circle>
 ```
 

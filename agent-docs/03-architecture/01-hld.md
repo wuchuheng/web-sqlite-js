@@ -10,21 +10,21 @@ TEMPLATE SOURCE
 
 ## 1) Architecture Style & Principles
 
--   **Pattern**: Worker-Based Client-Side Architecture (Web Worker + OPFS)
--   **Key Principles**:
-    -   **Non-blocking by default**: All database operations execute in a dedicated Web Worker, ensuring the main thread never blocks
-    -   **Type safety first**: Full TypeScript API with strict type definitions for all operations
-    -   **SharedArrayBuffer required**: Environment must be cross-origin isolated (COOP/COEP); library fails fast otherwise
-    -   **Mutex-serialized operations**: Single-threaded SQLite access via mutex queue prevents race conditions
-    -   **Versioned persistence**: OPFS-based storage with release management for schema evolution
-    -   **Developer experience**: Simple async/await API abstracting worker communication complexity
-    -   **Global accessibility** (v2.0.0): Direct database access via `window.__web_sqlite` namespace
-    -   **Enhanced observability** (v2.0.0): Structured logging API and database change events
+- **Pattern**: Worker-Based Client-Side Architecture (Web Worker + OPFS)
+- **Key Principles**:
+  - **Non-blocking by default**: All database operations execute in a dedicated Web Worker, ensuring the main thread never blocks
+  - **Type safety first**: Full TypeScript API with strict type definitions for all operations
+  - **SharedArrayBuffer required**: Environment must be cross-origin isolated (COOP/COEP); library fails fast otherwise
+  - **Mutex-serialized operations**: Single-threaded SQLite access via mutex queue prevents race conditions
+  - **Versioned persistence**: OPFS-based storage with release management for schema evolution
+  - **Developer experience**: Simple async/await API abstracting worker communication complexity
+  - **Global accessibility** (v2.0.0): Direct database access via `window.__web_sqlite` namespace
+  - **Enhanced observability** (v2.0.0): Structured logging API and database change events
 
 ## 2) System Boundary (C4 Context)
 
--   **Users**: Frontend web developers building offline-first or data-intensive applications
--   **External Systems**: Web Browser APIs (OPFS, Web Workers, SharedArrayBuffer)
+- **Users**: Frontend web developers building offline-first or data-intensive applications
+- **External Systems**: Web Browser APIs (OPFS, Web Workers, SharedArrayBuffer)
 
 ```mermaid
 C4Context
@@ -43,27 +43,27 @@ C4Context
 
 **Context Notes**:
 
--   **Browser Requirements**: Modern browsers (Chrome/Edge/Opera) with OPFS and SharedArrayBuffer support
--   **Deployment Constraints**: Requires COOP/COEP headers for SharedArrayBuffer availability
--   **Build Integration**: Library bundled via Vite, consumed by user applications via npm
--   **Global Access** (v2.0.0): `window.__web_sqlite` namespace provides direct database access from anywhere in the application
+- **Browser Requirements**: Modern browsers (Chrome/Edge/Opera) with OPFS and SharedArrayBuffer support
+- **Deployment Constraints**: Requires COOP/COEP headers for SharedArrayBuffer availability
+- **Build Integration**: Library bundled via Vite, consumed by user applications via npm
+- **Global Access** (v2.0.0): `window.__web_sqlite` namespace provides direct database access from anywhere in the application
 
 ## 3) Containers & Tech Stack (C4 Container)
 
 ### 3.1 Core Containers
 
--   **Main Thread**: TypeScript/JavaScript (Reason: User API layer, async coordination, registry management)
--   **Worker Bridge**: TypeScript/JavaScript (Reason: Message passing abstraction, promise management, log forwarding)
--   **Web Worker**: SQLite WASM + JavaScript (Reason: Off-main-thread execution, SQLite engine)
--   **OPFS Storage**: Browser API (Reason: Persistent file-backed storage, survives browser restarts)
--   **Metadata Database**: SQLite (Reason: Version tracking, release history)
+- **Main Thread**: TypeScript/JavaScript (Reason: User API layer, async coordination, registry management)
+- **Worker Bridge**: TypeScript/JavaScript (Reason: Message passing abstraction, promise management, log forwarding)
+- **Web Worker**: SQLite WASM + JavaScript (Reason: Off-main-thread execution, SQLite engine)
+- **OPFS Storage**: Browser API (Reason: Persistent file-backed storage, survives browser restarts)
+- **Metadata Database**: SQLite (Reason: Version tracking, release history)
 
 ### 3.2 v2.0.0 New Components
 
--   **Database Registry**: TypeScript Singleton (Reason: Track opened database instances, prevent duplicate opens)
--   **Log Dispatcher**: TypeScript (Reason: Forward structured logs to registered callbacks)
--   **Event Emitter**: TypeScript (Reason: Dispatch database open/close events to subscribers)
--   **Global Namespace**: TypeScript (Reason: Initialize `window.__web_sqlite` for direct database access)
+- **Database Registry**: TypeScript Singleton (Reason: Track opened database instances, prevent duplicate opens)
+- **Log Dispatcher**: TypeScript (Reason: Forward structured logs to registered callbacks)
+- **Event Emitter**: TypeScript (Reason: Dispatch database open/close events to subscribers)
+- **Global Namespace**: TypeScript (Reason: Initialize `window.__web_sqlite` for direct database access)
 
 ```mermaid
 C4Container
@@ -95,32 +95,32 @@ C4Container
 
 **Technology Rationale**:
 
--   **SQLite WASM**: Industry-standard SQL engine compiled to WebAssembly for near-native performance
--   **Web Worker**: Prevents main thread blocking, enabling responsive UI during database operations
--   **OPFS**: Provides true file-backed storage with synchronous access within worker context
--   **Mutex Queue**: Ensures sequential SQLite operations (SQLite is not thread-safe)
--   **TypeScript**: Full type safety for API contracts and query results
--   **Database Registry** (v2.0.0): Singleton pattern ensures single source of truth for opened databases
--   **Log Dispatcher** (v2.0.0): Observer pattern enables multiple independent log listeners
--   **Event Emitter** (v2.0.0): Pub-sub pattern for database lifecycle events
--   **Global Namespace** (v2.0.0): Browser window object provides cross-module database access
+- **SQLite WASM**: Industry-standard SQL engine compiled to WebAssembly for near-native performance
+- **Web Worker**: Prevents main thread blocking, enabling responsive UI during database operations
+- **OPFS**: Provides true file-backed storage with synchronous access within worker context
+- **Mutex Queue**: Ensures sequential SQLite operations (SQLite is not thread-safe)
+- **TypeScript**: Full type safety for API contracts and query results
+- **Database Registry** (v2.0.0): Singleton pattern ensures single source of truth for opened databases
+- **Log Dispatcher** (v2.0.0): Observer pattern enables multiple independent log listeners
+- **Event Emitter** (v2.0.0): Pub-sub pattern for database lifecycle events
+- **Global Namespace** (v2.0.0): Browser window object provides cross-module database access
 
 ## 4) Data Architecture Strategy
 
--   **Ownership**:
-    -   **Active Database**: Primary application data, owned by user application
-    -   **Metadata Database**: Release versioning history, owned by library internals
-    -   **Versioned Databases**: Isolated snapshots per release, owned by release manager
-    -   **Database Registry** (v2.0.0): Track opened database instances, owned by library internals
--   **Caching**:
-    -   **Worker State**: Active SQLite connections maintained in worker memory
-    -   **No External Cache**: All data persisted directly to OPFS
-    -   **Registry Cache** (v2.0.0): In-memory registry tracks opened databases (cleared on page unload)
--   **Consistency**:
-    -   **Strong Consistency**: ACID transactions within single database operations
-    -   **Sequential Execution**: Mutex queue ensures no concurrent writes to same database
-    -   **Release Isolation**: Each version has isolated database file, preventing cross-version contamination
-    -   **Registry Consistency** (v2.0.0): Database name lock prevents duplicate opens
+- **Ownership**:
+  - **Active Database**: Primary application data, owned by user application
+  - **Metadata Database**: Release versioning history, owned by library internals
+  - **Versioned Databases**: Isolated snapshots per release, owned by release manager
+  - **Database Registry** (v2.0.0): Track opened database instances, owned by library internals
+- **Caching**:
+  - **Worker State**: Active SQLite connections maintained in worker memory
+  - **No External Cache**: All data persisted directly to OPFS
+  - **Registry Cache** (v2.0.0): In-memory registry tracks opened databases (cleared on page unload)
+- **Consistency**:
+  - **Strong Consistency**: ACID transactions within single database operations
+  - **Sequential Execution**: Mutex queue ensures no concurrent writes to same database
+  - **Release Isolation**: Each version has isolated database file, preventing cross-version contamination
+  - **Registry Consistency** (v2.0.0): Database name lock prevents duplicate opens
 
 **Data Flow Strategy**:
 
@@ -145,73 +145,73 @@ Registered Callbacks (User Code)
 
 ### 5.1 Authentication & Authorization
 
--   **AuthN**: Not applicable (client-side library, no server authentication)
--   **AuthZ**: Not applicable (browser same-origin policy provides isolation)
--   **Access Control**: OPFS restricts access to same-origin, prevents cross-origin data access
+- **AuthN**: Not applicable (client-side library, no server authentication)
+- **AuthZ**: Not applicable (browser same-origin policy provides isolation)
+- **Access Control**: OPFS restricts access to same-origin, prevents cross-origin data access
 
 ### 5.2 Observability (Enhanced in v2.0.0)
 
--   **Logs**:
-    -   **Debug Mode** (v1.x): Optional SQL execution logging with timing (`debug: true` option)
-    -   **Console.debug**: Structured log messages with `{ sql, duration, bind }` format
-    -   **Worker Logs**: Console.debug output from worker for initialization and errors
-    -   **Structured Logging API** (v2.0.0): `db.onLog(callback)` for programmatic log access
-        -   **Log Levels**: `'info' | 'debug' | 'error'`
-        -   **Log Entry Format**: `{ level: LogLevel, data: unknown }`
-        -   **Multiple Listeners**: Observer pattern allows multiple concurrent callbacks
-        -   **Cancel Function**: Each subscription returns unsubscribe function
-        -   **Independent from Debug Mode**: Both can work simultaneously
--   **Metrics**:
-    -   **Query Timing**: `performance.now()` measurements for each SQL execution
-    -   **Changes Tracking**: `db.changes()` returns affected row count
-    -   **Last Insert ID**: `last_insert_rowid()` for auto-increment tracking
--   **Events** (v2.0.0):
-    -   **Database Change Events**: `window.__web_sqlite.onDatabaseChange(callback)`
-    -   **Event Types**: `'opened' | 'closed'`
-    -   **Event Data**: `{ action, dbName, databases[] }`
-    -   **Subscription Management**: Returns cancel function for cleanup
--   **Global Registry** (v2.0.0):
-    -   **Direct Access**: `window.__web_sqlite.databases[dbName]`
-    -   **Read-Only**: Registry is externally read-only (internal updates only)
-    -   **DevTools Integration**: Enables browser DevTools to inspect active databases
--   **Tracing**: Not implemented (client-side library, no distributed tracing)
+- **Logs**:
+  - **Debug Mode** (v1.x): Optional SQL execution logging with timing (`debug: true` option)
+  - **Console.debug**: Structured log messages with `{ sql, duration, bind }` format
+  - **Worker Logs**: Console.debug output from worker for initialization and errors
+  - **Structured Logging API** (v2.0.0): `db.onLog(callback)` for programmatic log access
+    - **Log Levels**: `'info' | 'debug' | 'error'`
+    - **Log Entry Format**: `{ level: LogLevel, data: unknown }`
+    - **Multiple Listeners**: Observer pattern allows multiple concurrent callbacks
+    - **Cancel Function**: Each subscription returns unsubscribe function
+    - **Independent from Debug Mode**: Both can work simultaneously
+- **Metrics**:
+  - **Query Timing**: `performance.now()` measurements for each SQL execution
+  - **Changes Tracking**: `db.changes()` returns affected row count
+  - **Last Insert ID**: `last_insert_rowid()` for auto-increment tracking
+- **Events** (v2.0.0):
+  - **Database Change Events**: `window.__web_sqlite.onDatabaseChange(callback)`
+  - **Event Types**: `'opened' | 'closed'`
+  - **Event Data**: `{ action, dbName, databases[] }`
+  - **Subscription Management**: Returns cancel function for cleanup
+- **Global Registry** (v2.0.0):
+  - **Direct Access**: `window.__web_sqlite.databases[dbName]`
+  - **Read-Only**: Registry is externally read-only (internal updates only)
+  - **DevTools Integration**: Enables browser DevTools to inspect active databases
+- **Tracing**: Not implemented (client-side library, no distributed tracing)
 
 ### 5.3 Error Handling
 
--   **Global Strategy**:
-    -   **Typed Errors**: Error objects with `name`, `message`, `stack` preserved across worker boundary
-    -   **Promise Rejection**: All errors propagated as rejected promises to main thread
-    -   **Transaction Rollback**: Automatic ROLLBACK on transaction errors
-    -   **Release Validation**: Hash mismatch errors for release integrity violations
-    -   **Database Lock Errors** (v2.0.0): Throws when opening already-opened database
--   **Error Types**:
-    -   **Initialization Errors**: SharedArrayBuffer unavailable, invalid filename
-    -   **SQL Execution Errors**: Syntax errors, constraint violations, table not found
-    -   **Release Errors**: Hash mismatches, version conflicts, rollback failures
-    -   **OPFS Errors**: File not found, quota exceeded, permission denied
-    -   **Registry Errors** (v2.0.0): Database already open, invalid database name
--   **Stack Trace Preservation**: Worker errors reconstructed in main thread with original stack traces
--   **Callback Error Isolation** (v2.0.0): `onLog` callback errors don't break database operations
+- **Global Strategy**:
+  - **Typed Errors**: Error objects with `name`, `message`, `stack` preserved across worker boundary
+  - **Promise Rejection**: All errors propagated as rejected promises to main thread
+  - **Transaction Rollback**: Automatic ROLLBACK on transaction errors
+  - **Release Validation**: Hash mismatch errors for release integrity violations
+  - **Database Lock Errors** (v2.0.0): Throws when opening already-opened database
+- **Error Types**:
+  - **Initialization Errors**: SharedArrayBuffer unavailable, invalid filename
+  - **SQL Execution Errors**: Syntax errors, constraint violations, table not found
+  - **Release Errors**: Hash mismatches, version conflicts, rollback failures
+  - **OPFS Errors**: File not found, quota exceeded, permission denied
+  - **Registry Errors** (v2.0.0): Database already open, invalid database name
+- **Stack Trace Preservation**: Worker errors reconstructed in main thread with original stack traces
+- **Callback Error Isolation** (v2.0.0): `onLog` callback errors don't break database operations
 
 ### 5.4 Concurrency Control
 
--   **Mutex Queue**: Serializes all database operations (prevents race conditions)
--   **Database Lock Registry** (v2.0.0): Prevents opening same database name twice
-    -   **Lock Scope**: Per normalized database name (e.g., "myapp.sqlite3")
-    -   **Lock Duration**: From `openDB()` until `close()`
-    -   **Lock Release**: Automatic on `close()` or page unload
-    -   **Multiple DBs Allowed**: Different database names can be opened simultaneously
--   **Worker Isolation**: All SQLite operations run in single worker thread
+- **Mutex Queue**: Serializes all database operations (prevents race conditions)
+- **Database Lock Registry** (v2.0.0): Prevents opening same database name twice
+  - **Lock Scope**: Per normalized database name (e.g., "myapp.sqlite3")
+  - **Lock Duration**: From `openDB()` until `close()`
+  - **Lock Release**: Automatic on `close()` or page unload
+  - **Multiple DBs Allowed**: Different database names can be opened simultaneously
+- **Worker Isolation**: All SQLite operations run in single worker thread
 
 ### 5.5 Global Namespace (v2.0.0)
 
--   **Namespace**: `window.__web_sqlite`
--   **Properties**:
-    -   `databases`: `Record<string, DBInterface>` - Direct database instance access
-    -   `onDatabaseChange(callback)`: Subscribe to open/close events
--   **Non-enumerable**: Namespace property doesn't appear in `Object.keys(window)`
--   **Initialization**: Created on library load (IIFE)
--   **Lifetime**: Cleared on page unload/refresh
+- **Namespace**: `window.__web_sqlite`
+- **Properties**:
+  - `databases`: `Record<string, DBInterface>` - Direct database instance access
+  - `onDatabaseChange(callback)`: Subscribe to open/close events
+- **Non-enumerable**: Namespace property doesn't appear in `Object.keys(window)`
+- **Initialization**: Created on library load (IIFE)
+- **Lifetime**: Cleared on page unload/refresh
 
 ## 6) Code Structure Strategy (High-Level File Tree)
 
@@ -288,15 +288,15 @@ Registered Callbacks (User Code)
 
 **Key Design Decisions**:
 
--   **Vendored WASM**: SQLite WASM module bundled in source (`jswasm/`), not external dependency
--   **Worker Protocol**: Message-based communication with request/response pattern via ID mapping
--   **Mutex Queue**: All database operations serialized through single mutex to prevent race conditions
--   **Release Isolation**: Each database version stored in separate OPFS directory for rollback capability
--   **Metadata Separation**: `release.sqlite3` metadata database separate from user data for version tracking
--   **Database Registry** (v2.0.0): Singleton pattern ensures single source of truth for opened databases
--   **Log Dispatcher** (v2.0.0): Observer pattern enables multiple independent log listeners per database
--   **Event Emitter** (v2.0.0): Pub-sub pattern for database lifecycle events across all databases
--   **Global Namespace** (v2.0.0): IIFE initialization on library load creates `window.__web_sqlite`
+- **Vendored WASM**: SQLite WASM module bundled in source (`jswasm/`), not external dependency
+- **Worker Protocol**: Message-based communication with request/response pattern via ID mapping
+- **Mutex Queue**: All database operations serialized through single mutex to prevent race conditions
+- **Release Isolation**: Each database version stored in separate OPFS directory for rollback capability
+- **Metadata Separation**: `release.sqlite3` metadata database separate from user data for version tracking
+- **Database Registry** (v2.0.0): Singleton pattern ensures single source of truth for opened databases
+- **Log Dispatcher** (v2.0.0): Observer pattern enables multiple independent log listeners per database
+- **Event Emitter** (v2.0.0): Pub-sub pattern for database lifecycle events across all databases
+- **Global Namespace** (v2.0.0): IIFE initialization on library load creates `window.__web_sqlite`
 
 ## 7) Component Diagram (v2.0.0 Architecture)
 
@@ -398,15 +398,15 @@ sequenceDiagram
 
 **Related Architecture Documents**:
 
--   [03 Deployment](./03-deployment.md) - Deployment and infrastructure
--   [Back to Spec Index](../00-control/00-spec.md)
+- [03 Deployment](./03-deployment.md) - Deployment and infrastructure
+- [Back to Spec Index](../00-control/00-spec.md)
 
 **Related Feasibility Documents**:
 
--   [01 Options Analysis](../02-feasibility/01-options.md) - Selected architecture option
+- [01 Options Analysis](../02-feasibility/01-options.md) - Selected architecture option
 
 **Related Feature Documents**:
 
--   [F-001: v2.0.0 Enhanced Logging](../01-discovery/features/F-001-v2-logging-direct-access.md) - Feature specification
+- [F-001: v2.0.0 Enhanced Logging](../01-discovery/features/F-001-v2-logging-direct-access.md) - Feature specification
 
 **Continue to**: [Stage 4: ADR Index](../04-adr/) - Architecture decision records

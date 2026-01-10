@@ -17,7 +17,7 @@ Based on technical research, the most robust and performant way to reveal a **da
 ### 2. Synchronized Motion Path
 
 - **Arrow Movement:** The arrow must be positioned using the quadratic Bezier formula:
-    - $P(progress) = (1-progress)^2 P_1 + 2(1-progress)progress P_c + progress^2 P_3$
+  - $P(progress) = (1-progress)^2 P_1 + 2(1-progress)progress P_c + progress^2 P_3$
 - **Arrow Rotation:** The rotation must match the tangent of the curve at the current `progress`.
 - **Synchronization:** The `progress` value (0 to 1) will simultaneously drive the mask's `stroke-dashoffset` and the arrow's coordinates.
 
@@ -33,18 +33,18 @@ Based on technical research, the most robust and performant way to reveal a **da
 - **Duration:** 800ms - 1000ms.
 - **Easing:** `cubic-bezier(0.4, 0, 0.2, 1)` for a smooth start and tactile finish.
 - **Visuals:**
-    - The arrow moves along the curve.
-    - The dashed line is "painted" behind the arrow.
-    - The text/icons at the destination (e.g., Worker pulse) trigger once the arrow arrives ($progress = 1$).
+  - The arrow moves along the curve.
+  - The dashed line is "painted" behind the arrow.
+  - The text/icons at the destination (e.g., Worker pulse) trigger once the arrow arrives ($progress = 1$).
 
 ### 3. Real-Time Position Tracking (Debounced)
 
 - **Requirement:** Connectors must remain attached to elements even when they move or change size (e.g., when the `ResultTable` expands during a transition).
 - **Mechanism:**
-    - Use `ResizeObserver` to monitor the source and destination elements.
-    - Implement a **Debounced Recalculation** strategy:
-        - **Real-Time:** Update positions immediately using `requestAnimationFrame` during high-frequency changes (like animations).
-        - **Debounce:** Ensure a final, precise calculation runs 50ms after the last change to correct any sub-pixel drifts.
+  - Use `ResizeObserver` to monitor the source and destination elements.
+  - Implement a **Debounced Recalculation** strategy:
+    - **Real-Time:** Update positions immediately using `requestAnimationFrame` during high-frequency changes (like animations).
+    - **Debounce:** Ensure a final, precise calculation runs 50ms after the last change to correct any sub-pixel drifts.
 - **Independence:** The `StraightConnector.vue` will become "Smart": instead of receiving static `p1/p2` coordinates, it will receive the target elements and calculate its own anchor points dynamically.
 
 ## Technical Implementation Plan
@@ -58,14 +58,14 @@ Based on technical research, the most robust and performant way to reveal a **da
 
 ```html
 <defs>
-    <mask :id="maskId">
-        <path
-            :d="pathData"
-            stroke="white"
-            :stroke-dasharray="pathLength"
-            :stroke-dashoffset="maskOffset"
-        />
-    </mask>
+  <mask :id="maskId">
+    <path
+      :d="pathData"
+      stroke="white"
+      :stroke-dasharray="pathLength"
+      :stroke-dashoffset="maskOffset"
+    />
+  </mask>
 </defs>
 <path :d="pathData" class="dashed-line" :mask="`url(#${maskId})`" />
 ```

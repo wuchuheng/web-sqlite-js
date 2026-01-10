@@ -147,7 +147,7 @@ npm install web-sqlite-js@latest
 
 ```json
 {
-    "files": ["dist"]
+  "files": ["dist"]
 }
 ```
 
@@ -172,37 +172,37 @@ dist/
 name: Release
 
 on:
-    push:
-        tags:
-            - "v*"
+  push:
+    tags:
+      - "v*"
 
 jobs:
-    release:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v3
-              with:
-                  fetch-depth: 0
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v3
-              with:
-                  node-version: "20"
-                  registry-url: "https://registry.npmjs.org"
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
 
-            - name: Install dependencies
-              run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-            - name: Run tests
-              run: npm test
+      - name: Run tests
+        run: npm test
 
-            - name: Build package
-              run: npm run build
+      - name: Build package
+        run: npm run build
 
-            - name: Publish to npm
-              run: npm publish --access public
-              env:
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 ```
 
 ### 3.2 GitHub Secrets
@@ -433,24 +433,24 @@ chore: upgrade dependencies
 
 1. Update `openDB()` calls:
 
-    ```typescript
-    // Old
-    const db = await openDB("mydb");
+   ```typescript
+   // Old
+   const db = await openDB("mydb");
 
-    // New
-    const db = await openDB("mydb", { debug: false });
-    ```
+   // New
+   const db = await openDB("mydb", { debug: false });
+   ```
 ````
 
 2. Update `exec()` calls:
 
-    ```typescript
-    // Old
-    const result = await db.exec(sql);
+   ```typescript
+   // Old
+   const result = await db.exec(sql);
 
-    // New
-    const { changes, lastInsertRowId } = await db.exec(sql);
-    ```
+   // New
+   const { changes, lastInsertRowId } = await db.exec(sql);
+   ```
 
 ````
 

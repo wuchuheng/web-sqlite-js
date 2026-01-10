@@ -11,13 +11,13 @@ Refine the `ResultTable.vue` transitions into a high-fidelity animation system u
 - **Basic Unit:** The entire `<tr>`.
 - **Keying:** Use `:key="row.id"`.
 - **Sequential Add (Gap First):**
-    1. **Gap Phase:** The table opens an empty, borderless gap at the target position. Table height extends slowly and smoothly.
-    2. **Descent Phase:** The row becomes visible ~3 rows above its target.
-    3. **Clarity transition:** The text starts **heavily blurry** (`filter: blur(8px)`) and gradually becomes sharp as the row slides down into the gap.
+  1. **Gap Phase:** The table opens an empty, borderless gap at the target position. Table height extends slowly and smoothly.
+  2. **Descent Phase:** The row becomes visible ~3 rows above its target.
+  3. **Clarity transition:** The text starts **heavily blurry** (`filter: blur(8px)`) and gradually becomes sharp as the row slides down into the gap.
 - **Sequential Delete (Tear-off First):**
-    1. **Tear-off Phase:** The row detaches and swipes **down and to the right** with a slight rotation.
-    2. **Clarity Transition:** The text starts clear and gradually becomes **blurry** as it moves away.
-    3. **Collapse Phase:** The resulting empty gap slowly contracts, shrinking the table height.
+  1. **Tear-off Phase:** The row detaches and swipes **down and to the right** with a slight rotation.
+  2. **Clarity Transition:** The text starts clear and gradually becomes **blurry** as it moves away.
+  3. **Collapse Phase:** The resulting empty gap slowly contracts, shrinking the table height.
 
 ### 2. Content Transitions (Update)
 
@@ -25,8 +25,8 @@ Refine the `ResultTable.vue` transitions into a high-fidelity animation system u
 - **Visual Logic:** Follows the "Row Unit" behavior but constrained to the cell.
 - **Keying:** Wrap each cell value in a `<Transition name="cell-tactile" mode="out-in">` keyed by value.
 - **Tear-off & Focus:**
-    - **Old Value:** Swipes down-right and becomes blurry.
-    - **New Value:** Slides down from the top of the cell, starting blurry and becoming clear upon arrival.
+  - **Old Value:** Swipes down-right and becomes blurry.
+  - **New Value:** Slides down from the top of the cell, starting blurry and becoming clear upon arrival.
 
 ### 3. Technical Implementation
 

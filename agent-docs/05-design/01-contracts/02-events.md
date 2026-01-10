@@ -7,25 +7,28 @@
 All worker messages follow this structure:
 
 **Request Message**:
+
 ```typescript
 type SqliteReqMsg<T> = {
-  id: number;           // Unique message ID for correlation
-  event: string;        // Event type: "open", "execute", "query", "close"
-  payload?: T;          // Optional event-specific payload
+  id: number; // Unique message ID for correlation
+  event: string; // Event type: "open", "execute", "query", "close"
+  payload?: T; // Optional event-specific payload
 };
 ```
 
 **Success Response**:
+
 ```typescript
 type SqliteResMsg<T> = {
-  id: number;           // Same ID as request
-  success: true;        // Indicates success
-  payload: T;           // Response payload (event-specific)
-  logs?: LogEntry[];    // v2.0.0: Structured logs from worker
+  id: number; // Same ID as request
+  success: true; // Indicates success
+  payload: T; // Response payload (event-specific)
+  logs?: LogEntry[]; // v2.0.0: Structured logs from worker
 };
 ```
 
 **Error Response**:
+
 ```typescript
 type SqliteResMsg<void> = {
   id: number;           // Same ID as request
@@ -54,12 +57,12 @@ type SqliteResMsg<void> = {
 
 ```typescript
 type OpenDBArgs = {
-    filename: string;      // Full database file path in OPFS (e.g., "myapp.sqlite3/release.sqlite3")
-    options?: {
-        debug?: boolean;   // Enable SQL execution logging
-    };
-    target?: "active" | "meta";  // "active" = user data, "meta" = release metadata
-    replace?: boolean;     // Close existing connection before opening (internal use)
+  filename: string; // Full database file path in OPFS (e.g., "myapp.sqlite3/release.sqlite3")
+  options?: {
+    debug?: boolean; // Enable SQL execution logging
+  };
+  target?: "active" | "meta"; // "active" = user data, "meta" = release metadata
+  replace?: boolean; // Close existing connection before opening (internal use)
 };
 ```
 
@@ -186,9 +189,9 @@ sequenceDiagram
 
 ```typescript
 type ExecutePayload = {
-    sql: string; // SQL string to execute
-    bind?: SQLParams; // Bind parameters (positional or named)
-    target?: "active" | "meta"; // Database target (default: "active")
+  sql: string; // SQL string to execute
+  bind?: SQLParams; // Bind parameters (positional or named)
+  target?: "active" | "meta"; // Database target (default: "active")
 };
 ```
 
@@ -196,8 +199,8 @@ type ExecutePayload = {
 
 ```typescript
 type ExecuteResult = {
-    changes: number | bigint; // Number of rows changed
-    lastInsertRowid: number | bigint; // Last inserted row ID
+  changes: number | bigint; // Number of rows changed
+  lastInsertRowid: number | bigint; // Last inserted row ID
 };
 ```
 
@@ -281,9 +284,9 @@ Worker responses now include structured logs:
 ```typescript
 // When debug mode is enabled
 console.debug({
-    sql: "INSERT INTO users (name, email) VALUES (?, ?)",
-    duration: 0.35,
-    bind: ["Alice", "alice@example.com"],
+  sql: "INSERT INTO users (name, email) VALUES (?, ?)",
+  duration: 0.35,
+  bind: ["Alice", "alice@example.com"],
 });
 ```
 
@@ -299,9 +302,9 @@ console.debug({
 
 ```typescript
 type QueryPayload = {
-    sql: string; // SELECT SQL to execute
-    bind?: SQLParams; // Bind parameters (positional or named)
-    target?: "active" | "meta"; // Database target (default: "active")
+  sql: string; // SELECT SQL to execute
+  bind?: SQLParams; // Bind parameters (positional or named)
+  target?: "active" | "meta"; // Database target (default: "active")
 };
 ```
 
@@ -397,9 +400,9 @@ Worker responses now include structured logs:
 ```typescript
 // When debug mode is enabled
 console.debug({
-    sql: "SELECT id, name FROM users",
-    duration: 0.28,
-    bind: [],
+  sql: "SELECT id, name FROM users",
+  duration: 0.28,
+  bind: [],
 });
 ```
 
@@ -473,8 +476,8 @@ type CloseResponse = undefined;
 // Execute in metadata database
 await metaExec("BEGIN IMMEDIATE");
 await metaExec(
-    "INSERT OR REPLACE INTO release_lock (id, lockedAt) VALUES (1, ?)",
-    [new Date().toISOString()],
+  "INSERT OR REPLACE INTO release_lock (id, lockedAt) VALUES (1, ?)",
+  [new Date().toISOString()],
 );
 ```
 
@@ -531,8 +534,8 @@ await metaExec("ROLLBACK");
 
 ```typescript
 type VersionApplication = {
-    config: ReleaseConfigWithHash;
-    mode: "release" | "dev";
+  config: ReleaseConfigWithHash;
+  mode: "release" | "dev";
 };
 ```
 
@@ -573,7 +576,7 @@ type VersionApplication = {
 
 ```typescript
 type RollbackExecution = {
-    targetVersion: string;
+  targetVersion: string;
 };
 ```
 
@@ -584,8 +587,8 @@ type RollbackExecution = {
 3. Validate target version >= latest release
 4. Identify dev versions to remove
 5. For each dev version:
-    - Remove version directory from OPFS
-    - Delete metadata row
+   - Remove version directory from OPFS
+   - Delete metadata row
 6. Switch active database to target version
 
 **Error Conditions**:
@@ -615,9 +618,9 @@ type RollbackExecution = {
 
 ```typescript
 type SqlLogInfo = {
-    sql: string; // Executed SQL
-    duration: number; // Execution time in milliseconds
-    bind?: SQLParams; // Bind parameters used
+  sql: string; // Executed SQL
+  duration: number; // Execution time in milliseconds
+  bind?: SQLParams; // Bind parameters used
 };
 ```
 
@@ -638,7 +641,7 @@ type SqlLogInfo = {
 
 ```typescript
 const db = await openDB("myapp", {
-    debug: true, // Enable logging
+  debug: true, // Enable logging
 });
 ```
 
@@ -661,9 +664,9 @@ const db = await openDB("myapp", {
 
 ```typescript
 type WorkerError = {
-    name: string; // Error class name (e.g., "Error", "TypeError")
-    message: string; // Error message
-    stack: string; // Stack trace
+  name: string; // Error class name (e.g., "Error", "TypeError")
+  message: string; // Error message
+  stack: string; // Stack trace
 };
 ```
 
@@ -687,14 +690,14 @@ type ErrorResponse = {
 ```typescript
 // In worker bridge
 worker.onmessage = (event) => {
-    const { id, success, error } = event.data;
+  const { id, success, error } = event.data;
 
-    if (!success) {
-        const newError = new Error(error.message);
-        newError.name = error.name;
-        newError.stack = error.stack;
-        task.reject(newError);
-    }
+  if (!success) {
+    const newError = new Error(error.message);
+    newError.name = error.name;
+    newError.stack = error.stack;
+    task.reject(newError);
+  }
 };
 ```
 
@@ -747,11 +750,11 @@ worker.onmessage = (event) => {
 ```typescript
 // In worker bridge
 const terminate = () => {
-    worker.terminate();
-    idMapPromise.forEach((task) => {
-        task.reject(new Error("Worker terminated"));
-    });
-    idMapPromise.clear();
+  worker.terminate();
+  idMapPromise.forEach((task) => {
+    task.reject(new Error("Worker terminated"));
+  });
+  idMapPromise.clear();
 };
 ```
 
@@ -773,8 +776,8 @@ const terminate = () => {
 
 ```typescript
 type LogEntry = {
-    level: 'info' | 'debug' | 'error';
-    data: unknown;
+  level: "info" | "debug" | "error";
+  data: unknown;
 };
 ```
 
@@ -851,14 +854,14 @@ sequenceDiagram
 ```typescript
 // Register log listener
 const cancel1 = db.onLog((log) => {
-    console.log(`[${log.level}]`, log.data);
+  console.log(`[${log.level}]`, log.data);
 });
 
 // Register another listener
 const cancel2 = db.onLog((log) => {
-    if (log.level === 'error') {
-        sendToErrorTracking(log.data);
-    }
+  if (log.level === "error") {
+    sendToErrorTracking(log.data);
+  }
 });
 
 // Both callbacks receive the same log entries
@@ -881,9 +884,9 @@ const cancel2 = db.onLog((log) => {
 
 ```typescript
 type DatabaseChangeEvent = {
-    action: 'opened' | 'closed';
-    dbName: string; // Normalized database name (e.g., "myapp.sqlite3")
-    databases: string[]; // All currently opened database names
+  action: "opened" | "closed";
+  dbName: string; // Normalized database name (e.g., "myapp.sqlite3")
+  databases: string[]; // All currently opened database names
 };
 ```
 
@@ -892,8 +895,8 @@ type DatabaseChangeEvent = {
 ```typescript
 // Subscribe via global namespace
 const unsubscribe = window.__web_sqlite.onDatabaseChange((event) => {
-    console.log(`Database ${event.action}: ${event.dbName}`);
-    console.log('Current databases:', event.databases);
+  console.log(`Database ${event.action}: ${event.dbName}`);
+  console.log("Current databases:", event.databases);
 });
 ```
 
@@ -948,29 +951,29 @@ sequenceDiagram
 ```typescript
 // Subscribe to database changes
 const unsubscribe = window.__web_sqlite.onDatabaseChange((event) => {
-    if (event.action === 'opened') {
-        console.log(`✅ Database opened: ${event.dbName}`);
-        // Access the newly opened database directly
-        const db = window.__web_sqlite.databases[event.dbName];
-        console.log('Database instance:', db);
-    } else {
-        console.log(`❌ Database closed: ${event.dbName}`);
-    }
-    console.log('Current databases:', event.databases);
+  if (event.action === "opened") {
+    console.log(`✅ Database opened: ${event.dbName}`);
+    // Access the newly opened database directly
+    const db = window.__web_sqlite.databases[event.dbName];
+    console.log("Database instance:", db);
+  } else {
+    console.log(`❌ Database closed: ${event.dbName}`);
+  }
+  console.log("Current databases:", event.databases);
 });
 
 // Open a database
-await openDB('app');
+await openDB("app");
 // Output: ✅ Database opened: app.sqlite3
 // Output: Current databases: ["app.sqlite3"]
 
 // Open another database
-await openDB('users');
+await openDB("users");
 // Output: ✅ Database opened: users.sqlite3
 // Output: Current databases: ["app.sqlite3", "users.sqlite3"]
 
 // Close first database
-await window.__web_sqlite.databases['app.sqlite3'].close();
+await window.__web_sqlite.databases["app.sqlite3"].close();
 // Output: ❌ Database closed: app.sqlite3
 // Output: Current databases: ["users.sqlite3"]
 
@@ -1222,8 +1225,8 @@ sequenceDiagram
 
 ```typescript
 const getLatestMsgId = (() => {
-    let latestId = 0;
-    return () => ++latestId;
+  let latestId = 0;
+  return () => ++latestId;
 })();
 ```
 
@@ -1237,8 +1240,8 @@ const getLatestMsgId = (() => {
 const idMapPromise: Map<number, Task<unknown>> = new Map();
 
 type Task<T> = {
-    resolve: (value: T) => void;
-    reject: (reason?: unknown) => void;
+  resolve: (value: T) => void;
+  reject: (reason?: unknown) => void;
 };
 ```
 
@@ -1280,9 +1283,9 @@ All message payloads are serialized using the structured clone algorithm:
 ```typescript
 // Worker serializes error
 const serialized = {
-    name: errorObj.name,
-    message: errorObj.message,
-    stack: errorObj.stack,
+  name: errorObj.name,
+  message: errorObj.message,
+  stack: errorObj.stack,
 } as Error;
 
 // Main thread reconstructs error
@@ -1323,7 +1326,7 @@ reconstructed.stack = serialized.stack;
 
 ```typescript
 const db = await openDB("myapp", {
-    debug: true, // Enable SQL logging
+  debug: true, // Enable SQL logging
 });
 ```
 

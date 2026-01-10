@@ -139,9 +139,9 @@ Is code repeated 3+ times?
 - Sub-steps: `1.1`, `2.2`, up to three levels deep.
 - Numeric comments must only be used inside function or method bodies, never at the file, module, or global scope, and never on property declarations.
 - Only the prefixes `1.`, `2.`, and `3.` are permitted:
-    - `1.` is for input handling (validation, preparation). This phase corresponds to the "input" section in computer architecture, where data is received, checked, and prepared before processing.
-    - `2.` is for core processing (business logic). This phase corresponds to the "processing" section in computer architecture, where the system computes, transforms, or manipulates the input data to produce the desired result. Numeric comments with the prefix `2.` should be used to annotate steps that perform calculations, transformations, or any business logic that processes the validated input.
-    - `3.` is for output (return or print result). This phase corresponds to the "output" section in computer architecture, where the processing result is returned, printed, or otherwise delivered as the final output of the function or method. Numeric comments with the prefix `3.` should be used to annotate steps that handle the result of processing and produce the final output.
+  - `1.` is for input handling (validation, preparation). This phase corresponds to the "input" section in computer architecture, where data is received, checked, and prepared before processing.
+  - `2.` is for core processing (business logic). This phase corresponds to the "processing" section in computer architecture, where the system computes, transforms, or manipulates the input data to produce the desired result. Numeric comments with the prefix `2.` should be used to annotate steps that perform calculations, transformations, or any business logic that processes the validated input.
+  - `3.` is for output (return or print result). This phase corresponds to the "output" section in computer architecture, where the processing result is returned, printed, or otherwise delivered as the final output of the function or method. Numeric comments with the prefix `3.` should be used to annotate steps that handle the result of processing and produce the final output.
 - Prefixes like `4.` or higher are invalid and must not be used.
 
 ### 3.2 Numeric Comment Placement Rules
@@ -164,14 +164,14 @@ Is code repeated 3+ times?
 
 ```typescript example 1 - Simple Function
 function example(input) {
-    // 1. Input validation
-    if (!input) throw new Error("Missing input");
+  // 1. Input validation
+  if (!input) throw new Error("Missing input");
 
-    // 2. Core processing
-    const result = process(input);
+  // 2. Core processing
+  const result = process(input);
 
-    // 3. Output
-    return result;
+  // 3. Output
+  return result;
 }
 ```
 
@@ -182,20 +182,20 @@ function example(input) {
  * @returns Boolean indicating the truthiness of the input
  */
 function notNotNotTruth(value: unknown): boolean {
-    // 1. Input handling
-    // 1.1 Check for null or undefined
-    if (value === null || value === undefined) {
-        return false;
-    }
+  // 1. Input handling
+  // 1.1 Check for null or undefined
+  if (value === null || value === undefined) {
+    return false;
+  }
 
-    // 2. Core processing
-    // 2.1 Apply double negation (!!) to get truthiness
-    // 2.2 Apply logical NOT (!) to invert the result
-    const truthValue = !!value;
-    const inverted = !truthValue;
+  // 2. Core processing
+  // 2.1 Apply double negation (!!) to get truthiness
+  // 2.2 Apply logical NOT (!) to invert the result
+  const truthValue = !!value;
+  const inverted = !truthValue;
 
-    // 3. Return result.
-    return !inverted;
+  // 3. Return result.
+  return !inverted;
 }
 ```
 
@@ -207,55 +207,55 @@ function notNotNotTruth(value: unknown): boolean {
  * @throws {PaymentError} If validation or processing fails
  */
 async function processPayment(
-    payment: PaymentDetails,
+  payment: PaymentDetails,
 ): Promise<TransactionResult> {
-    // 1. Input validation and preparation
-    // 1.1 Check for missing payment details
-    if (!payment || !payment.amount || !payment.method) {
-        throw new PaymentError("Missing payment details");
-    }
+  // 1. Input validation and preparation
+  // 1.1 Check for missing payment details
+  if (!payment || !payment.amount || !payment.method) {
+    throw new PaymentError("Missing payment details");
+  }
 
-    // 1.2 Validate payment amount
-    // 1.2.1 Ensure amount is positive
-    if (payment.amount <= 0) {
-        throw new PaymentError("Invalid payment amount");
-    }
+  // 1.2 Validate payment amount
+  // 1.2.1 Ensure amount is positive
+  if (payment.amount <= 0) {
+    throw new PaymentError("Invalid payment amount");
+  }
 
-    // 1.2.2 Ensure supported payment method
-    if (!["credit_card", "paypal", "bank_transfer"].includes(payment.method)) {
-        throw new PaymentError("Unsupported payment method");
-    }
+  // 1.2.2 Ensure supported payment method
+  if (!["credit_card", "paypal", "bank_transfer"].includes(payment.method)) {
+    throw new PaymentError("Unsupported payment method");
+  }
 
-    // 2. Core processing
-    // 2.1 Calculate transaction fees
-    // 2.1.1 Determine base fee
-    const baseFee = payment.amount * 0.02;
+  // 2. Core processing
+  // 2.1 Calculate transaction fees
+  // 2.1.1 Determine base fee
+  const baseFee = payment.amount * 0.02;
 
-    // 2.1.2 Apply method-specific surcharge
-    const surcharge = payment.method === "credit_card" ? 1.5 : 0;
+  // 2.1.2 Apply method-specific surcharge
+  const surcharge = payment.method === "credit_card" ? 1.5 : 0;
 
-    // 2.2 Execute payment and log event
-    try {
-        // 2.2.1 Call external payment API
-        const apiResult = await paymentApi.charge(payment);
+  // 2.2 Execute payment and log event
+  try {
+    // 2.2.1 Call external payment API
+    const apiResult = await paymentApi.charge(payment);
 
-        // 2.2.2 Log successful transaction
-        logger.info("Payment processed", {
-            paymentId: apiResult.id,
-            amount: payment.amount,
-        });
-    } catch (error) {
-        // 2.2.3 Log error and rethrow
-        logger.error("Payment failed", { error, payment });
-        throw new PaymentError("Payment processing failed");
-    }
+    // 2.2.2 Log successful transaction
+    logger.info("Payment processed", {
+      paymentId: apiResult.id,
+      amount: payment.amount,
+    });
+  } catch (error) {
+    // 2.2.3 Log error and rethrow
+    logger.error("Payment failed", { error, payment });
+    throw new PaymentError("Payment processing failed");
+  }
 
-    // 3. Return transaction result
-    return {
-        status: "success",
-        amount: payment.amount,
-        fee: baseFee + surcharge,
-    };
+  // 3. Return transaction result
+  return {
+    status: "success",
+    amount: payment.amount,
+    fee: baseFee + surcharge,
+  };
 }
 ```
 
@@ -263,10 +263,10 @@ async function processPayment(
 
 ```typescript
 function badExample(input) {
-    // 1. This must only handle input logic
-    // 2. This must relate to core logic, not input/output
-    // 3. This must only handle output (return/console)
-    // 4. This is invalid – only 1, 2, 3 as prefix allowed, the 4th phase is not allowed.
+  // 1. This must only handle input logic
+  // 2. This must relate to core logic, not input/output
+  // 3. This must only handle output (return/console)
+  // 4. This is invalid – only 1, 2, 3 as prefix allowed, the 4th phase is not allowed.
 }
 ```
 
@@ -313,15 +313,15 @@ function badExample(input) {
  * @throws {ValidationError} When items array is empty
  */
 function calculateTotal(items: PurchaseItem[], taxRate: number): number {
-    // 1. Input validation
-    if (!items.length) throw new ValidationError("Items required");
+  // 1. Input validation
+  if (!items.length) throw new ValidationError("Items required");
 
-    // 2. Core calculation
-    const subtotal = items.reduce((sum, item) => sum + item.price, 0);
-    const total = subtotal * (1 + taxRate);
+  // 2. Core calculation
+  const subtotal = items.reduce((sum, item) => sum + item.price, 0);
+  const total = subtotal * (1 + taxRate);
 
-    // 3. Output formatting
-    return Math.round(total * 100) / 100;
+  // 3. Output formatting
+  return Math.round(total * 100) / 100;
 }
 ```
 
@@ -355,19 +355,19 @@ function calculateTotal(items: PurchaseItem[], taxRate: number): number {
  * @returns Registration result
  */
 async function registerUser(user: UserData): Promise<RegistrationResult> {
-    // 1. Input validation
-    if (!user.email) {
-        logger.error("Registration failed: missing email", { user });
-        throw new ValidationError("Email required");
-    }
+  // 1. Input validation
+  if (!user.email) {
+    logger.error("Registration failed: missing email", { user });
+    throw new ValidationError("Email required");
+  }
 
-    // 2. Core processing
-    logger.info("Registering user", { email: user.email });
-    const result = await registrationService.register(user);
+  // 2. Core processing
+  logger.info("Registering user", { email: user.email });
+  const result = await registrationService.register(user);
 
-    // 3. Output handling
-    logger.info("Registration successful", { userId: result.id });
-    return result;
+  // 3. Output handling
+  logger.info("Registration successful", { userId: result.id });
+  return result;
 }
 ```
 
@@ -507,14 +507,14 @@ Use empty lines to visually separate distinct logical steps, categories, or unre
 
 ```typescript
 function processOrder(order) {
-    // Validate input
-    if (!order) throw new Error("Order required");
+  // Validate input
+  if (!order) throw new Error("Order required");
 
-    // Calculate totals
-    const total = order.items.reduce((sum, item) => sum + item.price, 0);
+  // Calculate totals
+  const total = order.items.reduce((sum, item) => sum + item.price, 0);
 
-    // Return result
-    return { total };
+  // Return result
+  return { total };
 }
 ```
 
@@ -522,11 +522,11 @@ function processOrder(order) {
 
 ```json
 {
-    "host": "localhost",
+  "host": "localhost",
 
-    "port": 8080,
+  "port": 8080,
 
-    "useSSL": false
+  "useSSL": false
 }
 ```
 
@@ -577,45 +577,45 @@ PB --> TC[techContext.md]
 ### Core Files (Required)
 
 1. `projectbrief.md`
-    - Foundation document that shapes all other files
-    - Created at project start if it doesn't exist
-    - Defines core requirements and goals
-    - Source of truth for project scope
+   - Foundation document that shapes all other files
+   - Created at project start if it doesn't exist
+   - Defines core requirements and goals
+   - Source of truth for project scope
 
 2. `productContext.md`
-    - Why this project exists
-    - Problems it solves
-    - How it should work
-    - User experience goals
+   - Why this project exists
+   - Problems it solves
+   - How it should work
+   - User experience goals
 
 3. `activeContext.md`
-    - Current work focus
-    - Recent changes
-    - Next steps
-    - Active decisions and considerations
-    - Important patterns and preferences
-    - Learnings and project insights
+   - Current work focus
+   - Recent changes
+   - Next steps
+   - Active decisions and considerations
+   - Important patterns and preferences
+   - Learnings and project insights
 
 4. `systemPatterns.md`
-    - System architecture
-    - Key technical decisions
-    - Design patterns in use
-    - Component relationships
-    - Critical implementation paths
+   - System architecture
+   - Key technical decisions
+   - Design patterns in use
+   - Component relationships
+   - Critical implementation paths
 
 5. `techContext.md`
-    - Technologies used
-    - Development setup
-    - Technical constraints
-    - Dependencies
-    - Tool usage patterns
+   - Technologies used
+   - Development setup
+   - Technical constraints
+   - Dependencies
+   - Tool usage patterns
 
 6. `progress.md`
-    - What works
-    - What's left to build
-    - Current status
-    - Known issues
-    - Evolution of project decisions
+   - What works
+   - What's left to build
+   - Current status
+   - Known issues
+   - Evolution of project decisions
 
 ### Additional Context
 

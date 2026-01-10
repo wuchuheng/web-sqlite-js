@@ -239,63 +239,63 @@ interface ReleaseConfig {
 ### Technical risks
 
 - **R1**: **Browser compatibility changes** - Future browser updates may restrict SharedArrayBuffer or OPFS APIs
-    - _Mitigation_: Monitor browser changelogs, provide clear documentation of requirements
+  - _Mitigation_: Monitor browser changelogs, provide clear documentation of requirements
 - **R2**: **OPFS quota limits** - Users may hit storage limits with large databases
-    - _Mitigation_: Document quota management, provide guidance for large datasets
+  - _Mitigation_: Document quota management, provide guidance for large datasets
 - **R3**: **WASM bundle size** - SQLite WASM module is large (~500KB-1MB) affecting page load
-    - _Mitigation_: Optimize WASM, use lazy loading, document size expectations
+  - _Mitigation_: Optimize WASM, use lazy loading, document size expectations
 - **R4**: **Memory leaks** - Worker or file handle leaks could degrade performance
-    - _Mitigation_: Comprehensive testing, proper cleanup in close() method
+  - _Mitigation_: Comprehensive testing, proper cleanup in close() method
 
 ### API design risks
 
 - **R5**: **Release system complexity** - Versioning system may be confusing for users
-    - _Mitigation_: Clear documentation, examples, and error messages
+  - _Mitigation_: Clear documentation, examples, and error messages
 - **R6**: **Type inference limitations** - Generic query types may not always infer correctly
-    - _Mitigation_: Provide type casting examples, document limitations
+  - _Mitigation_: Provide type casting examples, document limitations
 - **R7**: **Error handling complexity** - Worker boundary errors may lose context
-    - _Mitigation_: Preserve stack traces, provide error codes, document common errors
+  - _Mitigation_: Preserve stack traces, provide error codes, document common errors
 
 ### Development risks
 
 - **R8**: **Test flakiness** - E2E tests may be flaky due to timing or browser issues
-    - _Mitigation_: Proper test isolation, retries, clear test data management
+  - _Mitigation_: Proper test isolation, retries, clear test data management
 - **R9**: **Documentation drift** - Code changes may outpace documentation updates
-    - _Mitigation_: Require documentation updates in PRs, automated type doc generation
+  - _Mitigation_: Require documentation updates in PRs, automated type doc generation
 - **R10**: **SQLite WASM updates** - Upstream SQLite WASM changes may break compatibility
-    - _Mitigation_: Pin specific WASM version, test thoroughly before upgrades
+  - _Mitigation_: Pin specific WASM version, test thoroughly before upgrades
 
 ### Adoption risks
 
 - **R11**: **COOP/COEP header friction** - Required headers may be difficult for some users to configure
-    - _Mitigation_: Provide server configuration examples for common platforms
+  - _Mitigation_: Provide server configuration examples for common platforms
 - **R12**: **Learning curve** - Users unfamiliar with SQL or workers may struggle
-    - _Mitigation_: Comprehensive tutorials, examples, and quick start guide
+  - _Mitigation_: Comprehensive tutorials, examples, and quick start guide
 - **R13**: **Competing solutions** - Other browser databases (Dexie.js, PouchDB) may be preferred
-    - _Mitigation_: Emphasize SQLite advantages, migration guides, unique features
+  - _Mitigation_: Emphasize SQLite advantages, migration guides, unique features
 
 ### Security risks
 
 - **R14**: **SQL injection** - Poorly constructed queries could introduce vulnerabilities
-    - _Mitigation_: Strongly recommend parameterized queries, document security best practices
+  - _Mitigation_: Strongly recommend parameterized queries, document security best practices
 - **R15**: **OPFS access** - Malicious scripts could access database files
-    - _Mitigation_: Document same-origin protections, user education
+  - _Mitigation_: Document same-origin protections, user education
 
 ### Performance risks
 
 - **R16**: **Large query results** - Big result sets could cause memory issues
-    - _Mitigation_: Document pagination strategies, provide streaming examples (future)
+  - _Mitigation_: Document pagination strategies, provide streaming examples (future)
 - **R17**: **Mutex bottleneck** - Sequential operations may limit throughput
-    - _Mitigation_: Document architecture, provide batch operation guidance (future)
+  - _Mitigation_: Document architecture, provide batch operation guidance (future)
 - **R18**: **Worker overhead** - Message passing latency for small queries
-    - _Mitigation_: Benchmark and document typical latencies, optimize for common cases
+  - _Mitigation_: Benchmark and document typical latencies, optimize for common cases
 
 ### Maintenance risks
 
 - **R19**: **Single maintainer** - Project depends heavily on one developer
-    - _Mitigation_: Encourage contributions, clear code structure, good documentation
+  - _Mitigation_: Encourage contributions, clear code structure, good documentation
 - **R20**: **Time zone issues** - Global users may have delayed support
-    - _Mitigation_: Async communication, comprehensive documentation, community support
+  - _Mitigation_: Async communication, comprehensive documentation, community support
 
 ---
 

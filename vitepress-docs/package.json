@@ -1,26 +1,26 @@
 {
-    "name": "@web-sqlite-js/vitepress-docs",
-    "version": "0.0.1",
-    "type": "module",
-    "private": true,
-    "scripts": {
-        "dev": "vitepress dev .",
-        "build": "vitepress build .",
-        "preview": "vitepress preview .",
-        "icons": "tsx ./scripts/generate-doc-icons.ts"
-    },
-    "devDependencies": {
-        "@types/node": "^25.0.1",
-        "typescript": "^5.9.3",
-        "vitepress": "^1.6.4",
-        "@vite-pwa/vitepress": "^0.5.3",
-        "tsx": "^4.21.0"
-    },
-    "dependencies": {
-        "@codemirror/autocomplete": "^6.20.0",
-        "@codemirror/lang-sql": "^6.10.0",
-        "@codemirror/state": "^6.5.2",
-        "@codemirror/view": "^6.39.4",
-        "codemirror": "^6.0.2"
-    }
+  "name": "@web-sqlite-js/vitepress-docs",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vitepress dev .",
+    "build": "vitepress build .",
+    "preview": "vitepress preview .",
+    "icons": "tsx ./scripts/generate-doc-icons.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.1",
+    "typescript": "^5.9.3",
+    "vitepress": "^1.6.4",
+    "@vite-pwa/vitepress": "^0.5.3",
+    "tsx": "^4.21.0"
+  },
+  "dependencies": {
+    "@codemirror/autocomplete": "^6.20.0",
+    "@codemirror/lang-sql": "^6.10.0",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.39.4",
+    "codemirror": "^6.0.2"
+  }
 }

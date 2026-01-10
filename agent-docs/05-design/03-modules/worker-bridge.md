@@ -6,9 +6,9 @@
 
 **Links to Contracts**:
 
--   API: `agent-docs/05-design/01-contracts/01-api.md#internal-worker-api`
--   Events: `agent-docs/05-design/01-contracts/02-events.md#worker-message-events`
--   Errors: `agent-docs/05-design/01-contracts/03-errors.md#category-7-worker-errors`
+- API: `agent-docs/05-design/01-contracts/01-api.md#internal-worker-api`
+- Events: `agent-docs/05-design/01-contracts/02-events.md#worker-message-events`
+- Errors: `agent-docs/05-design/01-contracts/03-errors.md#category-7-worker-errors`
 
 ---
 
@@ -25,9 +25,9 @@
 
 ### Cross-Cutting Concerns
 
--   **Async Communication**: All worker operations are asynchronous
--   **Error Propagation**: Stack traces preserved across worker boundary
--   **Resource Cleanup**: Proper worker termination and promise cleanup
+- **Async Communication**: All worker operations are asynchronous
+- **Error Propagation**: Stack traces preserved across worker boundary
+- **Resource Cleanup**: Proper worker termination and promise cleanup
 
 ---
 
@@ -45,11 +45,11 @@
 
 ```typescript
 type WorkerBridge = {
-    sendMsg: <TRes, TReq = unknown>(
-        event: SqliteEvent,
-        payload?: TReq
-    ) => Promise<TRes>;
-    terminate: () => void;
+  sendMsg: <TRes, TReq = unknown>(
+    event: SqliteEvent,
+    payload?: TReq,
+  ) => Promise<TRes>;
+  terminate: () => void;
 };
 ```
 
@@ -61,8 +61,8 @@ type WorkerBridge = {
 
 **Parameters**:
 
--   `event` (SqliteEvent): Event type (OPEN, EXECUTE, QUERY, CLOSE)
--   `payload` (TReq, optional): Request payload
+- `event` (SqliteEvent): Event type (OPEN, EXECUTE, QUERY, CLOSE)
+- `payload` (TReq, optional): Request payload
 
 **Returns**: `Promise<TRes>` - Response payload
 
@@ -93,23 +93,23 @@ sequenceDiagram
 
 ```typescript
 const sendMsg = <TRes, TReq = unknown>(
-    event: SqliteEvent,
-    payload?: TReq
+  event: SqliteEvent,
+  payload?: TReq,
 ): Promise<TRes> => {
-    const id = getLatestMsgId();
-    const msg: SqliteReqMsg<TReq> = {
-        id,
-        event,
-        payload,
-    };
+  const id = getLatestMsgId();
+  const msg: SqliteReqMsg<TReq> = {
+    id,
+    event,
+    payload,
+  };
 
-    return new Promise<TRes>((resolve, reject) => {
-        idMapPromise.set(id, {
-            resolve: resolve as (value: unknown) => void,
-            reject,
-        });
-        worker.postMessage(msg);
+  return new Promise<TRes>((resolve, reject) => {
+    idMapPromise.set(id, {
+      resolve: resolve as (value: unknown) => void,
+      reject,
     });
+    worker.postMessage(msg);
+  });
 };
 ```
 
@@ -121,19 +121,19 @@ const sendMsg = <TRes, TReq = unknown>(
 
 **Behavior**:
 
--   Calls `worker.terminate()`
--   Rejects all pending promises with "Worker terminated" error
--   Clears message ID map
+- Calls `worker.terminate()`
+- Rejects all pending promises with "Worker terminated" error
+- Clears message ID map
 
 **Code**:
 
 ```typescript
 const terminate = () => {
-    worker.terminate();
-    idMapPromise.forEach((task) => {
-        task.reject(new Error("Worker terminated"));
-    });
-    idMapPromise.clear();
+  worker.terminate();
+  idMapPromise.forEach((task) => {
+    task.reject(new Error("Worker terminated"));
+  });
+  idMapPromise.clear();
 };
 ```
 
@@ -151,16 +151,16 @@ const terminate = () => {
 
 ```typescript
 const getLatestMsgId = (() => {
-    let latestId = 0;
-    return () => ++latestId;
+  let latestId = 0;
+  return () => ++latestId;
 })();
 ```
 
 **Properties**:
 
--   Starts at 1 (first call returns 1)
--   Increments by 1 each call
--   Safe for concurrent use (single-threaded JavaScript)
+- Starts at 1 (first call returns 1)
+- Increments by 1 each call
+- Safe for concurrent use (single-threaded JavaScript)
 
 **Usage**:
 
@@ -180,8 +180,8 @@ const id3 = getLatestMsgId(); // 3
 
 ```typescript
 type Task<T> = {
-    resolve: (value: T | PromiseLike<T>) => void;
-    reject: (reason?: unknown) => void;
+  resolve: (value: T | PromiseLike<T>) => void;
+  reject: (reason?: unknown) => void;
 };
 
 const idMapPromise: Map<number, Task<unknown>> = new Map();
@@ -191,8 +191,8 @@ const idMapPromise: Map<number, Task<unknown>> = new Map();
 
 ```typescript
 idMapPromise.set(id, {
-    resolve: resolve as (value: unknown) => void,
-    reject,
+  resolve: resolve as (value: unknown) => void,
+  reject,
 });
 ```
 
@@ -201,16 +201,16 @@ idMapPromise.set(id, {
 ```typescript
 const task = idMapPromise.get(id);
 if (task) {
-    task.resolve(payload);
-    idMapPromise.delete(id);
+  task.resolve(payload);
+  idMapPromise.delete(id);
 }
 ```
 
 **Cleanup**:
 
--   Promises removed after response received
--   All promises rejected on worker termination
--   Map cleared on terminate
+- Promises removed after response received
+- All promises rejected on worker termination
+- Map cleared on terminate
 
 ---
 
@@ -222,21 +222,21 @@ if (task) {
 
 ```typescript
 worker.onmessage = (event: MessageEvent<SqliteResMsg<unknown>>) => {
-    const { id, success, error, payload } = event.data;
-    const task = idMapPromise.get(id);
+  const { id, success, error, payload } = event.data;
+  const task = idMapPromise.get(id);
 
-    if (!task) return; // Ignore unknown message IDs
+  if (!task) return; // Ignore unknown message IDs
 
-    if (!success) {
-        const newError = new Error(error!.message);
-        newError.name = error!.name;
-        newError.stack = error!.stack;
-        task.reject(newError);
-    } else {
-        task.resolve(payload);
-    }
+  if (!success) {
+    const newError = new Error(error!.message);
+    newError.name = error!.name;
+    newError.stack = error!.stack;
+    task.reject(newError);
+  } else {
+    task.resolve(payload);
+  }
 
-    idMapPromise.delete(id);
+  idMapPromise.delete(id);
 };
 ```
 
@@ -246,13 +246,13 @@ worker.onmessage = (event: MessageEvent<SqliteResMsg<unknown>>) => {
 // Worker serializes error
 const errorObj = err instanceof Error ? err : new Error(String(err));
 const res: SqliteResMsg<void> = {
-    id,
-    success: false,
-    error: {
-        name: errorObj.name,
-        message: errorObj.message,
-        stack: errorObj.stack,
-    } as Error,
+  id,
+  success: false,
+  error: {
+    name: errorObj.name,
+    message: errorObj.message,
+    stack: errorObj.stack,
+  } as Error,
 };
 
 // Main thread reconstructs error
@@ -275,21 +275,21 @@ newError.stack = error!.stack;
 import Sqlite3Worker from "./worker?worker&inline";
 
 export const createWorkerBridge = () => {
-    const worker = new Sqlite3Worker();
-    // ... rest of implementation
+  const worker = new Sqlite3Worker();
+  // ... rest of implementation
 };
 ```
 
 **Vite Configuration**:
 
--   `?worker`: Import as Web Worker
--   `&inline`: Inline worker code in bundle (no separate file)
+- `?worker`: Import as Web Worker
+- `&inline`: Inline worker code in bundle (no separate file)
 
 **Worker Context**:
 
--   Runs in isolated thread
--   Has access to `sqlite3` global (initialized in worker)
--   Cannot access main thread DOM or globals
+- Runs in isolated thread
+- Has access to `sqlite3` global (initialized in worker)
+- Cannot access main thread DOM or globals
 
 ---
 
@@ -316,51 +316,51 @@ let isDebug = false; // Debug logging flag
 
 ```typescript
 self.onmessage = async (msg: MessageEvent<SqliteReqMsg<unknown>>) => {
-    const { id, event, payload } = msg.data;
+  const { id, event, payload } = msg.data;
 
-    try {
-        if (sqlite3 === null && event !== SqliteEvent.OPEN) {
-            throw new Error("Database is not open");
-        }
-
-        let result: unknown = undefined;
-
-        switch (event) {
-            case SqliteEvent.OPEN:
-                await handleOpen(payload as OpenDBArgs);
-                break;
-            case SqliteEvent.EXECUTE:
-                result = handleExecute(payload);
-                break;
-            case SqliteEvent.QUERY:
-                result = handleQuery(payload as ExecParams);
-                break;
-            case SqliteEvent.CLOSE:
-                handleClose();
-                break;
-            default:
-                throw new Error(`Unknown event: ${event}`);
-        }
-
-        const res: SqliteResMsg<unknown> = {
-            id,
-            success: true,
-            payload: result,
-        };
-        self.postMessage(res);
-    } catch (err) {
-        const errorObj = err instanceof Error ? err : new Error(String(err));
-        const res: SqliteResMsg<void> = {
-            id,
-            success: false,
-            error: {
-                name: errorObj.name,
-                message: errorObj.message,
-                stack: errorObj.stack,
-            } as Error,
-        };
-        self.postMessage(res);
+  try {
+    if (sqlite3 === null && event !== SqliteEvent.OPEN) {
+      throw new Error("Database is not open");
     }
+
+    let result: unknown = undefined;
+
+    switch (event) {
+      case SqliteEvent.OPEN:
+        await handleOpen(payload as OpenDBArgs);
+        break;
+      case SqliteEvent.EXECUTE:
+        result = handleExecute(payload);
+        break;
+      case SqliteEvent.QUERY:
+        result = handleQuery(payload as ExecParams);
+        break;
+      case SqliteEvent.CLOSE:
+        handleClose();
+        break;
+      default:
+        throw new Error(`Unknown event: ${event}`);
+    }
+
+    const res: SqliteResMsg<unknown> = {
+      id,
+      success: true,
+      payload: result,
+    };
+    self.postMessage(res);
+  } catch (err) {
+    const errorObj = err instanceof Error ? err : new Error(String(err));
+    const res: SqliteResMsg<void> = {
+      id,
+      success: false,
+      error: {
+        name: errorObj.name,
+        message: errorObj.message,
+        stack: errorObj.stack,
+      } as Error,
+    };
+    self.postMessage(res);
+  }
 };
 ```
 
@@ -372,55 +372,53 @@ self.onmessage = async (msg: MessageEvent<SqliteReqMsg<unknown>>) => {
 
 ```typescript
 const handleOpen = async (payload: OpenDBArgs) => {
-    if (typeof payload.filename !== "string") {
-        throw new Error(
-            "Invalid payload for OPEN event: expected filename string"
-        );
-    }
+  if (typeof payload.filename !== "string") {
+    throw new Error("Invalid payload for OPEN event: expected filename string");
+  }
 
-    if (!sqlite3) {
-        sqlite3 = await sqlite3InitModule();
-        console.debug(`Initialized sqlite3 module in worker.`);
-    }
+  if (!sqlite3) {
+    sqlite3 = await sqlite3InitModule();
+    console.debug(`Initialized sqlite3 module in worker.`);
+  }
 
-    let { filename } = payload;
-    if (!filename.endsWith(".sqlite3")) {
-        filename += ".sqlite3";
-    }
+  let { filename } = payload;
+  if (!filename.endsWith(".sqlite3")) {
+    filename += ".sqlite3";
+  }
 
-    if (payload.options) {
-        isDebug = payload.options.debug === true;
-        configureLogger(isDebug);
-    }
+  if (payload.options) {
+    isDebug = payload.options.debug === true;
+    configureLogger(isDebug);
+  }
 
-    const target = payload.target ?? "active";
-    const replace = payload.replace === true;
+  const target = payload.target ?? "active";
+  const replace = payload.replace === true;
 
-    if (target === "meta") {
-        if (metaDb && replace) {
-            metaDb.close();
-            metaDb = null;
-        }
-        if (!metaDb) {
-            metaDb = new sqlite3!.oo1!.OpfsDb!(filename, "c");
-            console.debug(`Opened metadata database: ${filename}`);
-        }
-        return;
+  if (target === "meta") {
+    if (metaDb && replace) {
+      metaDb.close();
+      metaDb = null;
     }
+    if (!metaDb) {
+      metaDb = new sqlite3!.oo1!.OpfsDb!(filename, "c");
+      console.debug(`Opened metadata database: ${filename}`);
+    }
+    return;
+  }
 
-    const hadActiveDb = Boolean(activeDb);
-    if (activeDb && replace) {
-        activeDb.close();
-        activeDb = null;
+  const hadActiveDb = Boolean(activeDb);
+  if (activeDb && replace) {
+    activeDb.close();
+    activeDb = null;
+  }
+  if (!activeDb) {
+    activeDb = new sqlite3!.oo1!.OpfsDb!(filename, "c");
+    if (replace && hadActiveDb) {
+      console.debug(`Switched active database to: ${filename}`);
+    } else {
+      console.debug(`Opened active database: ${filename}`);
     }
-    if (!activeDb) {
-        activeDb = new sqlite3!.oo1!.OpfsDb!(filename, "c");
-        if (replace && hadActiveDb) {
-            console.debug(`Switched active database to: ${filename}`);
-        } else {
-            console.debug(`Opened active database: ${filename}`);
-        }
-    }
+  }
 };
 ```
 
@@ -432,32 +430,32 @@ const handleOpen = async (payload: OpenDBArgs) => {
 
 ```typescript
 const handleExecute = (payload: unknown) => {
-    const start = performance.now();
-    const { sql, bind, target } = payload as ExecParams;
+  const start = performance.now();
+  const { sql, bind, target } = payload as ExecParams;
 
-    if (typeof sql !== "string") {
-        throw new Error(
-            "Invalid payload for EXECUTE event: expected SQL string or { sql, bind }"
-        );
-    }
+  if (typeof sql !== "string") {
+    throw new Error(
+      "Invalid payload for EXECUTE event: expected SQL string or { sql, bind }",
+    );
+  }
 
-    const db = target === "meta" ? metaDb : activeDb;
-    if (!db) {
-        throw new Error("Database is not open");
-    }
+  const db = target === "meta" ? metaDb : activeDb;
+  if (!db) {
+    throw new Error("Database is not open");
+  }
 
-    db.exec({ sql, bind });
-    const end = performance.now();
-    const duration = end - start;
+  db.exec({ sql, bind });
+  const end = performance.now();
+  const duration = end - start;
 
-    if (isDebug) {
-        console.debug({ sql, duration, bind } as SqlLogInfo);
-    }
+  if (isDebug) {
+    console.debug({ sql, duration, bind } as SqlLogInfo);
+  }
 
-    return {
-        changes: db.changes(),
-        lastInsertRowid: db.selectValue("SELECT last_insert_rowid()"),
-    };
+  return {
+    changes: db.changes(),
+    lastInsertRowid: db.selectValue("SELECT last_insert_rowid()"),
+  };
 };
 ```
 
@@ -469,33 +467,33 @@ const handleExecute = (payload: unknown) => {
 
 ```typescript
 const handleQuery = (payload: ExecParams) => {
-    const { sql, bind, target } = payload;
+  const { sql, bind, target } = payload;
 
-    if (typeof sql !== "string") {
-        throw new Error(
-            "Invalid payload for QUERY event: expected { sql: string, bind?: any[] }"
-        );
-    }
+  if (typeof sql !== "string") {
+    throw new Error(
+      "Invalid payload for QUERY event: expected { sql: string, bind?: any[] }",
+    );
+  }
 
-    const db = target === "meta" ? metaDb : activeDb;
-    if (!db) {
-        throw new Error("Database is not open");
-    }
+  const db = target === "meta" ? metaDb : activeDb;
+  if (!db) {
+    throw new Error("Database is not open");
+  }
 
-    const start = performance.now();
-    const rows = db.selectObjects(sql, bind);
-    const end = performance.now();
-    const duration = end - start;
+  const start = performance.now();
+  const rows = db.selectObjects(sql, bind);
+  const end = performance.now();
+  const duration = end - start;
 
-    if (isDebug) {
-        console.debug({
-            sql,
-            duration,
-            bind,
-        } as SqlLogInfo);
-    }
+  if (isDebug) {
+    console.debug({
+      sql,
+      duration,
+      bind,
+    } as SqlLogInfo);
+  }
 
-    return rows;
+  return rows;
 };
 ```
 
@@ -507,15 +505,15 @@ const handleQuery = (payload: ExecParams) => {
 
 ```typescript
 const handleClose = () => {
-    if (activeDb) {
-        activeDb.close();
-        activeDb = null;
-    }
-    if (metaDb) {
-        metaDb.close();
-        metaDb = null;
-    }
-    sqlite3 = null;
+  if (activeDb) {
+    activeDb.close();
+    activeDb = null;
+  }
+  if (metaDb) {
+    metaDb.close();
+    metaDb = null;
+  }
+  sqlite3 = null;
 };
 ```
 
@@ -603,19 +601,19 @@ sequenceDiagram
 
 ```typescript
 try {
-    // ... operation ...
-    self.postMessage({ id, success: true, payload: result });
+  // ... operation ...
+  self.postMessage({ id, success: true, payload: result });
 } catch (err) {
-    const errorObj = err instanceof Error ? err : new Error(String(err));
-    self.postMessage({
-        id,
-        success: false,
-        error: {
-            name: errorObj.name,
-            message: errorObj.message,
-            stack: errorObj.stack,
-        } as Error,
-    });
+  const errorObj = err instanceof Error ? err : new Error(String(err));
+  self.postMessage({
+    id,
+    success: false,
+    error: {
+      name: errorObj.name,
+      message: errorObj.message,
+      stack: errorObj.stack,
+    } as Error,
+  });
 }
 ```
 
@@ -623,17 +621,17 @@ try {
 
 ```typescript
 worker.onmessage = (event) => {
-    const { id, success, error } = event.data;
-    const task = idMapPromise.get(id);
+  const { id, success, error } = event.data;
+  const task = idMapPromise.get(id);
 
-    if (!success) {
-        const newError = new Error(error!.message);
-        newError.name = error!.name;
-        newError.stack = error!.stack;
-        task.reject(newError);
-    } else {
-        task.resolve(payload);
-    }
+  if (!success) {
+    const newError = new Error(error!.message);
+    newError.name = error!.name;
+    newError.stack = error!.stack;
+    task.reject(newError);
+  } else {
+    task.resolve(payload);
+  }
 };
 ```
 
@@ -641,15 +639,15 @@ worker.onmessage = (event) => {
 
 **Properties Preserved**:
 
--   `name`: Error class name (e.g., "Error", "TypeError")
--   `message`: Error message
--   `stack`: Stack trace with file names and line numbers
+- `name`: Error class name (e.g., "Error", "TypeError")
+- `message`: Error message
+- `stack`: Stack trace with file names and line numbers
 
 **Properties Lost**:
 
--   Custom error properties (not standard)
--   Error cause (if available)
--   Prototype chain (reconstructed as plain Error)
+- Custom error properties (not standard)
+- Error cause (if available)
+- Prototype chain (reconstructed as plain Error)
 
 ---
 
@@ -667,15 +665,15 @@ worker.onmessage = (event) => {
 
 ### Concurrency
 
--   **No Concurrent Operations**: Worker processes one message at a time
--   **Mutex Queue**: Main thread serializes operations via mutex
--   **Message Ordering**: FIFO ordering maintained
+- **No Concurrent Operations**: Worker processes one message at a time
+- **Mutex Queue**: Main thread serializes operations via mutex
+- **Message Ordering**: FIFO ordering maintained
 
 ### Memory
 
--   **Promise Map**: Stores pending promises (typically < 10)
--   **Structured Clone**: Copies data between threads (no shared memory)
--   **Worker Memory**: Separate from main thread (limited by browser)
+- **Promise Map**: Stores pending promises (typically < 10)
+- **Structured Clone**: Copies data between threads (no shared memory)
+- **Worker Memory**: Separate from main thread (limited by browser)
 
 ---
 
@@ -693,8 +691,8 @@ src/worker-bridge.ts
 
 ### External Dependencies
 
--   **sqlite3.wasm**: SQLite WASM module (vendored)
--   **Browser APIs**: Web Workers, postMessage, performance.now()
+- **sqlite3.wasm**: SQLite WASM module (vendored)
+- **Browser APIs**: Web Workers, postMessage, performance.now()
 
 ---
 
@@ -702,17 +700,17 @@ src/worker-bridge.ts
 
 ### Unit Tests
 
--   **Message ID Generation**: Verify unique incremental IDs
--   **Promise Storage**: Verify map operations
--   **Error Reconstruction**: Verify error properties preserved
+- **Message ID Generation**: Verify unique incremental IDs
+- **Promise Storage**: Verify map operations
+- **Error Reconstruction**: Verify error properties preserved
 
 ### E2E Tests
 
--   **Worker Communication**: `tests/e2e/worker.e2e.test.ts`
-    -   Message send/receive
-    -   Promise resolution
-    -   Error propagation
-    -   Worker termination
+- **Worker Communication**: `tests/e2e/worker.e2e.test.ts`
+  - Message send/receive
+  - Promise resolution
+  - Error propagation
+  - Worker termination
 
 ---
 
@@ -724,8 +722,8 @@ src/worker-bridge.ts
 
 ```typescript
 await sendMsg(OPEN, {
-    filename: "mydb",
-    options: { debug: true },
+  filename: "mydb",
+  options: { debug: true },
 });
 ```
 
@@ -733,8 +731,8 @@ await sendMsg(OPEN, {
 
 ```typescript
 if (payload.options) {
-    isDebug = payload.options.debug === true;
-    configureLogger(isDebug);
+  isDebug = payload.options.debug === true;
+  configureLogger(isDebug);
 }
 ```
 
@@ -767,21 +765,21 @@ if (payload.options) {
 
 ```typescript
 export type SqlLogInfo = {
-    sql: string;
-    duration: number;
-    bind?: unknown;
+  sql: string;
+  duration: number;
+  bind?: unknown;
 };
 
 let isDebugMode = false;
 
 export const configureLogger = (enabled: boolean): void => {
-    isDebugMode = enabled;
+  isDebugMode = enabled;
 };
 
 export const logSql = (info: SqlLogInfo): void => {
-    if (isDebugMode) {
-        console.debug(info);
-    }
+  if (isDebugMode) {
+    console.debug(info);
+  }
 };
 ```
 
@@ -795,34 +793,32 @@ export const logSql = (info: SqlLogInfo): void => {
 
 ```typescript
 if (typeof payload.filename !== "string") {
-    throw new Error("Invalid payload for OPEN event: expected filename string");
+  throw new Error("Invalid payload for OPEN event: expected filename string");
 }
 
 if (typeof sql !== "string") {
-    throw new Error(
-        "Invalid payload for QUERY event: expected { sql: string }"
-    );
+  throw new Error("Invalid payload for QUERY event: expected { sql: string }");
 }
 ```
 
 ### SQL Injection Prevention
 
--   **Parameterized Queries**: Bind parameters used for all SQL
--   **No String Concatenation**: SQL statements never concatenated with user input
--   **SQLite Prepared Statements**: Used internally by SQLite WASM
+- **Parameterized Queries**: Bind parameters used for all SQL
+- **No String Concatenation**: SQL statements never concatenated with user input
+- **SQLite Prepared Statements**: Used internally by SQLite WASM
 
 ### Worker Isolation
 
--   **Sandbox**: Worker runs in isolated thread
--   **No DOM Access**: Worker cannot access main thread DOM
--   **Same-Origin**: Worker script subject to same-origin policy
--   **WASM Isolation**: SQLite runs in WASM sandbox
+- **Sandbox**: Worker runs in isolated thread
+- **No DOM Access**: Worker cannot access main thread DOM
+- **Same-Origin**: Worker script subject to same-origin policy
+- **WASM Isolation**: SQLite runs in WASM sandbox
 
 ### Memory Isolation
 
--   **Structured Clone**: Data copied between threads (not shared)
--   **No Shared State**: Worker cannot access main thread variables
--   **Memory Limits**: Worker has separate memory limits
+- **Structured Clone**: Data copied between threads (not shared)
+- **No Shared State**: Worker cannot access main thread variables
+- **Memory Limits**: Worker has separate memory limits
 
 ---
 
@@ -834,17 +830,17 @@ if (typeof sql !== "string") {
 
 **Related Design Documents**:
 
--   [Back to Modules: Core](./core.md)
--   [Back to Modules: Release Management](./release-management.md)
+- [Back to Modules: Core](./core.md)
+- [Back to Modules: Release Management](./release-management.md)
 
 **All Design Documents**:
 
--   [Contracts](../01-contracts/) - API, Events, Errors
--   [Schema](../02-schema/) - Database, Migrations
+- [Contracts](../01-contracts/) - API, Events, Errors
+- [Schema](../02-schema/) - Database, Migrations
 
 **Related ADRs**:
 
--   [ADR-0001: Web Worker](../../04-adr/0001-web-worker-architecture.md) - Worker architecture
--   [ADR-0007: Error Handling](../../04-adr/0007-error-handling-strategy.md) - Error reconstruction
+- [ADR-0001: Web Worker](../../04-adr/0001-web-worker-architecture.md) - Worker architecture
+- [ADR-0007: Error Handling](../../04-adr/0007-error-handling-strategy.md) - Error reconstruction
 
 **Back to**: [Spec Index](../../00-control/00-spec.md)

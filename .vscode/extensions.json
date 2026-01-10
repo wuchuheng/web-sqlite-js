@@ -1,24 +1,24 @@
 {
-    "recommendations": [
-        // To check spelling
-        "streetsidesoftware.code-spell-checker",
-        // Vim
-        "vscodevim.vim",
-        // Prettier
-        "esbenp.prettier-vscode",
-        // ESLint
-        "dbaeumer.vscode-eslint",
-        // Git Graph
-        "mhutchie.git-graph",
-        // Markdow preview
-        "shd101wyy.markdown-preview-enhanced",
-        // Tailwind CSS
-        "bradlc.vscode-tailwindcss",
-        // wsl
-        "ms-vscode-remote.remote-wsl",
-        // todo plugin.
-        "Gruntfuggly.todo-tree",
-        // Html
-        "formulahendry.auto-rename-tag"
-    ]
+  "recommendations": [
+    // To check spelling
+    "streetsidesoftware.code-spell-checker",
+    // Vim
+    "vscodevim.vim",
+    // Prettier
+    "esbenp.prettier-vscode",
+    // ESLint
+    "dbaeumer.vscode-eslint",
+    // Git Graph
+    "mhutchie.git-graph",
+    // Markdow preview
+    "shd101wyy.markdown-preview-enhanced",
+    // Tailwind CSS
+    "bradlc.vscode-tailwindcss",
+    // wsl
+    "ms-vscode-remote.remote-wsl",
+    // todo plugin.
+    "Gruntfuggly.todo-tree",
+    // Html
+    "formulahendry.auto-rename-tag"
+  ]
 }

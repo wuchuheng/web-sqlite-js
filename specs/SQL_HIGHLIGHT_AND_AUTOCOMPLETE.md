@@ -17,19 +17,19 @@ Enhance the `SqlConsole.vue` component by replacing the basic HTML `<textarea>` 
 - **Engine:** Deep integration with **`@codemirror/lang-sql`**.
 - **Keyword Suggestions:** Standard SQL keywords suggested as the user types.
 - **SQL Syntax Templates (Snippets):**
-    - Provide "Smart Templates" for common operations. For example, typing `INS` will suggest a full `INSERT INTO table (cols) VALUES (vals)` pattern.
-    - Supported templates: `INSERT`, `UPDATE`, `DELETE`, `CREATE TABLE`, `ALTER TABLE`.
-    - These templates will act as placeholder structures that the user can quickly fill in.
+  - Provide "Smart Templates" for common operations. For example, typing `INS` will suggest a full `INSERT INTO table (cols) VALUES (vals)` pattern.
+  - Supported templates: `INSERT`, `UPDATE`, `DELETE`, `CREATE TABLE`, `ALTER TABLE`.
+  - These templates will act as placeholder structures that the user can quickly fill in.
 - **Schema-Awareness:**
-    - The editor should suggest **table names** and **column names** existing in the current SQLite database.
-    - **Reactive Updates:** If a user executes a `CREATE TABLE` or `ALTER TABLE` query, the autocomplete schema should refresh to include the new structures.
+  - The editor should suggest **table names** and **column names** existing in the current SQLite database.
+  - **Reactive Updates:** If a user executes a `CREATE TABLE` or `ALTER TABLE` query, the autocomplete schema should refresh to include the new structures.
 - **UI:** Suggestions should appear in a non-intrusive popup menu, styled to match the project's sketch-like aesthetic.
 
 ### 3. Developer Experience (DX)
 
 - **Keybindings:**
-    - `Ctrl + Enter` (or `Cmd + Enter` on Mac) should trigger the "Run" command.
-    - Standard editor shortcuts (Undo/Redo, Indentation) should work as expected.
+  - `Ctrl + Enter` (or `Cmd + Enter` on Mac) should trigger the "Run" command.
+  - Standard editor shortcuts (Undo/Redo, Indentation) should work as expected.
 - **Auto-formatting:** (Optional/Future) Basic indentation and casing consistency.
 
 ### 4. Footer Keyboard Hint Refinement
@@ -37,9 +37,9 @@ Enhance the `SqlConsole.vue` component by replacing the basic HTML `<textarea>` 
 - **Copywriting:** Update the hint to "Press `Ctrl` + `Enter` to execute."
 - **Visuals:** Replace the legacy return icon with two pure SVG "Key Caps" representing the shortcut keys.
 - **Mac-Style Aesthetic:**
-    - The keys will be styled like Apple macOS keyboard caps (rounded rectangles with a subtle 3D border/shadow).
-    - Key 1: **Ctrl** (or the symbol `⌃`).
-    - Key 2: **Enter** (with the symbol `↵`).
+  - The keys will be styled like Apple macOS keyboard caps (rounded rectangles with a subtle 3D border/shadow).
+  - Key 1: **Ctrl** (or the symbol `⌃`).
+  - Key 2: **Enter** (with the symbol `↵`).
 - **Hand-Drawn Integration:** Ensure the SVG strokes match the hand-drawn weight (`2px`) and color (`#2d2d2d`) used throughout the demo.
 
 ## Technical Implementation
@@ -59,9 +59,9 @@ CodeMirror's SQL extension will be combined with custom snippet completion:
 
 1. **Schema:** Dynamically updated via `sqlite_master` and `PRAGMA` queries.
 2. **Snippets:** Define a `CompletionSource` that provides templates for:
-    - `INSERT INTO ${table} (${columns}) VALUES (${values});`
-    - `UPDATE ${table} SET ${column} = ${value} WHERE ${condition};`
-    - `CREATE TABLE ${name} (${definitions});`
+   - `INSERT INTO ${table} (${columns}) VALUES (${values});`
+   - `UPDATE ${table} SET ${column} = ${value} WHERE ${condition};`
+   - `CREATE TABLE ${name} (${definitions});`
 
 ### Styling Strategy
 
@@ -91,8 +91,8 @@ Install the necessary CodeMirror 6 packages in the `docs` workspace.
 - Match the "hand-drawn" aesthetic for the CodeMirror editor.
 - Ensure the autocomplete popup is styled to match the project's look and feel.
 - **Implement SVG Keyboard Keys:**
-    - Design a small reusable SVG pattern or separate SVGs for "Ctrl" and "Enter" keys in the footer.
-    - Update the template in `SqlConsole.vue` to display these keys next to the new copywriting.
+  - Design a small reusable SVG pattern or separate SVGs for "Ctrl" and "Enter" keys in the footer.
+  - Update the template in `SqlConsole.vue` to display these keys next to the new copywriting.
 - Verify `Ctrl+Enter` functionality.
 
 ## Verification

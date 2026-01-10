@@ -35,14 +35,14 @@ CREATE UNIQUE INDEX idx_release_version ON release(version);
 
 **Column Descriptions**:
 
-| Column             | Type    | Constraints               | Description                                            |
-| ------------------ | ------- | ------------------------- | ------------------------------------------------------ |
-| `id`               | INTEGER | PRIMARY KEY AUTOINCREMENT | Auto-incrementing unique identifier                    |
-| `version`          | TEXT    | NOT NULL, UNIQUE          | Semantic version string (e.g., "1.0.0", "1.0.1")       |
+| Column             | Type    | Constraints               | Description                                             |
+| ------------------ | ------- | ------------------------- | ------------------------------------------------------- |
+| `id`               | INTEGER | PRIMARY KEY AUTOINCREMENT | Auto-incrementing unique identifier                     |
+| `version`          | TEXT    | NOT NULL, UNIQUE          | Semantic version string (e.g., "1.0.0", "1.0.1")        |
 | `migrationSQLHash` | TEXT    | NULL                      | SHA-256 hash of migration SQL (NULL only for `default`) |
-| `seedSQLHash`      | TEXT    | NULL                      | SHA-256 hash of seed SQL (NULL if no seed SQL)         |
-| `mode`             | TEXT    | NOT NULL, CHECK           | Version mode: "release" (immutable) or "dev" (mutable) |
-| `createdAt`        | TEXT    | NOT NULL                  | ISO 8601 timestamp of version creation                 |
+| `seedSQLHash`      | TEXT    | NULL                      | SHA-256 hash of seed SQL (NULL if no seed SQL)          |
+| `mode`             | TEXT    | NOT NULL, CHECK           | Version mode: "release" (immutable) or "dev" (mutable)  |
+| `createdAt`        | TEXT    | NOT NULL                  | ISO 8601 timestamp of version creation                  |
 
 **Indexes**:
 
@@ -372,9 +372,9 @@ The active database is the versioned database currently in use by the applicatio
 ```typescript
 // In worker
 await sendMsg(OPEN, {
-    filename: `${baseDir}/${version}/db.sqlite3`,
-    target: "active",
-    replace: true, // Close existing connection first
+  filename: `${baseDir}/${version}/db.sqlite3`,
+  target: "active",
+  replace: true, // Close existing connection first
 });
 ```
 
@@ -442,25 +442,25 @@ ORDER BY id;
 const VERSION_RE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 function compareVersions(a: string, b: string): number {
-    if (a === b) return 0;
-    if (a === "default") return -1;
-    if (b === "default") return 1;
+  if (a === b) return 0;
+  if (a === "default") return -1;
+  if (b === "default") return 1;
 
-    const matchA = VERSION_RE.exec(a);
-    const matchB = VERSION_RE.exec(b);
-    if (!matchA || !matchB) {
-        throw new Error(`Invalid version format: ${!matchA ? a : b}`);
+  const matchA = VERSION_RE.exec(a);
+  const matchB = VERSION_RE.exec(b);
+  if (!matchA || !matchB) {
+    throw new Error(`Invalid version format: ${!matchA ? a : b}`);
+  }
+
+  const aParts = [Number(matchA[1]), Number(matchA[2]), Number(matchA[3])];
+  const bParts = [Number(matchB[1]), Number(matchB[2]), Number(matchB[3])];
+
+  for (let i = 0; i < aParts.length; i++) {
+    if (aParts[i] !== bParts[i]) {
+      return aParts[i] > bParts[i] ? 1 : -1;
     }
-
-    const aParts = [Number(matchA[1]), Number(matchA[2]), Number(matchA[3])];
-    const bParts = [Number(matchB[1]), Number(matchB[2]), Number(matchB[3])];
-
-    for (let i = 0; i < aParts.length; i++) {
-        if (aParts[i] !== bParts[i]) {
-            return aParts[i] > bParts[i] ? 1 : -1;
-        }
-    }
-    return 0;
+  }
+  return 0;
 }
 ```
 
@@ -476,7 +476,7 @@ function compareVersions(a: string, b: string): number {
 
 ```typescript
 if (compareVersions(targetVersion, latestReleaseVersion) < 0) {
-    throw new Error("Cannot rollback below the latest release version");
+  throw new Error("Cannot rollback below the latest release version");
 }
 ```
 
@@ -503,11 +503,11 @@ if (compareVersions(targetVersion, latestReleaseVersion) < 0) {
 
 ```typescript
 async function computeHash(sql: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(sql);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  const encoder = new TextEncoder();
+  const data = encoder.encode(sql);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 ```
 
@@ -515,8 +515,8 @@ async function computeHash(sql: string): Promise<string> {
 
 ```typescript
 function normalizeSQL(sql: string | undefined | null): string {
-    if (!sql) return "";
-    return sql.trim();
+  if (!sql) return "";
+  return sql.trim();
 }
 ```
 
@@ -541,13 +541,13 @@ VALUES (
 
 ```typescript
 for (const row of releaseRows) {
-    const config = configByVersion.get(row.version);
-    if (config.migrationSQLHash !== row.migrationSQLHash) {
-        throw new Error(`migrationSQL hash mismatch for ${row.version}`);
-    }
-    if (config.seedSQLHash !== row.seedSQLHash) {
-        throw new Error(`seedSQL hash mismatch for ${row.version}`);
-    }
+  const config = configByVersion.get(row.version);
+  if (config.migrationSQLHash !== row.migrationSQLHash) {
+    throw new Error(`migrationSQL hash mismatch for ${row.version}`);
+  }
+  if (config.seedSQLHash !== row.seedSQLHash) {
+    throw new Error(`seedSQL hash mismatch for ${row.version}`);
+  }
 }
 ```
 
@@ -593,9 +593,9 @@ stateDiagram-v2
 ```typescript
 // Switch to new version database
 await sendMsg(OPEN, {
-    filename: `${baseDir}/${newVersion}/db.sqlite3`,
-    target: "active",
-    replace: true, // Close existing connection first
+  filename: `${baseDir}/${newVersion}/db.sqlite3`,
+  target: "active",
+  replace: true, // Close existing connection first
 });
 ```
 
@@ -603,14 +603,14 @@ await sendMsg(OPEN, {
 
 ```typescript
 if (target === "active" && replace) {
-    if (activeDb) {
-        activeDb.close();
-        activeDb = null;
-    }
+  if (activeDb) {
+    activeDb.close();
+    activeDb = null;
+  }
 }
 if (!activeDb) {
-    activeDb = new sqlite3!.oo1!.OpfsDb!(filename, "c");
-    console.debug(`Switched active database to: ${filename}`);
+  activeDb = new sqlite3!.oo1!.OpfsDb!(filename, "c");
+  console.debug(`Switched active database to: ${filename}`);
 }
 ```
 
@@ -644,7 +644,7 @@ if (!activeDb) {
 
 ```typescript
 const exec = async (sql: string, params?: SQLParams): Promise<ExecResult> => {
-    return runMutex(() => _exec(sql, params, "active"));
+  return runMutex(() => _exec(sql, params, "active"));
 };
 ```
 
@@ -658,15 +658,15 @@ const exec = async (sql: string, params?: SQLParams): Promise<ExecResult> => {
 
 ```typescript
 const withReleaseLock = async <T>(fn: () => Promise<T>): Promise<T> => {
-    await metaExec("BEGIN IMMEDIATE");
-    try {
-        const result = await fn();
-        await metaExec("COMMIT");
-        return result;
-    } catch (error) {
-        await metaExec("ROLLBACK");
-        throw error;
-    }
+  await metaExec("BEGIN IMMEDIATE");
+  try {
+    const result = await fn();
+    await metaExec("COMMIT");
+    return result;
+  } catch (error) {
+    await metaExec("ROLLBACK");
+    throw error;
+  }
 };
 ```
 
@@ -870,11 +870,11 @@ await db.exec("ANALYZE");
 
 ```typescript
 const result = await db.query<{ integrity_check: string }>(
-    "PRAGMA integrity_check",
+  "PRAGMA integrity_check",
 );
 
 if (result[0].integrity_check !== "ok") {
-    console.error("Database integrity check failed:", result);
+  console.error("Database integrity check failed:", result);
 }
 ```
 

@@ -12,33 +12,33 @@ Opens a SQLite database connection with release-versioning support.
 
 ```typescript
 function openDB(
-    filename: string,
-    options?: OpenDBOptions,
+  filename: string,
+  options?: OpenDBOptions,
 ): Promise<DBInterface>;
 ```
 
 **Parameters:**
 
 - `filename` (string): The base database name. A directory is created in OPFS with this name.
-    - If it does not end with `.sqlite3`, the suffix is appended automatically.
-    - Constraints: Non-empty string, trimmed
-    - Validation: Throws if invalid
-    - Example: `"demo"`, `"myapp.sqlite3"`
+  - If it does not end with `.sqlite3`, the suffix is appended automatically.
+  - Constraints: Non-empty string, trimmed
+  - Validation: Throws if invalid
+  - Example: `"demo"`, `"myapp.sqlite3"`
 
 - `options` (OpenDBOptions, optional): Configuration options
-    - `releases` (ReleaseConfig[], optional): Immutable release history configuration
-        - Array of release configs defining schema evolution
-        - Each config includes version, migrationSQL, optional seedSQL
-        - Must be in ascending version order
-    - `debug` (boolean, optional): Enable SQL execution logging in worker
-        - Default: `false`
-        - Logs query timing, SQL, and bind parameters via console.debug
+  - `releases` (ReleaseConfig[], optional): Immutable release history configuration
+    - Array of release configs defining schema evolution
+    - Each config includes version, migrationSQL, optional seedSQL
+    - Must be in ascending version order
+  - `debug` (boolean, optional): Enable SQL execution logging in worker
+    - Default: `false`
+    - Logs query timing, SQL, and bind parameters via console.debug
 
 **Returns:**
 
 - `Promise<DBInterface>`: Database interface for the latest active version
-    - Resolves when database is opened and migrations applied
-    - Rejects on validation errors, hash mismatches, or SharedArrayBuffer unavailability
+  - Resolves when database is opened and migrations applied
+  - Rejects on validation errors, hash mismatches, or SharedArrayBuffer unavailability
 
 **Throws:**
 
@@ -54,15 +54,14 @@ function openDB(
 
 ```typescript
 const db = await openDB("myapp", {
-    releases: [
-        {
-            version: "1.0.0",
-            migrationSQL:
-                "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
-            seedSQL: "INSERT INTO users (name) VALUES ('Alice');",
-        },
-    ],
-    debug: true,
+  releases: [
+    {
+      version: "1.0.0",
+      migrationSQL: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
+      seedSQL: "INSERT INTO users (name) VALUES ('Alice');",
+    },
+  ],
+  debug: true,
 });
 ```
 
@@ -134,28 +133,28 @@ Execute a SQL script without returning rows. Intended for migrations, schema set
 
 ```typescript
 interface DBInterface {
-    exec(sql: string, params?: SQLParams): Promise<ExecResult>;
+  exec(sql: string, params?: SQLParams): Promise<ExecResult>;
 }
 ```
 
 **Parameters:**
 
 - `sql` (string): SQL string to execute
-    - Constraints: string
-    - Can contain multiple statements separated by semicolons
-    - Examples: DDL (CREATE, DROP, ALTER), DML (INSERT, UPDATE, DELETE)
+  - Constraints: string
+  - Can contain multiple statements separated by semicolons
+  - Examples: DDL (CREATE, DROP, ALTER), DML (INSERT, UPDATE, DELETE)
 
 - `params` (SQLParams, optional): Bind parameters for the statement
-    - Type: `SqlValue[] | Record<string, SqlValue>`
-    - Positional parameters: `?` syntax with array
-    - Named parameters: `$name`, `:name`, `@name` syntax with object
-    - Supported types: `null | number | string | boolean | bigint | Uint8Array | ArrayBuffer`
+  - Type: `SqlValue[] | Record<string, SqlValue>`
+  - Positional parameters: `?` syntax with array
+  - Named parameters: `$name`, `:name`, `@name` syntax with object
+  - Supported types: `null | number | string | boolean | bigint | Uint8Array | ArrayBuffer`
 
 **Returns:**
 
 - `Promise<ExecResult>`: Metadata about execution
-    - `changes` (number | bigint): Number of rows changed
-    - `lastInsertRowid` (number | bigint): Last inserted row ID
+  - `changes` (number | bigint): Number of rows changed
+  - `lastInsertRowid` (number | bigint): Last inserted row ID
 
 **Throws:**
 
@@ -168,16 +167,16 @@ interface DBInterface {
 ```typescript
 // Positional parameters
 const result = await db.exec("INSERT INTO users (name, email) VALUES (?, ?)", [
-    "Alice",
-    "alice@example.com",
+  "Alice",
+  "alice@example.com",
 ]);
 console.log(result.changes); // 1
 console.log(result.lastInsertRowid); // 1
 
 // Named parameters
 await db.exec("UPDATE users SET email = $email WHERE id = $id", {
-    $email: "new@email.com",
-    $id: 1,
+  $email: "new@email.com",
+  $id: 1,
 });
 
 // Multiple statements
@@ -238,32 +237,32 @@ Execute a SELECT query and return all result rows as an array of objects.
 
 ```typescript
 interface DBInterface {
-    query<T = unknown>(sql: string, params?: SQLParams): Promise<T[]>;
+  query<T = unknown>(sql: string, params?: SQLParams): Promise<T[]>;
 }
 ```
 
 **Type Parameters:**
 
 - `T` (extends unknown): Type of result rows
-    - Default: `unknown`
-    - Inferred from usage or explicitly provided
-    - Rows are returned as objects with column names as keys
+  - Default: `unknown`
+  - Inferred from usage or explicitly provided
+  - Rows are returned as objects with column names as keys
 
 **Parameters:**
 
 - `sql` (string): SELECT SQL to execute
-    - Constraints: Non-empty string, trimmed
-    - Must be a query that returns rows (SELECT, EXPLAIN, PRAGMA that returns data)
+  - Constraints: Non-empty string, trimmed
+  - Must be a query that returns rows (SELECT, EXPLAIN, PRAGMA that returns data)
 
 - `params` (SQLParams, optional): Bind parameters for the query
-    - Same as `exec()` parameter syntax
+  - Same as `exec()` parameter syntax
 
 **Returns:**
 
 - `Promise<T[]>`: Array of result rows
-    - Each row is an object with column names as keys
-    - Empty array if no results
-    - Type `T` applied to each row
+  - Each row is an object with column names as keys
+  - Empty array if no results
+  - Type `T` applied to each row
 
 **Throws:**
 
@@ -276,30 +275,30 @@ interface DBInterface {
 ```typescript
 // Basic query
 const users = await db.query<{ id: number; name: string }>(
-    "SELECT id, name FROM users",
+  "SELECT id, name FROM users",
 );
 // Result: [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }]
 
 // With positional parameters
 const user = await db.query<{ id: number; name: string }>(
-    "SELECT id, name FROM users WHERE id = ?",
-    [1],
+  "SELECT id, name FROM users WHERE id = ?",
+  [1],
 );
 // Result: [{ id: 1, name: "Alice" }]
 
 // With named parameters
 const users = await db.query<{ id: number; name: string }>(
-    "SELECT id, name FROM users WHERE name LIKE $pattern",
-    { $pattern: "%Alice%" },
+  "SELECT id, name FROM users WHERE name LIKE $pattern",
+  { $pattern: "%Alice%" },
 );
 
 // With JOIN
 const posts = await db.query<{
-    id: number;
-    title: string;
-    authorName: string;
+  id: number;
+  title: string;
+  authorName: string;
 }>(
-    `
+  `
   SELECT
     posts.id,
     posts.title,
@@ -360,9 +359,9 @@ Run a callback inside a transaction. BEGIN is called before `fn`, COMMIT on succ
 
 ```typescript
 interface DBInterface {
-    transaction<T>(
-        fn: (tx: Pick<DBInterface, "exec" | "query">) => Promise<T>,
-    ): Promise<T>;
+  transaction<T>(
+    fn: (tx: Pick<DBInterface, "exec" | "query">) => Promise<T>,
+  ): Promise<T>;
 }
 ```
 
@@ -373,15 +372,15 @@ interface DBInterface {
 **Parameters:**
 
 - `fn` (transactionCallback<T>): Callback that receives transaction interface
-    - Receives `Pick<DBInterface, "exec" | "query">` (no `transaction` or `close`)
-    - Must return a Promise
-    - All database operations within callback run in same transaction
+  - Receives `Pick<DBInterface, "exec" | "query">` (no `transaction` or `close`)
+  - Must return a Promise
+  - All database operations within callback run in same transaction
 
 **Returns:**
 
 - `Promise<T>`: Result of the transaction callback
-    - Resolves with callback return value on COMMIT
-    - Rejects with callback error on ROLLBACK
+  - Resolves with callback return value on COMMIT
+  - Rejects with callback error on ROLLBACK
 
 **Throws:**
 
@@ -400,37 +399,37 @@ interface DBInterface {
 ```typescript
 // Simple transaction
 const result = await db.transaction(async (tx) => {
-    await tx.exec("INSERT INTO users (name) VALUES (?)", ["Alice"]);
-    await tx.exec("INSERT INTO posts (title, authorId) VALUES (?, ?)", [
-        "Hello",
-        1,
-    ]);
-    return { success: true };
+  await tx.exec("INSERT INTO users (name) VALUES (?)", ["Alice"]);
+  await tx.exec("INSERT INTO posts (title, authorId) VALUES (?, ?)", [
+    "Hello",
+    1,
+  ]);
+  return { success: true };
 });
 // Result: { success: true }
 
 // Transaction with query results
 const userId = await db.transaction(async (tx) => {
-    await tx.exec("INSERT INTO users (name) VALUES (?)", ["Bob"]);
+  await tx.exec("INSERT INTO users (name) VALUES (?)", ["Bob"]);
 
-    const users = await tx.query<{ id: number }>(
-        "SELECT id FROM users WHERE name = ?",
-        ["Bob"],
-    );
+  const users = await tx.query<{ id: number }>(
+    "SELECT id FROM users WHERE name = ?",
+    ["Bob"],
+  );
 
-    return users[0].id;
+  return users[0].id;
 });
 // Result: 2
 
 // Transaction with error (automatic rollback)
 try {
-    await db.transaction(async (tx) => {
-        await tx.exec("INSERT INTO users (name) VALUES (?)", ["Charlie"]);
-        throw new Error("Validation failed");
-        // ROLLBACK executed automatically
-    });
+  await db.transaction(async (tx) => {
+    await tx.exec("INSERT INTO users (name) VALUES (?)", ["Charlie"]);
+    throw new Error("Validation failed");
+    // ROLLBACK executed automatically
+  });
 } catch (error) {
-    // Charlie not inserted due to rollback
+  // Charlie not inserted due to rollback
 }
 ```
 
@@ -493,7 +492,7 @@ Close the database and release resources.
 
 ```typescript
 interface DBInterface {
-    close(): Promise<void>;
+  close(): Promise<void>;
 }
 ```
 
@@ -552,47 +551,47 @@ Subscribe to structured log events from database operations. Returns a cancel fu
 
 ```typescript
 interface DBInterface {
-    /**
-     * Subscribe to log events
-     * Logs include SQL execution, timing, errors, and application events
-     *
-     * @param callback - Called for each log entry
-     * @returns Unsubscribe function
-     *
-     * @example
-     * const unsubscribe = db.onLog((log) => {
-     *     console.log(`[${log.level}]`, log.data);
-     * });
-     * // Later: unsubscribe();
-     */
-    onLog(callback: (log: LogEntry) => void): () => void;
+  /**
+   * Subscribe to log events
+   * Logs include SQL execution, timing, errors, and application events
+   *
+   * @param callback - Called for each log entry
+   * @returns Unsubscribe function
+   *
+   * @example
+   * const unsubscribe = db.onLog((log) => {
+   *     console.log(`[${log.level}]`, log.data);
+   * });
+   * // Later: unsubscribe();
+   */
+  onLog(callback: (log: LogEntry) => void): () => void;
 }
 ```
 
 **Type Parameters:**
 
 - `callback` (LogCallback): Function to call for each log entry
-    - Receives `LogEntry` object with `{level, data}` structure
+  - Receives `LogEntry` object with `{level, data}` structure
 
 **Returns:**
 
 - `() => void`: Cancel function to unsubscribe
-    - Removes the callback from log dispatcher
-    - Idempotent (safe to call multiple times)
+  - Removes the callback from log dispatcher
+  - Idempotent (safe to call multiple times)
 
 **Log Entry Format:**
 
 ```typescript
 interface LogEntry {
-    /**
-     * Log level: 'info' | 'debug' | 'error'
-     */
-    level: 'info' | 'debug' | 'error';
+  /**
+   * Log level: 'info' | 'debug' | 'error'
+   */
+  level: "info" | "debug" | "error";
 
-    /**
-     * Log data (SQL, timing, errors, events, etc.)
-     */
-    data: unknown;
+  /**
+   * Log data (SQL, timing, errors, events, etc.)
+   */
+  data: unknown;
 }
 ```
 
@@ -614,7 +613,7 @@ interface LogEntry {
 ```typescript
 // Register log listener
 const cancelLog = db.onLog((log) => {
-    console.log(`[${log.level}]`, log.data);
+  console.log(`[${log.level}]`, log.data);
 });
 
 // Later: stop listening
@@ -622,17 +621,17 @@ cancelLog();
 
 // Register another listener (multiple allowed)
 const cancelLog2 = db.onLog((log) => {
-    if (log.level === 'error') {
-        sendToErrorTracking(log.data);
-    }
+  if (log.level === "error") {
+    sendToErrorTracking(log.data);
+  }
 });
 
 // Filter by level
 const cancelDebug = db.onLog((log) => {
-    if (log.level === 'debug') {
-        // Log SQL execution details
-        console.log('SQL:', log.data.sql, 'Duration:', log.data.duration);
-    }
+  if (log.level === "debug") {
+    // Log SQL execution details
+    console.log("SQL:", log.data.sql, "Duration:", log.data.duration);
+  }
 });
 ```
 
@@ -676,16 +675,16 @@ Create a new dev version using migration and seed SQL.
 
 ```typescript
 interface DevTool {
-    release(input: ReleaseConfig): Promise<void>;
+  release(input: ReleaseConfig): Promise<void>;
 }
 ```
 
 **Parameters:**
 
 - `input` (ReleaseConfig): Release configuration
-    - `version` (string): Semantic version string "x.x.x" (no leading zeros)
-    - `migrationSQL` (string): Migration SQL to apply for this version
-    - `seedSQL` (string | null | undefined): Optional seed SQL to apply after migration
+  - `version` (string): Semantic version string "x.x.x" (no leading zeros)
+  - `migrationSQL` (string): Migration SQL to apply for this version
+  - `seedSQL` (string | null | undefined): Optional seed SQL to apply after migration
 
 **Returns:**
 
@@ -710,9 +709,9 @@ interface DevTool {
 
 ```typescript
 await db.devTool.release({
-    version: "1.0.1",
-    migrationSQL: "ALTER TABLE users ADD COLUMN age INTEGER;",
-    seedSQL: "UPDATE users SET age = 25 WHERE age IS NULL;",
+  version: "1.0.1",
+  migrationSQL: "ALTER TABLE users ADD COLUMN age INTEGER;",
+  seedSQL: "UPDATE users SET age = 25 WHERE age IS NULL;",
 });
 ```
 
@@ -726,15 +725,15 @@ Roll back to a target version and remove dev versions above it.
 
 ```typescript
 interface DevTool {
-    rollback(version: string): Promise<void>;
+  rollback(version: string): Promise<void>;
 }
 ```
 
 **Parameters:**
 
 - `version` (string): Target version to rollback to
-    - Must be an existing version in metadata
-    - Cannot be below latest release version
+  - Must be an existing version in metadata
+  - Cannot be below latest release version
 
 **Returns:**
 
@@ -781,64 +780,64 @@ Global namespace providing direct access to opened database instances and databa
 
 ```typescript
 declare global {
-    interface Window {
-        /**
-         * web-sqlite-js global namespace
-         * Provides direct access to opened database instances
-         */
-        __web_sqlite: {
-            /**
-             * Map of currently opened database instances
-             * Key: normalized database name (e.g., "myapp.sqlite3")
-             * Value: Database interface instance
-             * @readonly
-             */
-            readonly databases: Record<string, DBInterface>;
+  interface Window {
+    /**
+     * web-sqlite-js global namespace
+     * Provides direct access to opened database instances
+     */
+    __web_sqlite: {
+      /**
+       * Map of currently opened database instances
+       * Key: normalized database name (e.g., "myapp.sqlite3")
+       * Value: Database interface instance
+       * @readonly
+       */
+      readonly databases: Record<string, DBInterface>;
 
-            /**
-             * Subscribe to database open/close events
-             * @param callback - Called when a database is opened or closed
-             * @returns Unsubscribe function
-             */
-            onDatabaseChange(
-                callback: (event: DatabaseChangeEvent) => void
-            ): () => void;
-        };
-    }
+      /**
+       * Subscribe to database open/close events
+       * @param callback - Called when a database is opened or closed
+       * @returns Unsubscribe function
+       */
+      onDatabaseChange(
+        callback: (event: DatabaseChangeEvent) => void,
+      ): () => void;
+    };
+  }
 }
 ```
 
 **Properties:**
 
 - `databases` (Record<string, DBInterface>): Map of opened database instances
-    - **Keys**: Normalized database names (e.g., "myapp.sqlite3")
-    - **Values**: Actual `DBInterface` instances (direct references, no RPC)
-    - **Read-only**: Externally read-only (internal updates only)
-    - **Lifetime**: Cleared on page unload/refresh
+  - **Keys**: Normalized database names (e.g., "myapp.sqlite3")
+  - **Values**: Actual `DBInterface` instances (direct references, no RPC)
+  - **Read-only**: Externally read-only (internal updates only)
+  - **Lifetime**: Cleared on page unload/refresh
 
 - `onDatabaseChange(callback)` (Function): Subscribe to database lifecycle events
-    - **Parameter**: Callback receiving `DatabaseChangeEvent`
-    - **Returns**: Cancel function to unsubscribe
-    - **Event Types**: `'opened' | 'closed'`
+  - **Parameter**: Callback receiving `DatabaseChangeEvent`
+  - **Returns**: Cancel function to unsubscribe
+  - **Event Types**: `'opened' | 'closed'`
 
 **Event Format:**
 
 ```typescript
 interface DatabaseChangeEvent {
-    /**
-     * What happened: 'opened' | 'closed'
-     */
-    action: 'opened' | 'closed';
+  /**
+   * What happened: 'opened' | 'closed'
+   */
+  action: "opened" | "closed";
 
-    /**
-     * Which database changed (normalized name, e.g., "myapp.sqlite3")
-     */
-    dbName: string;
+  /**
+   * Which database changed (normalized name, e.g., "myapp.sqlite3")
+   */
+  dbName: string;
 
-    /**
-     * All currently opened database names
-     */
-    databases: string[];
+  /**
+   * All currently opened database names
+   */
+  databases: string[];
 }
 ```
 
@@ -853,30 +852,30 @@ interface DatabaseChangeEvent {
 
 ```typescript
 // Access database from anywhere (no imports needed!)
-const db = window.__web_sqlite.databases['myapp.sqlite3'];
-const users = await db.query('SELECT * FROM users');
+const db = window.__web_sqlite.databases["myapp.sqlite3"];
+const users = await db.query("SELECT * FROM users");
 
 // In module A:
-await openDB('app');
+await openDB("app");
 
 // In module B (completely separate file, no import):
-const db = window.__web_sqlite.databases['app.sqlite3'];
-await db.exec('INSERT INTO users (name) VALUES (?)', ['Alice']);
+const db = window.__web_sqlite.databases["app.sqlite3"];
+await db.exec("INSERT INTO users (name) VALUES (?)", ["Alice"]);
 
 // In module C:
-const db2 = window.__web_sqlite.databases['app.sqlite3'];
-const users = await db2.query('SELECT * FROM users');
+const db2 = window.__web_sqlite.databases["app.sqlite3"];
+const users = await db2.query("SELECT * FROM users");
 
 // Subscribe to database change events
 const unsubscribe = window.__web_sqlite.onDatabaseChange((event) => {
-    if (event.action === 'opened') {
-        console.log(`✅ Database opened: ${event.dbName}`);
-        // Access the newly opened database directly
-        const db = window.__web_sqlite.databases[event.dbName];
-    } else {
-        console.log(`❌ Database closed: ${event.dbName}`);
-    }
-    console.log('Current databases:', event.databases);
+  if (event.action === "opened") {
+    console.log(`✅ Database opened: ${event.dbName}`);
+    // Access the newly opened database directly
+    const db = window.__web_sqlite.databases[event.dbName];
+  } else {
+    console.log(`❌ Database closed: ${event.dbName}`);
+  }
+  console.log("Current databases:", event.databases);
 });
 
 // Unsubscribe when done
@@ -1075,8 +1074,8 @@ Each request gets a unique incremental ID for promise resolution:
 
 ```typescript
 const getLatestMsgId = (() => {
-    let latestId = 0;
-    return () => ++latestId;
+  let latestId = 0;
+  return () => ++latestId;
 })();
 
 // Main thread sends request
@@ -1098,8 +1097,8 @@ idMapPromise.set(id, { resolve, reject });
 // Retrieve and resolve on response
 const task = idMapPromise.get(id);
 if (task) {
-    task.resolve(payload);
-    idMapPromise.delete(id);
+  task.resolve(payload);
+  idMapPromise.delete(id);
 }
 ```
 
@@ -1112,13 +1111,13 @@ if (task) {
 ```typescript
 // SQL value types supported by SQLite
 type SqlValue =
-    | null
-    | number
-    | string
-    | boolean
-    | bigint
-    | Uint8Array
-    | ArrayBuffer;
+  | null
+  | number
+  | string
+  | boolean
+  | bigint
+  | Uint8Array
+  | ArrayBuffer;
 
 // Bind parameters (positional or named)
 type SQLParams = SqlValue[] | Record<string, SqlValue>;
@@ -1128,73 +1127,73 @@ type DbTarget = "active" | "meta";
 
 // Execution result metadata
 type ExecResult = {
-    changes?: number | bigint;
-    lastInsertRowid?: number | bigint;
+  changes?: number | bigint;
+  lastInsertRowid?: number | bigint;
 };
 
 // Release configuration
 type ReleaseConfig = {
-    version: string;
-    migrationSQL: string;
-    seedSQL?: string | null;
+  version: string;
+  migrationSQL: string;
+  seedSQL?: string | null;
 };
 
 // Database open options
 type OpenDBOptions = {
-    releases?: ReleaseConfig[];
-    debug?: boolean;
+  releases?: ReleaseConfig[];
+  debug?: boolean;
 };
 
 // Transaction callback
 type transactionCallback<T> = (
-    db: Pick<DBInterface, "exec" | "query">,
+  db: Pick<DBInterface, "exec" | "query">,
 ) => Promise<T>;
 
 // Dev tool interface
 type DevTool = {
-    release(input: ReleaseConfig): Promise<void>;
-    rollback(version: string): Promise<void>;
+  release(input: ReleaseConfig): Promise<void>;
+  rollback(version: string): Promise<void>;
 };
 
 // v2.0.0: Log entry with level and structured data
 type LogEntry = {
-    /**
-     * Log level: 'info' | 'debug' | 'error'
-     */
-    level: 'info' | 'debug' | 'error';
+  /**
+   * Log level: 'info' | 'debug' | 'error'
+   */
+  level: "info" | "debug" | "error";
 
-    /**
-     * Log data (SQL, timing, errors, events, etc.)
-     */
-    data: unknown;
+  /**
+   * Log data (SQL, timing, errors, events, etc.)
+   */
+  data: unknown;
 };
 
 // v2.0.0: Event emitted when a database is opened or closed
 type DatabaseChangeEvent = {
-    /**
-     * What happened: 'opened' | 'closed'
-     */
-    action: 'opened' | 'closed';
+  /**
+   * What happened: 'opened' | 'closed'
+   */
+  action: "opened" | "closed";
 
-    /**
-     * Which database changed (normalized name, e.g., "myapp.sqlite3")
-     */
-    dbName: string;
+  /**
+   * Which database changed (normalized name, e.g., "myapp.sqlite3")
+   */
+  dbName: string;
 
-    /**
-     * All currently opened database names
-     */
-    databases: string[];
+  /**
+   * All currently opened database names
+   */
+  databases: string[];
 };
 
 // Main database interface
 interface DBInterface {
-    exec(sql: string, params?: SQLParams): Promise<ExecResult>;
-    query<T = unknown>(sql: string, params?: SQLParams): Promise<T[]>;
-    transaction<T>(fn: transactionCallback<T>): Promise<T>;
-    close(): Promise<void>;
-    onLog(callback: (log: LogEntry) => void): () => void; // v2.0.0
-    devTool: DevTool;
+  exec(sql: string, params?: SQLParams): Promise<ExecResult>;
+  query<T = unknown>(sql: string, params?: SQLParams): Promise<T[]>;
+  transaction<T>(fn: transactionCallback<T>): Promise<T>;
+  close(): Promise<void>;
+  onLog(callback: (log: LogEntry) => void): () => void; // v2.0.0
+  devTool: DevTool;
 }
 ```
 
@@ -1203,39 +1202,39 @@ interface DBInterface {
 ```typescript
 // Worker message events
 enum SqliteEvent {
-    OPEN = "open",
-    CLOSE = "close",
-    EXECUTE = "execute",
-    QUERY = "query",
+  OPEN = "open",
+  CLOSE = "close",
+  EXECUTE = "execute",
+  QUERY = "query",
 }
 
 // Worker open options
 type WorkerOpenDBOptions = {
-    debug?: boolean;
+  debug?: boolean;
 };
 
 // Open database arguments
 type OpenDBArgs = {
-    filename: string;
-    options?: WorkerOpenDBOptions;
-    target?: DbTarget;
-    replace?: boolean;
+  filename: string;
+  options?: WorkerOpenDBOptions;
+  target?: DbTarget;
+  replace?: boolean;
 };
 
 // Request message
 type SqliteReqMsg<T> = {
-    id: number;
-    event: SqliteEvent;
-    payload?: T;
+  id: number;
+  event: SqliteEvent;
+  payload?: T;
 };
 
 // Response message (v2.0.0: includes logs)
 type SqliteResMsg<T> = {
-    id: number;
-    success: boolean;
-    error?: Error;
-    payload?: T;
-    logs?: LogEntry[]; // v2.0.0: Structured logs from worker
+  id: number;
+  success: boolean;
+  error?: Error;
+  payload?: T;
+  logs?: LogEntry[]; // v2.0.0: Structured logs from worker
 };
 ```
 
@@ -1244,30 +1243,30 @@ type SqliteResMsg<T> = {
 ```typescript
 // Global namespace on window object
 declare global {
-    interface Window {
-        /**
-         * web-sqlite-js global namespace
-         * Provides direct access to opened database instances
-         */
-        __web_sqlite: {
-            /**
-             * Map of currently opened database instances
-             * Key: normalized database name (e.g., "myapp.sqlite3")
-             * Value: Database interface instance
-             * @readonly
-             */
-            readonly databases: Record<string, DBInterface>;
+  interface Window {
+    /**
+     * web-sqlite-js global namespace
+     * Provides direct access to opened database instances
+     */
+    __web_sqlite: {
+      /**
+       * Map of currently opened database instances
+       * Key: normalized database name (e.g., "myapp.sqlite3")
+       * Value: Database interface instance
+       * @readonly
+       */
+      readonly databases: Record<string, DBInterface>;
 
-            /**
-             * Subscribe to database open/close events
-             * @param callback - Called when a database is opened or closed
-             * @returns Unsubscribe function
-             */
-            onDatabaseChange(
-                callback: (event: DatabaseChangeEvent) => void
-            ): () => void;
-        };
-    }
+      /**
+       * Subscribe to database open/close events
+       * @param callback - Called when a database is opened or closed
+       * @returns Unsubscribe function
+       */
+      onDatabaseChange(
+        callback: (event: DatabaseChangeEvent) => void,
+      ): () => void;
+    };
+  }
 }
 ```
 
@@ -1281,24 +1280,24 @@ declare global {
 import { openDB } from "web-sqlite-js";
 
 const db = await openDB("myapp", {
-    releases: [
-        {
-            version: "1.0.0",
-            migrationSQL: `
+  releases: [
+    {
+      version: "1.0.0",
+      migrationSQL: `
         CREATE TABLE users (
           id INTEGER PRIMARY KEY,
           name TEXT NOT NULL,
           email TEXT UNIQUE
         );
       `,
-        },
-        {
-            version: "1.1.0",
-            migrationSQL: `
+    },
+    {
+      version: "1.1.0",
+      migrationSQL: `
         ALTER TABLE users ADD COLUMN age INTEGER;
       `,
-        },
-    ],
+    },
+  ],
 });
 ```
 
@@ -1306,17 +1305,17 @@ const db = await openDB("myapp", {
 
 ```typescript
 await db.transaction(async (tx) => {
-    const result = await tx.exec(
-        "INSERT INTO users (name, email) VALUES (?, ?)",
-        ["Alice", "alice@example.com"],
-    );
+  const result = await tx.exec(
+    "INSERT INTO users (name, email) VALUES (?, ?)",
+    ["Alice", "alice@example.com"],
+  );
 
-    const userId = result.lastInsertRowid;
+  const userId = result.lastInsertRowid;
 
-    await tx.exec("INSERT INTO posts (title, authorId) VALUES (?, ?)", [
-        "Hello World",
-        userId,
-    ]);
+  await tx.exec("INSERT INTO posts (title, authorId) VALUES (?, ?)", [
+    "Hello World",
+    userId,
+  ]);
 });
 ```
 
@@ -1324,14 +1323,14 @@ await db.transaction(async (tx) => {
 
 ```typescript
 interface User {
-    id: number;
-    name: string;
-    email: string;
+  id: number;
+  name: string;
+  email: string;
 }
 
 const users = await db.query<User>(
-    "SELECT id, name, email FROM users WHERE age > ?",
-    [18],
+  "SELECT id, name, email FROM users WHERE age > ?",
+  [18],
 );
 
 // users is properly typed as User[]
@@ -1344,8 +1343,8 @@ users[0].id; // number
 ```typescript
 // Create dev version for testing migration
 await db.devTool.release({
-    version: "2.0.0",
-    migrationSQL: "ALTER TABLE users ADD COLUMN bio TEXT;",
+  version: "2.0.0",
+  migrationSQL: "ALTER TABLE users ADD COLUMN bio TEXT;",
 });
 
 // Test new schema
@@ -1360,13 +1359,13 @@ await db.devTool.rollback("1.1.0");
 ```typescript
 // Register log listener for monitoring
 const cancelLog = db.onLog((log) => {
-    if (log.level === 'error') {
-        // Send errors to tracking service
-        errorTracking.capture(log.data);
-    } else if (log.level === 'debug') {
-        // Log SQL execution details
-        console.log(`SQL: ${log.data.sql}, Duration: ${log.data.duration}ms`);
-    }
+  if (log.level === "error") {
+    // Send errors to tracking service
+    errorTracking.capture(log.data);
+  } else if (log.level === "debug") {
+    // Log SQL execution details
+    console.log(`SQL: ${log.data.sql}, Duration: ${log.data.duration}ms`);
+  }
 });
 
 // Later: unsubscribe
@@ -1377,16 +1376,16 @@ cancelLog();
 
 ```typescript
 // In main module:
-const db = await openDB('app');
+const db = await openDB("app");
 
 // In another module (no import needed):
-const db = window.__web_sqlite.databases['app.sqlite3'];
-const users = await db.query('SELECT * FROM users');
+const db = window.__web_sqlite.databases["app.sqlite3"];
+const users = await db.query("SELECT * FROM users");
 
 // Subscribe to database lifecycle events
 const unsubscribe = window.__web_sqlite.onDatabaseChange((event) => {
-    console.log(`Database ${event.action}: ${event.dbName}`);
-    updateDatabaseList(event.databases);
+  console.log(`Database ${event.action}: ${event.dbName}`);
+  updateDatabaseList(event.databases);
 });
 ```
 
@@ -1430,29 +1429,29 @@ const unsubscribe = window.__web_sqlite.onDatabaseChange((event) => {
 ### Error Categories
 
 1. **Initialization Errors**
-    - SharedArrayBuffer unavailable
-    - Invalid filename
-    - OPFS not supported
+   - SharedArrayBuffer unavailable
+   - Invalid filename
+   - OPFS not supported
 
 2. **SQL Execution Errors**
-    - Syntax errors
-    - Constraint violations
-    - Table/column not found
+   - Syntax errors
+   - Constraint violations
+   - Table/column not found
 
 3. **Release Errors**
-    - Hash mismatch
-    - Version conflicts
-    - Rollback failures
-    - Lock contention
+   - Hash mismatch
+   - Version conflicts
+   - Rollback failures
+   - Lock contention
 
 4. **OPFS Errors**
-    - File not found
-    - Quota exceeded
-    - Permission denied
+   - File not found
+   - Quota exceeded
+   - Permission denied
 
 5. **Registry Errors** (v2.0.0)
-    - Database already open
-    - Invalid database name
+   - Database already open
+   - Invalid database name
 
 ### Error Propagation
 
@@ -1473,7 +1472,7 @@ All errors preserve `name`, `message`, and `stack` properties across worker boun
 
 ```typescript
 db.onLog((log) => {
-    throw new Error("Callback error"); // Doesn't break DB operations
+  throw new Error("Callback error"); // Doesn't break DB operations
 });
 
 await db.exec("INSERT INTO users ..."); // Still works

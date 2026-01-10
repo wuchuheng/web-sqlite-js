@@ -23,8 +23,8 @@ Refactor the toolbar buttons in `SqlConsole.vue` to behave and look like browser
 
 - **The "Sliding Gap" Effect:** When switching between tabs, the "empty" part of the bottom border should not simply jump. Instead, it should appear to "travel" along the border line.
 - **Movement Logic:**
-    - If moving from Tab A to Tab B (Left to Right): The border at Tab A should start "growing" back from left to right, while the border at Tab B should start "disappearing" from left to right.
-    - Visually, this is achieved by a sliding mask that matches the background color and transitions its `left` and `width` properties.
+  - If moving from Tab A to Tab B (Left to Right): The border at Tab A should start "growing" back from left to right, while the border at Tab B should start "disappearing" from left to right.
+  - Visually, this is achieved by a sliding mask that matches the background color and transitions its `left` and `width` properties.
 - **Animation:** Use a smooth transition (e.g., `0.3s cubic-bezier(0.4, 0, 0.2, 1)`).
 
 ### 4. Layout & Alignment
@@ -44,14 +44,14 @@ Refactor the toolbar buttons in `SqlConsole.vue` to behave and look like browser
 
 - **Toolbar Container:** `position: relative; border-bottom: 2px solid #2d2d2d;`.
 - **The Mask Element:** A `div` (or pseudo-element) with:
-    - `position: absolute; bottom: -2px;` (sitting exactly on the toolbar border).
-    - `height: 2px;` (matching the border width).
-    - `background: #fdfbf6;` (matching the content background).
-    - `transition: left 0.3s, width 0.3s;`.
-    - `z-index: 5;`.
+  - `position: absolute; bottom: -2px;` (sitting exactly on the toolbar border).
+  - `height: 2px;` (matching the border width).
+  - `background: #fdfbf6;` (matching the content background).
+  - `transition: left 0.3s, width 0.3s;`.
+  - `z-index: 5;`.
 - **Tab Component (`.tool-btn`):**
-    - `border-bottom: none;` (The mask handles the "opening" of the border).
-    - `z-index: 1;`.
+  - `border-bottom: none;` (The mask handles the "opening" of the border).
+  - `z-index: 1;`.
 
 ### Coordination Logic
 
@@ -61,22 +61,22 @@ Refactor the toolbar buttons in `SqlConsole.vue` to behave and look like browser
 ## Implementation Plan
 
 1. **Step 1: Update State & Refs**
-    - Add `activePreset` ref.
-    - Add `tabRefs` array to capture button elements.
+   - Add `activePreset` ref.
+   - Add `tabRefs` array to capture button elements.
 
 2. **Step 2: Implement Calculation Logic**
-    - Create a function `updateMaskPosition()` that uses `offsetLeft` and `offsetWidth` of the active tab.
-    - Call this on `mounted` and whenever `activePreset` changes.
+   - Create a function `updateMaskPosition()` that uses `offsetLeft` and `offsetWidth` of the active tab.
+   - Call this on `mounted` and whenever `activePreset` changes.
 
 3. **Step 3: Update Template**
-    - Add the `.active-tab-mask` element inside `.window-toolbar`.
-    - Apply dynamic styles to the mask based on the calculated position.
+   - Add the `.active-tab-mask` element inside `.window-toolbar`.
+   - Apply dynamic styles to the mask based on the calculated position.
 
 4. **Step 4: Refactor Styles**
-    - Change `.tool-btn` to tab-like styling (rounded top, flat bottom).
-    - Remove the hardcoded `border-bottom` removal on tabs and let the mask handle the visual merge.
-    - Add transition properties to the mask.
+   - Change `.tool-btn` to tab-like styling (rounded top, flat bottom).
+   - Remove the hardcoded `border-bottom` removal on tabs and let the mask handle the visual merge.
+   - Add transition properties to the mask.
 
 5. **Step 5: Verification**
-    - Test the "sliding hole" effect by clicking non-adjacent tabs (e.g., Insert -> Update).
-    - Ensure the mask correctly covers the border and moves smoothly.
+   - Test the "sliding hole" effect by clicking non-adjacent tabs (e.g., Insert -> Update).
+   - Ensure the mask correctly covers the border and moves smoothly.

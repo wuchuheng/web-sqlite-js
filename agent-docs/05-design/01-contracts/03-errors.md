@@ -53,10 +53,10 @@ Error: [web-sqlite-js] SharedArrayBuffer is not enabled.
 **Solution**:
 
 - Configure HTTP headers:
-    ```
-    Cross-Origin-Opener-Policy: same-origin
-    Cross-Origin-Embedder-Policy: require-corp
-    ```
+  ```
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  ```
 - Verify headers at: `https://example.com/test`
 - Check browser compatibility (Chrome/Edge/Opera only)
 
@@ -736,9 +736,9 @@ When `debug: true` is enabled:
 
 ```typescript
 console.debug({
-    sql: "SELECT * FROM users",
-    duration: 0.28,
-    bind: [1],
+  sql: "SELECT * FROM users",
+  duration: 0.28,
+  bind: [1],
 });
 ```
 
@@ -851,14 +851,14 @@ transaction<T>(fn: transactionCallback<T>): Promise<T> {
 
 ```typescript
 try {
-    await _exec("BEGIN");
-    await _exec(migrationSQL);
-    await _exec(seedSQL);
-    await _exec("COMMIT");
+  await _exec("BEGIN");
+  await _exec(migrationSQL);
+  await _exec(seedSQL);
+  await _exec("COMMIT");
 } catch (error) {
-    await _exec("ROLLBACK");
-    await removeDir(baseDir, version); // Automatic cleanup
-    throw error;
+  await _exec("ROLLBACK");
+  await removeDir(baseDir, version); // Automatic cleanup
+  throw error;
 }
 ```
 
@@ -866,16 +866,16 @@ try {
 
 ```typescript
 try {
-    await metaExec("BEGIN IMMEDIATE");
-    // ... release operations ...
-    await metaExec("COMMIT");
+  await metaExec("BEGIN IMMEDIATE");
+  // ... release operations ...
+  await metaExec("COMMIT");
 } catch (error) {
-    try {
-        await metaExec("ROLLBACK"); // Always release lock
-    } catch {
-        // ignore rollback errors
-    }
-    throw error;
+  try {
+    await metaExec("ROLLBACK"); // Always release lock
+  } catch {
+    // ignore rollback errors
+  }
+  throw error;
 }
 ```
 
@@ -893,10 +893,10 @@ const db = await openDB("myapp", options);
 ```typescript
 // Clear database and start over
 await navigator.storage
-    .getDirectory()
-    .then((root) =>
-        root.getDirectoryHandle("myapp").then((dir) => dir.removeRecursively()),
-    );
+  .getDirectory()
+  .then((root) =>
+    root.getDirectoryHandle("myapp").then((dir) => dir.removeRecursively()),
+  );
 const db = await openDB("myapp", options);
 ```
 
@@ -917,7 +917,7 @@ await db.devTool.rollback("1.0.0");
 
 ```typescript
 if (typeof filename !== "string" || filename.trim() === "") {
-    throw new Error("filename must be a non-empty string");
+  throw new Error("filename must be a non-empty string");
 }
 ```
 
@@ -925,7 +925,7 @@ if (typeof filename !== "string" || filename.trim() === "") {
 
 ```typescript
 if (typeof sql !== "string" || sql.trim() === "") {
-    throw new Error("SQL query must be a non-empty string");
+  throw new Error("SQL query must be a non-empty string");
 }
 ```
 
@@ -933,7 +933,7 @@ if (typeof sql !== "string" || sql.trim() === "") {
 
 ```typescript
 if (!VERSION_RE.test(version)) {
-    throw new Error(`Invalid version format: ${version}`);
+  throw new Error(`Invalid version format: ${version}`);
 }
 ```
 
@@ -949,15 +949,15 @@ const releaseConfigs = await validateAndHashReleases(options?.releases);
 ```typescript
 // Prevent concurrent release operations
 const withReleaseLock = async <T>(fn: () => Promise<T>): Promise<T> => {
-    try {
-        await metaExec("BEGIN IMMEDIATE");
-    } catch (error) {
-        if (isLockError(error)) {
-            throw new Error("Release operation already in progress");
-        }
-        throw error;
+  try {
+    await metaExec("BEGIN IMMEDIATE");
+  } catch (error) {
+    if (isLockError(error)) {
+      throw new Error("Release operation already in progress");
     }
-    // ... operations ...
+    throw error;
+  }
+  // ... operations ...
 };
 ```
 
@@ -987,13 +987,13 @@ const withReleaseLock = async <T>(fn: () => Promise<T>): Promise<T> => {
 
 ```typescript
 test("transaction rolls back on error", async () => {
-    await db.transaction(async (tx) => {
-        await tx.exec("INSERT INTO users (name) VALUES (?)", ["Alice"]);
-        throw new Error("Intentional error");
-    });
+  await db.transaction(async (tx) => {
+    await tx.exec("INSERT INTO users (name) VALUES (?)", ["Alice"]);
+    throw new Error("Intentional error");
+  });
 
-    const users = await db.query("SELECT * FROM users");
-    expect(users.length).toBe(0); // Alice not inserted
+  const users = await db.query("SELECT * FROM users");
+  expect(users.length).toBe(0); // Alice not inserted
 });
 ```
 
@@ -1001,18 +1001,18 @@ test("transaction rolls back on error", async () => {
 
 ```typescript
 test("migration failure removes version directory", async () => {
-    const db = await openDB("test", {
-        releases: [
-            {
-                version: "1.0.0",
-                migrationSQL: "INVALID SQL", // Syntax error
-            },
-        ],
-    });
+  const db = await openDB("test", {
+    releases: [
+      {
+        version: "1.0.0",
+        migrationSQL: "INVALID SQL", // Syntax error
+      },
+    ],
+  });
 
-    // Should throw error
-    // Version directory should be removed
-    // Database should remain at previous version
+  // Should throw error
+  // Version directory should be removed
+  // Database should remain at previous version
 });
 ```
 
@@ -1028,10 +1028,10 @@ test("migration failure removes version directory", async () => {
 import * as Sentry from "@sentry/browser";
 
 try {
-    await db.exec("INSERT INTO users ...");
+  await db.exec("INSERT INTO users ...");
 } catch (error) {
-    Sentry.captureException(error);
-    throw error;
+  Sentry.captureException(error);
+  throw error;
 }
 ```
 
@@ -1041,9 +1041,9 @@ try {
 const db = await openDB("myapp");
 
 db.query("SELECT * FROM users").catch((error) => {
-    console.error("Database error:", error);
-    // Send to error tracking service
-    analytics.trackError(error);
+  console.error("Database error:", error);
+  // Send to error tracking service
+  analytics.trackError(error);
 });
 ```
 
@@ -1051,7 +1051,7 @@ db.query("SELECT * FROM users").catch((error) => {
 
 ```typescript
 const db = await openDB("myapp", {
-    debug: true, // Enable SQL logging for debugging
+  debug: true, // Enable SQL logging for debugging
 });
 ```
 

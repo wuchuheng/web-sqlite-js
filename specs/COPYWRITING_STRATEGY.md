@@ -35,9 +35,9 @@ Transform the homepage demo's messaging from a functional technical diagram into
 
 - **Local-First Focus:** Explicitly use the word "Local" for both the Console and the Storage explorer to emphasize privacy and performance.
 - **Action Labels:** Use expressive labels for SQL presets:
-    - **Insert** -> **+ Add Data**
-    - **Delete** -> **🗑 Remove**
-    - **Update** -> **✎ Modify**
+  - **Insert** -> **+ Add Data**
+  - **Delete** -> **🗑 Remove**
+  - **Update** -> **✎ Modify**
 
 ## Implementation Plan
 

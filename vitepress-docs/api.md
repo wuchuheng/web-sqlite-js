@@ -27,9 +27,9 @@ If the filename does not end with `.sqlite3`, the extension is appended automati
 
 ```ts
 type ReleaseConfig = {
-    version: string;
-    migrationSQL: string;
-    seedSQL?: string | null;
+  version: string;
+  migrationSQL: string;
+  seedSQL?: string | null;
 };
 ```
 
@@ -64,11 +64,11 @@ Runs `fn` inside a transaction (`BEGIN` / `COMMIT`), and rolls back on error.
 
 ```ts
 await db.transaction(async (tx) => {
-    await tx.exec("INSERT INTO users (name) VALUES (?)", ["Alice"]);
-    const rows = await tx.query<{ count: number }>(
-        "SELECT COUNT(*) as count FROM users",
-    );
-    return rows[0]?.count ?? 0;
+  await tx.exec("INSERT INTO users (name) VALUES (?)", ["Alice"]);
+  const rows = await tx.query<{ count: number }>(
+    "SELECT COUNT(*) as count FROM users",
+  );
+  return rows[0]?.count ?? 0;
 });
 ```
 
@@ -90,8 +90,8 @@ Creates a new dev version and switches the active DB to it.
 
 ```ts
 await db.devTool.release({
-    version: "0.0.2",
-    migrationSQL: "ALTER TABLE users ADD COLUMN role TEXT;",
+  version: "0.0.2",
+  migrationSQL: "ALTER TABLE users ADD COLUMN role TEXT;",
 });
 ```
 

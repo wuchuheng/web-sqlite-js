@@ -148,31 +148,31 @@ Cross-Origin-Embedder-Policy: require-corp
 
 ### Worker-Based Architecture
 
--   **Decision**: Run SQLite in dedicated Web Worker
--   **Validation**: ✅ Production proven, 100% test pass rate
--   **Benefits**: Non-blocking UI, main thread never blocked
--   **Trade-offs**: Worker isolation adds debugging complexity
+- **Decision**: Run SQLite in dedicated Web Worker
+- **Validation**: ✅ Production proven, 100% test pass rate
+- **Benefits**: Non-blocking UI, main thread never blocked
+- **Trade-offs**: Worker isolation adds debugging complexity
 
 ### OPFS for Persistence
 
--   **Decision**: Use Origin Private File System for database storage
--   **Validation**: ✅ Stable in Chrome/Edge/Opera, handles 500MB-1GB databases
--   **Benefits**: True file-backed storage, no manual serialization
--   **Trade-offs**: Limited browser support
+- **Decision**: Use Origin Private File System for database storage
+- **Validation**: ✅ Stable in Chrome/Edge/Opera, handles 500MB-1GB databases
+- **Benefits**: True file-backed storage, no manual serialization
+- **Trade-offs**: Limited browser support
 
 ### Mutex Queue for Concurrency
 
--   **Decision**: Serialize all operations through mutex queue
--   **Validation**: ✅ 1000+ transactions/second, no race conditions
--   **Benefits**: Prevents concurrency bugs, fair query scheduling
--   **Trade-offs**: Serial execution limits throughput
+- **Decision**: Serialize all operations through mutex queue
+- **Validation**: ✅ 1000+ transactions/second, no race conditions
+- **Benefits**: Prevents concurrency bugs, fair query scheduling
+- **Trade-offs**: Serial execution limits throughput
 
 ### Release Versioning System
 
--   **Decision**: Isolated database files per version with metadata tracking
--   **Validation**: ✅ Atomic migrations, rollback support validated
--   **Benefits**: Zero-downtime upgrades, safe schema evolution
--   **Trade-offs**: OPFS space usage for multiple versions
+- **Decision**: Isolated database files per version with metadata tracking
+- **Validation**: ✅ Atomic migrations, rollback support validated
+- **Benefits**: Zero-downtime upgrades, safe schema evolution
+- **Trade-offs**: OPFS space usage for multiple versions
 
 ---
 
@@ -180,24 +180,24 @@ Cross-Origin-Embedder-Policy: require-corp
 
 ### Browser Support
 
--   **Limitation**: Requires OPFS support (Chrome/Edge/Opera full support)
--   **Impact**: Safari/Firefox have partial support
--   **Documentation**: ✅ Clearly documented in README and deployment guides
--   **Future**: May add hybrid approach if customer demand exists
+- **Limitation**: Requires OPFS support (Chrome/Edge/Opera full support)
+- **Impact**: Safari/Firefox have partial support
+- **Documentation**: ✅ Clearly documented in README and deployment guides
+- **Future**: May add hybrid approach if customer demand exists
 
 ### Deployment Requirements
 
--   **Limitation**: Requires COOP/COEP headers for SharedArrayBuffer
--   **Impact**: Cannot deploy to platforms without custom header support
--   **Documentation**: ✅ Platform-specific deployment guides provided
--   **Workaround**: Documented for Vercel, Netlify, Cloudflare Pages, nginx, Apache
+- **Limitation**: Requires COOP/COEP headers for SharedArrayBuffer
+- **Impact**: Cannot deploy to platforms without custom header support
+- **Documentation**: ✅ Platform-specific deployment guides provided
+- **Workaround**: Documented for Vercel, Netlify, Cloudflare Pages, nginx, Apache
 
 ### Bundle Size
 
--   **Limitation**: SQLite WASM module is ~500KB (compressed ~150-200KB)
--   **Impact**: Initial page load includes WASM download
--   **Mitigation**: CDN caching, one-time cost amortized over usage
--   **Validation**: ✅ Accepted by early adopters, no complaints
+- **Limitation**: SQLite WASM module is ~500KB (compressed ~150-200KB)
+- **Impact**: Initial page load includes WASM download
+- **Mitigation**: CDN caching, one-time cost amortized over usage
+- **Validation**: ✅ Accepted by early adopters, no complaints
 
 ---
 
@@ -205,34 +205,34 @@ Cross-Origin-Embedder-Policy: require-corp
 
 ### Version History
 
--   **v1.0.0**: Initial release (2024)
--   **v1.1.0**: Production release with all MVP features (2025-01-08)
--   **v1.1.1**: Documentation updates
--   **v1.1.2**: Current version (2025-01-09)
+- **v1.0.0**: Initial release (2024)
+- **v1.1.0**: Production release with all MVP features (2025-01-08)
+- **v1.1.1**: Documentation updates
+- **v1.1.2**: Current version (2025-01-09)
 
 ### NPM Package
 
--   **Package**: `web-sqlite-js`
--   **Downloads**: Available on https://www.npmjs.com/package/web-sqlite-js
--   **Documentation**: https://web-sqlite-js.wuchuheng.com
+- **Package**: `web-sqlite-js`
+- **Downloads**: Available on https://www.npmjs.com/package/web-sqlite-js
+- **Documentation**: https://web-sqlite-js.wuchuheng.com
 
 ### Code Quality
 
--   **TypeScript Coverage**: 100%
--   **Test Pass Rate**: 100%
--   **Lint Status**: Clean
--   **Build Status**: Passing
+- **TypeScript Coverage**: 100%
+- **Test Pass Rate**: 100%
+- **Lint Status**: Clean
+- **Build Status**: Passing
 
 ---
 
 ## References
 
--   **Options Analysis**: `agent-docs/02-feasibility/01-options.md` - Architecture and implementation
--   **Risk Assessment**: `agent-docs/02-feasibility/02-risk-assessment.md` - Risk register and mitigations
--   **Requirements**: `agent-docs/01-discovery/02-requirements.md` - MVP requirements (all implemented)
--   **Status Board**: `agent-docs/00-control/01-status.md` - Current project status
--   **Source Code**: `src/` - Implementation
--   **Tests**: `tests/` - Test suites
+- **Options Analysis**: `agent-docs/02-feasibility/01-options.md` - Architecture and implementation
+- **Risk Assessment**: `agent-docs/02-feasibility/02-risk-assessment.md` - Risk register and mitigations
+- **Requirements**: `agent-docs/01-discovery/02-requirements.md` - MVP requirements (all implemented)
+- **Status Board**: `agent-docs/00-control/01-status.md` - Current project status
+- **Source Code**: `src/` - Implementation
+- **Tests**: `tests/` - Test suites
 
 ---
 
@@ -244,12 +244,12 @@ Cross-Origin-Embedder-Policy: require-corp
 
 **Related Feasibility Documents**:
 
--   [Back to Feasibility: 01 Options](./01-options.md) - Architecture and implementation
--   [Back to Feasibility: 02 Risk Assessment](./02-risk-assessment.md) - Risk register
--   [Back to Spec Index](../00-control/00-spec.md)
+- [Back to Feasibility: 01 Options](./01-options.md) - Architecture and implementation
+- [Back to Feasibility: 02 Risk Assessment](./02-risk-assessment.md) - Risk register
+- [Back to Spec Index](../00-control/00-spec.md)
 
 **Related Discovery Documents**:
 
--   [02 Requirements](../01-discovery/02-requirements.md) - MVP requirements (all implemented)
+- [02 Requirements](../01-discovery/02-requirements.md) - MVP requirements (all implemented)
 
 **Continue to**: [Stage 3: High-Level Design](../03-architecture/01-hld.md) - System architecture and components

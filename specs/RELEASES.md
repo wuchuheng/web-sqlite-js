@@ -31,9 +31,9 @@ All versions are recorded in `release.sqlite3`. The database opened by `openDB()
 
 ```ts
 type ReleaseConfig = {
-    version: string; // "x.x.x" (no leading zeros)
-    migrationSQL: string;
-    seedSQL?: string | null;
+  version: string; // "x.x.x" (no leading zeros)
+  migrationSQL: string;
+  seedSQL?: string | null;
 };
 ```
 
@@ -43,8 +43,8 @@ type ReleaseConfig = {
 
 ```ts
 type DevTool = {
-    release(input: ReleaseConfig): Promise<void>;
-    rollback(version: string): Promise<void>;
+  release(input: ReleaseConfig): Promise<void>;
+  rollback(version: string): Promise<void>;
 };
 ```
 
@@ -107,8 +107,8 @@ CREATE TABLE IF NOT EXISTS release_lock (
 ## Worker Connections
 
 - The worker keeps **two** SQLite connections open:
-    - **Metadata DB**: `release.sqlite3` (used for locks and release records).
-    - **Active DB**: the latest version DB (`default.sqlite3` or `<version>/db.sqlite3`).
+  - **Metadata DB**: `release.sqlite3` (used for locks and release records).
+  - **Active DB**: the latest version DB (`default.sqlite3` or `<version>/db.sqlite3`).
 - Normal `exec/query/transaction` calls go to the **active DB**.
 - Release/rollback logic uses the metadata DB for locking and version bookkeeping, and
   the active DB for migrations/seed execution.
@@ -118,8 +118,8 @@ CREATE TABLE IF NOT EXISTS release_lock (
 ## Version Rules
 
 - Valid version formats:
-    - `default` (system-only)
-    - `x.x.x` numeric semver (no leading zeros; `0` allowed)
+  - `default` (system-only)
+  - `x.x.x` numeric semver (no leading zeros; `0` allowed)
 - Release configs may **not** use `default`.
 - Versions must be strictly increasing in `releases` order.
 - New versions (release or dev) must be greater than the latest recorded version.
@@ -138,48 +138,48 @@ CREATE TABLE IF NOT EXISTS release_lock (
 - Accept `filename` and `{ releases?, debug? }`.
 - Validate `filename` is a non-empty string.
 - Validate `releases` (if provided):
-    - Each entry has `{ version, migrationSQL, seedSQL? }`.
-    - `migrationSQL` is a non-empty string; `seedSQL` is string or `null`.
-    - `version` is valid semver (`x.x.x`, no leading zeros) and not `default`.
-    - Versions are strictly increasing and unique.
+  - Each entry has `{ version, migrationSQL, seedSQL? }`.
+  - `migrationSQL` is a non-empty string; `seedSQL` is string or `null`.
+  - `version` is valid semver (`x.x.x`, no leading zeros) and not `default`.
+  - Versions are strictly increasing and unique.
 - Precompute `migrationSQLHash` and `seedSQLHash` for each entry.
 - Normalize `filename` to end with `.sqlite3` (append if missing).
 
 ### 2) Processing
 
 - Ensure the OPFS directory:
-    - If a file exists with the directory name: throw.
-    - If directory does not exist: create it.
+  - If a file exists with the directory name: throw.
+  - If directory does not exist: create it.
 - Ensure `default.sqlite3` exists (empty DB).
 - Ensure `release.sqlite3` exists:
-    - Create `release` and `release_lock` tables if missing.
-    - Ensure a `default` row exists; insert if absent.
-    - After this step metadata is never empty.
+  - Create `release` and `release_lock` tables if missing.
+  - Ensure a `default` row exists; insert if absent.
+  - After this step metadata is never empty.
 - Load metadata:
-    - `latestRow = SELECT * FROM release ORDER BY id DESC LIMIT 1`
-    - `releaseRows = SELECT * FROM release WHERE mode='release' ORDER BY id`
+  - `latestRow = SELECT * FROM release ORDER BY id DESC LIMIT 1`
+  - `releaseRows = SELECT * FROM release WHERE mode='release' ORDER BY id`
 - Validate `releases` config (if provided):
-    - For every `releaseRows` version (excluding `default`), config must contain an exact match by:
-        - version
-        - `migrationSQLHash`
-        - `seedSQLHash`
-    - Config must not include any version `<= latestReleaseVersion` that is not present in `releaseRows`.
-    - Any config entry `> latestReleaseVersion` is considered **new** and eligible to apply.
+  - For every `releaseRows` version (excluding `default`), config must contain an exact match by:
+    - version
+    - `migrationSQLHash`
+    - `seedSQLHash`
+  - Config must not include any version `<= latestReleaseVersion` that is not present in `releaseRows`.
+  - Any config entry `> latestReleaseVersion` is considered **new** and eligible to apply.
 - Apply new release versions:
-    - Acquire metadata lock.
-    - For each new version in order:
-        - Copy latest DB file to `/<version>/db.sqlite3`
-        - Write `migration.sql` and optional `seed.sql`
-        - Execute migration + seed in a single transaction
-        - Insert new `release` row with mode `release`
-    - Release lock.
+  - Acquire metadata lock.
+  - For each new version in order:
+    - Copy latest DB file to `/<version>/db.sqlite3`
+    - Write `migration.sql` and optional `seed.sql`
+    - Execute migration + seed in a single transaction
+    - Insert new `release` row with mode `release`
+  - Release lock.
 
 ### 3) Return (latest result)
 
 - Determine the latest metadata row after applying new releases.
 - Resolve DB path:
-    - `default.sqlite3` if `latestRow.version === "default"`
-    - `/<version>/db.sqlite3` otherwise
+  - `default.sqlite3` if `latestRow.version === "default"`
+  - `/<version>/db.sqlite3` otherwise
 - Open `release.sqlite3` and the resolved DB file in the worker and return `DBInterface`.
 - `debug: true` only enables SQL logging and does not remove or alter any files.
 
@@ -203,16 +203,16 @@ For a target version `v`:
 2. Copy latest DB file to `<dir>/<v>/db.sqlite3`.
 3. Write `migration.sql` and (if provided) `seed.sql`.
 4. Open `<dir>/<v>/db.sqlite3` in worker and run:
-    - `BEGIN;`
-    - `migrationSQL`
-    - `seedSQL` (if provided)
-    - `COMMIT;`
+   - `BEGIN;`
+   - `migrationSQL`
+   - `seedSQL` (if provided)
+   - `COMMIT;`
 5. On failure:
-    - `ROLLBACK;`
-    - Delete `<dir>/<v>/` directory.
-    - Remove any inserted metadata row.
+   - `ROLLBACK;`
+   - Delete `<dir>/<v>/` directory.
+   - Remove any inserted metadata row.
 6. On success:
-    - Insert metadata row with `mode = 'release'` or `'dev'`.
+   - Insert metadata row with `mode = 'release'` or `'dev'`.
 
 ## Dev Tool: `devTool.release(...)`
 
@@ -266,57 +266,57 @@ Raise explicit errors for:
 ### New test coverage
 
 1. **Default init**
-    - `openDB("db-default.sqlite3")` with no `releases`.
-    - Assert OPFS contains `db-default.sqlite3/` with `default.sqlite3` and `release.sqlite3`.
-    - Assert `release` table contains exactly one row (`version = "default"`).
+   - `openDB("db-default.sqlite3")` with no `releases`.
+   - Assert OPFS contains `db-default.sqlite3/` with `default.sqlite3` and `release.sqlite3`.
+   - Assert `release` table contains exactly one row (`version = "default"`).
 
 2. **Release apply and seed**
-    - `openDB("db-release.sqlite3", { releases: [...] })` with `0.0.0` and `0.0.1`.
-    - `migrationSQL` creates table, `seedSQL` inserts rows.
-    - Assert latest DB contains seeded rows.
-    - Assert `0.0.0/` and `0.0.1/` contain `db.sqlite3`, `migration.sql`, `seed.sql`.
-    - Assert metadata hashes match input SQL.
+   - `openDB("db-release.sqlite3", { releases: [...] })` with `0.0.0` and `0.0.1`.
+   - `migrationSQL` creates table, `seedSQL` inserts rows.
+   - Assert latest DB contains seeded rows.
+   - Assert `0.0.0/` and `0.0.1/` contain `db.sqlite3`, `migration.sql`, `seed.sql`.
+   - Assert metadata hashes match input SQL.
 
 3. **Release hash mismatch**
-    - First run: apply `0.0.0` with SQL A.
-    - Second run: call `openDB` with `0.0.0` and SQL B (different hash).
-    - Expect error with mismatch message.
+   - First run: apply `0.0.0` with SQL A.
+   - Second run: call `openDB` with `0.0.0` and SQL B (different hash).
+   - Expect error with mismatch message.
 
 4. **Release ordering and format**
-    - Invalid ordering (e.g., `0.0.1` then `0.0.0`) should throw.
-    - Leading zeros (e.g., `01.0.0`) should throw.
+   - Invalid ordering (e.g., `0.0.1` then `0.0.0`) should throw.
+   - Leading zeros (e.g., `01.0.0`) should throw.
 
 5. **Slot rule validation**
-    - Metadata already has `0.0.0` and `0.0.1`.
-    - Config includes `0.0.0`, `0.0.1`, and an extra `0.0.2` that is `<= latestReleaseVersion`.
-    - Expect error about extra release config in the archived range.
+   - Metadata already has `0.0.0` and `0.0.1`.
+   - Config includes `0.0.0`, `0.0.1`, and an extra `0.0.2` that is `<= latestReleaseVersion`.
+   - Expect error about extra release config in the archived range.
 
 6. **devTool.release**
-    - Start with release versions `0.0.0`, `0.0.1`.
-    - Call `db.devTool.release({ version: "0.0.2", ... })`.
-    - Assert latest DB is `0.0.2` and metadata `mode = "dev"`.
+   - Start with release versions `0.0.0`, `0.0.1`.
+   - Call `db.devTool.release({ version: "0.0.2", ... })`.
+   - Assert latest DB is `0.0.2` and metadata `mode = "dev"`.
 
 7. **devTool.rollback**
-    - After creating dev versions `0.0.2`, `0.0.3`, call `db.devTool.rollback("0.0.2")`.
-    - Assert `0.0.3/` directory removed and metadata row deleted.
-    - Assert DB opens `0.0.2`.
-    - Attempt rollback below latest release and expect error.
+   - After creating dev versions `0.0.2`, `0.0.3`, call `db.devTool.rollback("0.0.2")`.
+   - Assert `0.0.3/` directory removed and metadata row deleted.
+   - Assert DB opens `0.0.2`.
+   - Attempt rollback below latest release and expect error.
 
 8. **Lock contention**
-    - Hold a `BEGIN IMMEDIATE` transaction on `release.sqlite3`.
-    - Attempt `openDB` release apply or `devTool.release` and expect a lock error.
+   - Hold a `BEGIN IMMEDIATE` transaction on `release.sqlite3`.
+   - Attempt `openDB` release apply or `devTool.release` and expect a lock error.
 
 ### Updates to existing E2E tests
 
 - `tests/e2e/exec.e2e.test.ts`
-    - Update persistence check to assert directory `filename/` exists.
-    - Read `default.sqlite3` (or latest version file when using `releases`) instead of expecting a top-level file.
+  - Update persistence check to assert directory `filename/` exists.
+  - Read `default.sqlite3` (or latest version file when using `releases`) instead of expecting a top-level file.
 - `tests/e2e/sqlite3.e2e.test.ts`
-    - Add assertion that `release.sqlite3` exists under `filename/`.
+  - Add assertion that `release.sqlite3` exists under `filename/`.
 - `tests/e2e/error.e2e.test.ts`
-    - Add cases for invalid `releases` input, hash mismatch, and ordering errors.
+  - Add cases for invalid `releases` input, hash mismatch, and ordering errors.
 - `tests/e2e/query.e2e.test.ts` and `tests/e2e/transaction.e2e.test.ts`
-    - Keep behavior, but ensure the DB name is unique per test run to avoid version conflicts.
+  - Keep behavior, but ensure the DB name is unique per test run to avoid version conflicts.
 
 ## Notes
 
@@ -337,8 +337,8 @@ Add `console.debug` logs at these points (no `debug` flag condition):
 ## JSDoc
 
 - Add standard JSDoc comments for all new public APIs:
-    - `openDB` options (`releases`, `debug`)
-    - `devTool.release`, `devTool.rollback`
-    - `ReleaseConfig` type
-    - Any new errors thrown (documented in API docs and types)
+  - `openDB` options (`releases`, `debug`)
+  - `devTool.release`, `devTool.rollback`
+  - `ReleaseConfig` type
+  - Any new errors thrown (documented in API docs and types)
 - Use concise, explicit descriptions; include parameter details and expected errors.

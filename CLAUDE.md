@@ -10,45 +10,45 @@ Always read these before making decisions or implementing changes:
 
 Stage 1 docs:
 
--   `agent-docs/01-discovery/01-brief.md`
--   `agent-docs/01-discovery/02-requirements.md`
--   `agent-docs/01-discovery/03-scope.md`
+- `agent-docs/01-discovery/01-brief.md`
+- `agent-docs/01-discovery/02-requirements.md`
+- `agent-docs/01-discovery/03-scope.md`
 
 Stage 2 docs:
 
--   `agent-docs/02-feasibility/01-options.md`
+- `agent-docs/02-feasibility/01-options.md`
 
 Stage 3 docs:
 
--   `agent-docs/03-architecture/01-hld.md`
--   `agent-docs/03-architecture/02-dataflow.md`
--   `agent-docs/03-architecture/03-deployment.md`
+- `agent-docs/03-architecture/01-hld.md`
+- `agent-docs/03-architecture/02-dataflow.md`
+- `agent-docs/03-architecture/03-deployment.md`
 
 Stage 4 docs (Architecture Decision Records):
 
--   `agent-docs/04-adr/0001-web-worker-architecture.md` - Worker-based architecture for non-blocking operations
--   `agent-docs/04-adr/0002-opfs-persistent-storage.md` - OPFS for persistent file-based storage
--   `agent-docs/04-adr/0003-mutex-queue-concurrency.md` - Mutex queue for serialized operations
--   `agent-docs/04-adr/0004-release-versioning-system.md` - Release versioning for database migrations
--   `agent-docs/04-adr/0005-coop-coep-requirement.md` - COOP/COEP headers for SharedArrayBuffer
--   `agent-docs/04-adr/0006-typescript-type-system.md` - TypeScript type system with generic parameters
--   `agent-docs/04-adr/0007-error-handling-strategy.md` - Error handling with stack trace preservation
+- `agent-docs/04-adr/0001-web-worker-architecture.md` - Worker-based architecture for non-blocking operations
+- `agent-docs/04-adr/0002-opfs-persistent-storage.md` - OPFS for persistent file-based storage
+- `agent-docs/04-adr/0003-mutex-queue-concurrency.md` - Mutex queue for serialized operations
+- `agent-docs/04-adr/0004-release-versioning-system.md` - Release versioning for database migrations
+- `agent-docs/04-adr/0005-coop-coep-requirement.md` - COOP/COEP headers for SharedArrayBuffer
+- `agent-docs/04-adr/0006-typescript-type-system.md` - TypeScript type system with generic parameters
+- `agent-docs/04-adr/0007-error-handling-strategy.md` - Error handling with stack trace preservation
 
 ---
 
 ## Output boundary rules (non-negotiable)
 
--   `.claude/` contains inputs for Claude: templates, agents, commands, hooks.
--   `agent-docs/` contains ONLY finalized outputs. Never store templates in `agent-docs/`.
+- `.claude/` contains inputs for Claude: templates, agents, commands, hooks.
+- `agent-docs/` contains ONLY finalized outputs. Never store templates in `agent-docs/`.
 
 Templates live here:
 
--   `.claude/templates/agent-docs/**`
+- `.claude/templates/agent-docs/**`
 
 When generating docs:
 
--   Always start from the template in `.claude/templates/agent-docs/**`
--   Do not change headings/sections; only fill in content.
+- Always start from the template in `.claude/templates/agent-docs/**`
+- Do not change headings/sections; only fill in content.
 
 ---
 
@@ -73,10 +73,10 @@ Prefer: flowchart, sequence diagram, state diagram.
 
 Stage 1 ends when all are explicit and confirmed:
 
--   MVP (P0 requirements)
--   Success criteria (testable)
--   Non-goals
--   Backlog (future ideas)
+- MVP (P0 requirements)
+- Success criteria (testable)
+- Non-goals
+- Backlog (future ideas)
 
 ---
 
@@ -84,7 +84,7 @@ Stage 1 ends when all are explicit and confirmed:
 
 A task is DONE only if:
 
--   Work completed
--   Evidence provided (commit/PR/test commands/results)
--   Status board updated: `agent-docs/00-control/01-status.md`
--   Spec index updated if any reading order / stage outputs changed
+- Work completed
+- Evidence provided (commit/PR/test commands/results)
+- Status board updated: `agent-docs/00-control/01-status.md`
+- Spec index updated if any reading order / stage outputs changed
