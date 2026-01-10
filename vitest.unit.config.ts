@@ -16,6 +16,7 @@ const srcDir = resolve(rootDir, "src");
 export default defineConfig({
   test: {
     include: ["**/*.unit.test.ts"],
+    setupFiles: ["./vitest.unit.setup.ts"],
   },
   resolve: {
     alias: {

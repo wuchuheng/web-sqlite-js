@@ -4,6 +4,8 @@ import type { DBInterface, OpenDBOptions } from "./types/DB";
 import { abilityCheck } from "./validations/shareBufferAbiliCheck";
 import { openReleaseDB } from "./release/release-manager";
 import { DatabaseRegistry } from "./registry/database-registry";
+// Initialize global namespace on library load
+import "./global/namespace";
 
 /**
  * Opens a SQLite database connection with release-versioning support.

@@ -1,9 +1,9 @@
 # web-sqlite-js Status Board
 
-**Last Updated**: 2026-01-10
+**Last Updated**: 2026-01-11
 **Current Version**: 1.1.2
 **Target Version**: 2.0.0
-**Overall Status**: Production v1.1.2 Stable - v2.0.0 Implementation In Progress (TASK-201 Complete)
+**Overall Status**: Production v1.1.2 Stable - v2.0.0 Implementation In Progress (Phase 1 Complete, Phase 2 In Progress)
 
 ---
 
@@ -49,6 +49,30 @@ gantt
 ## Current Tasks
 
 ### Completed (2026-01-11)
+
+**TASK-204: Initialize Global Namespace**
+
+- **Status**: ✅ COMPLETE
+- **Owner**: S8 Worker
+- **Started**: 2026-01-11
+- **Completed**: 2026-01-11
+- **Feature**: F-001 - Enhanced Logging and Direct Database Access
+- **Description**: Create and initialize `window.__web_sqlite` global namespace object
+- **Evidence**:
+  - ✅ Created `src/global/namespace.ts` with namespace implementation
+  - ✅ Created `src/types/global.ts` with type definitions
+  - ✅ Updated `src/main.ts` to import namespace (initializes on load)
+  - ✅ Created `src/global/namespace.unit.test.ts` (10 tests)
+  - ✅ Created `vitest.unit.setup.ts` for test environment setup
+  - ✅ All 10 unit tests passing (90.9% code coverage)
+  - ✅ All 21 E2E tests passing
+- **Test Results**:
+  - 10 unit tests for namespace initialization
+  - Coverage: 90.9% statements, 50% branches, 87.5% functions
+  - Namespace accessible via `window.__web_sqlite`
+  - Property not enumerable (not in `Object.keys(window)`)
+  - `databases` and `onDatabaseChange` properties exist
+- **Notes**: Global namespace initialized on library load. Ready for TASK-205 (Type Definitions) and TASK-206 (Sync with Registry).
 
 **TASK-203: Integrate Registry with openDB**
 
@@ -332,13 +356,13 @@ gantt
 | Database Registry                | ✅ COMPLETE           | ✅ PASSING | ✅ COMPLETE   | TASK-201 Complete                           |
 | Database Lock                    | ✅ COMPLETE           | ✅ PASSING | ✅ COMPLETE   | Included in Registry Module                 |
 | Registry Integration with openDB | ✅ COMPLETE           | ✅ PASSING | ✅ COMPLETE   | TASK-203 Complete                           |
-| Global Namespace                 | 📋 PENDING (TASK-204)  | ❌         | ✅ COMPLETE   | Next Task                                   |
+| Global Namespace                 | ✅ COMPLETE           | ✅ PASSING | ✅ COMPLETE   | TASK-204 Complete                           |
 | Structured Logging API (`onLog`) | 📋 DESIGN COMPLETE    | ❌         | ✅ COMPLETE   | Implementation ready (TASK-207 to TASK-210) |
 | Database Change Events           | 📋 DESIGN COMPLETE    | ❌         | ✅ COMPLETE   | Implementation ready (TASK-211 to TASK-213) |
 | Testing & Documentation          | 📋 DESIGN COMPLETE    | ❌         | ✅ COMPLETE   | Implementation ready (TASK-214 to TASK-219) |
 
 **v2.0.0 Total Tasks**: 19 tasks (61 estimated hours)
-**Status**: 3/19 tasks complete (~16%), Phase 1 (Registry & Lock) complete, Phase 2 (Global Namespace) ready to start
+**Status**: 4/19 tasks complete (~21%), Phase 1 (Registry & Lock) complete, Phase 2 (Global Namespace) in progress
 
 ### Test Coverage
 
@@ -577,8 +601,8 @@ A task is **DONE** only if:
 ### Progress
 
 - **MVP Requirements**: 48/48 implemented (100%)
-- **v2.0.0 Features**: 2/19 implemented (~11%) - Database Registry & Lock complete
-- **v2.0.0 Tasks**: 19 tasks defined, 61 estimated hours, 2 completed
+- **v2.0.0 Features**: 4/19 implemented (~21%) - Database Registry & Lock complete, Global Namespace initialized
+- **v2.0.0 Tasks**: 19 tasks defined, 61 estimated hours, 4 completed
 - **Success Criteria**: All met for v1.1.2
 - **Non-goals**: Respected (no scope creep)
 - **Stage Completion**: 7/7 stages documented (100%)
@@ -587,12 +611,12 @@ A task is **DONE** only if:
 
 | Phase                       | Tasks  | Hours   | Status                      |
 | --------------------------- | ------ | ------- | --------------------------- |
-| Phase 1: Registry & Lock    | 3      | 10h     | 2/3 Complete (TASK-201/202) |
-| Phase 2: Global Namespace   | 3      | 6h      | Ready to Start (TASK-203)   |
+| Phase 1: Registry & Lock    | 3      | 10h     | ✅ Complete                  |
+| Phase 2: Global Namespace   | 3      | 6h      | 1/3 Complete (TASK-204)     |
 | Phase 3: Structured Logging | 4      | 11h     | Pending                     |
 | Phase 4: Database Events    | 3      | 8h      | Pending                     |
 | Phase 5: Testing & Docs     | 6      | 26h     | Pending                     |
-| **Total**                   | **19** | **61h** | **2/19 Complete (~11%)**    |
+| **Total**                   | **19** | **61h** | **4/19 Complete (~21%)**    |
 
 ### Risk Posture
 
