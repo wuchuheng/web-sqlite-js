@@ -50,6 +50,31 @@ gantt
 
 ### Completed (2026-01-11)
 
+**TASK-205: Define Namespace Type Definitions**
+
+- **Status**: ✅ COMPLETE
+- **Owner**: S8 Worker
+- **Started**: 2026-01-11
+- **Completed**: 2026-01-11
+- **Feature**: F-001 - Enhanced Logging and Direct Database Access
+- **Description**: Enhance and validate TypeScript type definitions for global namespace
+- **Evidence**:
+  - ✅ Enhanced `src/types/global.ts` with `WebSqliteNamespace` export
+  - ✅ Added JSDoc comments with usage examples
+  - ✅ Added `readonly` modifier to `Window.__web_sqlite`
+  - ✅ Updated `src/main.ts` to re-export types for consumers
+  - ✅ Created `src/types/global.type.test.ts` for compile-time verification
+  - ✅ Updated `tsconfig.json` to exclude type test files from main check
+  - ✅ Verified `dist/index.d.ts` includes exported types
+  - ✅ All 44 unit tests passing
+  - ✅ All 21 E2E tests passing
+- **Test Results**:
+  - Type test file verifies correct type checking behavior
+  - `dist/index.d.ts` includes: `DatabaseChangeEvent`, `WebSqliteNamespace`
+  - IntelliSense shows `window.__web_sqlite` properties
+  - Type system correctly rejects invalid values (e.g., action: "invalid")
+- **Notes**: Type definitions complete and exported in build output. Ready for TASK-206 (Sync Namespace with Registry).
+
 **TASK-204: Initialize Global Namespace**
 
 - **Status**: ✅ COMPLETE
@@ -351,18 +376,18 @@ gantt
 
 ### v2.0.0 Features (F-001) - Implementation In Progress
 
-| Feature                          | Status                | Tests      | Documentation | Notes                                       |
-| -------------------------------- | --------------------- | ---------- | ------------- | ------------------------------------------- |
-| Database Registry                | ✅ COMPLETE           | ✅ PASSING | ✅ COMPLETE   | TASK-201 Complete                           |
-| Database Lock                    | ✅ COMPLETE           | ✅ PASSING | ✅ COMPLETE   | Included in Registry Module                 |
-| Registry Integration with openDB | ✅ COMPLETE           | ✅ PASSING | ✅ COMPLETE   | TASK-203 Complete                           |
-| Global Namespace                 | ✅ COMPLETE           | ✅ PASSING | ✅ COMPLETE   | TASK-204 Complete                           |
-| Structured Logging API (`onLog`) | 📋 DESIGN COMPLETE    | ❌         | ✅ COMPLETE   | Implementation ready (TASK-207 to TASK-210) |
-| Database Change Events           | 📋 DESIGN COMPLETE    | ❌         | ✅ COMPLETE   | Implementation ready (TASK-211 to TASK-213) |
-| Testing & Documentation          | 📋 DESIGN COMPLETE    | ❌         | ✅ COMPLETE   | Implementation ready (TASK-214 to TASK-219) |
+| Feature                          | Status             | Tests      | Documentation | Notes                                       |
+| -------------------------------- | ------------------ | ---------- | ------------- | ------------------------------------------- |
+| Database Registry                | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-201 Complete                           |
+| Database Lock                    | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | Included in Registry Module                 |
+| Registry Integration with openDB | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-203 Complete                           |
+| Global Namespace                 | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-204, TASK-205 Complete                 |
+| Structured Logging API (`onLog`) | 📋 DESIGN COMPLETE | ❌         | ✅ COMPLETE   | Implementation ready (TASK-207 to TASK-210) |
+| Database Change Events           | 📋 DESIGN COMPLETE | ❌         | ✅ COMPLETE   | Implementation ready (TASK-211 to TASK-213) |
+| Testing & Documentation          | 📋 DESIGN COMPLETE | ❌         | ✅ COMPLETE   | Implementation ready (TASK-214 to TASK-219) |
 
 **v2.0.0 Total Tasks**: 19 tasks (61 estimated hours)
-**Status**: 4/19 tasks complete (~21%), Phase 1 (Registry & Lock) complete, Phase 2 (Global Namespace) in progress
+**Status**: 5/19 tasks complete (~26%), Phase 1 (Registry & Lock) complete, Phase 2 (Global Namespace) nearly complete (2/3 tasks)
 
 ### Test Coverage
 
@@ -601,22 +626,22 @@ A task is **DONE** only if:
 ### Progress
 
 - **MVP Requirements**: 48/48 implemented (100%)
-- **v2.0.0 Features**: 4/19 implemented (~21%) - Database Registry & Lock complete, Global Namespace initialized
-- **v2.0.0 Tasks**: 19 tasks defined, 61 estimated hours, 4 completed
+- **v2.0.0 Features**: 5/19 implemented (~26%) - Database Registry & Lock complete, Global Namespace nearly complete
+- **v2.0.0 Tasks**: 19 tasks defined, 61 estimated hours, 5 completed
 - **Success Criteria**: All met for v1.1.2
 - **Non-goals**: Respected (no scope creep)
 - **Stage Completion**: 7/7 stages documented (100%)
 
 ### v2.0.0 Task Breakdown
 
-| Phase                       | Tasks  | Hours   | Status                      |
-| --------------------------- | ------ | ------- | --------------------------- |
-| Phase 1: Registry & Lock    | 3      | 10h     | ✅ Complete                  |
-| Phase 2: Global Namespace   | 3      | 6h      | 1/3 Complete (TASK-204)     |
-| Phase 3: Structured Logging | 4      | 11h     | Pending                     |
-| Phase 4: Database Events    | 3      | 8h      | Pending                     |
-| Phase 5: Testing & Docs     | 6      | 26h     | Pending                     |
-| **Total**                   | **19** | **61h** | **4/19 Complete (~21%)**    |
+| Phase                       | Tasks  | Hours   | Status                            |
+| --------------------------- | ------ | ------- | --------------------------------- |
+| Phase 1: Registry & Lock    | 3      | 10h     | ✅ Complete                       |
+| Phase 2: Global Namespace   | 3      | 6h      | 2/3 Complete (TASK-204, TASK-205) |
+| Phase 3: Structured Logging | 4      | 11h     | Pending                           |
+| Phase 4: Database Events    | 3      | 8h      | Pending                           |
+| Phase 5: Testing & Docs     | 6      | 26h     | Pending                           |
+| **Total**                   | **19** | **61h** | **5/19 Complete (~26%)**          |
 
 ### Risk Posture
 

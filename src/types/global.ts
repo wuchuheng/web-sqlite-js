@@ -21,33 +21,62 @@ export interface DatabaseChangeEvent {
 }
 
 /**
- * Extend the Window interface with the global namespace
+ * Global namespace for web-sqlite-js
+ * Provides direct access to opened database instances and event subscription
+ *
+ * @example
+ * ```typescript
+ * // Access database directly
+ * const db = window.__web_sqlite.databases["myapp.sqlite3"];
+ *
+ * // Subscribe to database changes
+ * const unsubscribe = window.__web_sqlite.onDatabaseChange((event) => {
+ *   console.log(`Database ${event.action}: ${event.dbName}`);
+ * });
+ * ```
+ */
+export interface WebSqliteNamespace {
+  /**
+   * Map of currently opened database instances
+   * Key: normalized database name (e.g., "myapp.sqlite3")
+   * Value: Database interface instance
+   * @readonly
+   */
+  readonly databases: Record<string, DBInterface>;
+
+  /**
+   * Subscribe to database open/close events
+   * @param callback - Called when a database is opened or closed
+   * @returns Unsubscribe function
+   * @example
+   * ```typescript
+   * const unsubscribe = window.__web_sqlite.onDatabaseChange((event) => {
+   *   if (event.action === "opened") {
+   *     console.log("New database:", event.dbName);
+   *   }
+   * });
+   * // Later: unsubscribe();
+   * ```
+   */
+  onDatabaseChange(callback: (event: DatabaseChangeEvent) => void): () => void;
+}
+
+/**
+ * Extend the global Window interface with web-sqlite-js namespace
+ * This allows TypeScript to recognize `window.__web_sqlite` property
  */
 declare global {
   interface Window {
     /**
      * web-sqlite-js global namespace
-     * Provides direct access to opened database instances
+     * Provides direct access to opened database instances and event subscription
      */
-    __web_sqlite: {
-      /**
-       * Map of currently opened database instances
-       * Key: normalized database name (e.g., "myapp.sqlite3")
-       * Value: Database interface instance
-       * @readonly
-       */
-      readonly databases: Record<string, DBInterface>;
-
-      /**
-       * Subscribe to database open/close events
-       * @param callback - Called when a database is opened or closed
-       * @returns Unsubscribe function
-       */
-      onDatabaseChange(
-        callback: (event: DatabaseChangeEvent) => void,
-      ): () => void;
-    };
+    readonly __web_sqlite: WebSqliteNamespace;
   }
 }
 
+/**
+ * Export empty object to make this a module
+ * Required for `declare global` augmentation to work
+ */
 export {};

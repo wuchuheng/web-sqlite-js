@@ -120,10 +120,10 @@
     - ✅ All 21 E2E tests passing
   - **Micro-Spec**: [draft](../08-task/active/TASK-204.md)
 
-- [ ] **TASK-205**: [Namespace] Define Namespace Type Definitions
+- [x] **TASK-205**: [Namespace] Define Namespace Type Definitions
   - **Priority**: P0
   - **Dependencies**: TASK-204
-  - **Boundary**: `src/global/namespace.ts`, `src/types/global.ts`
+  - **Boundary**: `src/global/namespace.ts`, `src/types/global.ts`, `src/main.ts`
   - **Description**: Add TypeScript type definitions for global namespace
   - **Implementation Details**:
     - Extend `Window` interface with `__web_sqlite` property
@@ -131,10 +131,14 @@
     - Define `DatabaseChangeEvent` type
     - Export types for consumers
   - **DoD**:
-    - TypeScript types compile without errors
-    - IntelliSense shows namespace properties
-    - Type definitions included in build output
+    - ✅ TypeScript types compile without errors
+    - ✅ IntelliSense shows namespace properties
+    - ✅ Type definitions included in build output (`dist/index.d.ts`)
+    - ✅ Type test file created for compile-time verification
+    - ✅ All 44 unit tests passing
+    - ✅ All 21 E2E tests passing
   - **Estimated**: 2 hours
+  - **Micro-Spec**: [draft](../08-task/active/TASK-205.md)
 
 - [ ] **TASK-206**: [Namespace] Sync Namespace with Registry
   - **Priority**: P0
