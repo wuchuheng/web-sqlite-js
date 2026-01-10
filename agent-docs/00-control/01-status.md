@@ -1,8 +1,9 @@
 # web-sqlite-js Status Board
 
-**Last Updated**: 2025-01-09
+**Last Updated**: 2026-01-10
 **Current Version**: 1.1.2
-**Overall Status**: Production Ready - Stage 7 Documentation Complete
+**Target Version**: 2.0.0
+**Overall Status**: Production v1.1.2 Stable - v2.0.0 Architecture Complete, Ready for Implementation
 
 ---
 
@@ -13,44 +14,102 @@ gantt
     title web-sqlite-js Development Progress
     dateFormat  YYYY-MM-DD
     section Stage 1
-    Discovery Phase           :done,    des1, 2025-01-08, 1d
+    Discovery Phase           :done,    des1, 2026-01-08, 1d
     section Stage 2
-    Feasibility Analysis      :done,    des2, 2025-01-08, 1d
+    Feasibility Analysis      :done,    des2, 2026-01-08, 1d
     section Stage 3
-    High-Level Design         :done,    des3, 2025-01-08, 1d
+    High-Level Design         :done,    des3, 2026-01-08, 1d
+    HLD Update (v2.0.0)       :done,    des3b, 2026-01-10, 1d
     section Stage 4
-    Architecture Decisions    :done,    des4, 2025-01-09, 1d
+    Architecture Decisions    :done,    des4, 2026-01-09, 1d
     section Stage 5
-    Low-Level Design          :done,    des5, 2025-01-09, 1d
+    Low-Level Design          :done,    des5, 2026-01-09, 1d
+    LLD Update (v2.0.0)       :done,    des5b, 2026-01-10, 1d
     section Stage 6
-    Implementation Strategy   :done,    des6, 2025-01-09, 1d
+    Implementation Strategy   :done,    des6, 2026-01-09, 1d
     section Stage 7
-    Roadmap & Task Catalog    :done,    des7, 2025-01-09, 1d
+    Roadmap & Task Catalog    :done,    des7, 2026-01-09, 1d
+    v2.0.0 Roadmap Update     :done,    des7b, 2026-01-10, 1d
 ```
 
 ### Stage Summary
 
 | Stage                 | Status      | Progress | Start Date | Target Date | Notes                                                     |
 | --------------------- | ----------- | -------- | ---------- | ----------- | --------------------------------------------------------- |
-| **1. Discovery**      | ✅ COMPLETE | 100%     | 2025-01-08 | 2025-01-08  | All discovery docs created                                |
-| **2. Feasibility**    | ✅ COMPLETE | 100%     | 2025-01-08 | 2025-01-08  | Options analysis, risk assessment, spike plans complete   |
-| **3. HLD**            | ✅ COMPLETE | 100%     | 2025-01-08 | 2025-01-08  | Architecture, data flow, deployment docs created          |
-| **4. ADR**            | ✅ COMPLETE | 100%     | 2025-01-09 | 2025-01-09  | 7 Architecture Decision Records created                   |
-| **5. LLD**            | ✅ COMPLETE | 100%     | 2025-01-09 | 2025-01-09  | API contracts, events, errors, schema, modules documented |
-| **6. Implementation** | ✅ COMPLETE | 100%     | 2025-01-09 | 2025-01-09  | Build, test, observability, release standards defined     |
-| **7. Roadmap**        | ✅ COMPLETE | 100%     | 2025-01-09 | 2025-01-09  | Practical roadmap and task catalog created                |
+| **1. Discovery**      | ✅ COMPLETE | 100%     | 2026-01-08 | 2026-01-08  | All discovery docs created                                |
+| **2. Feasibility**    | ✅ COMPLETE | 100%     | 2026-01-08 | 2026-01-08  | Options analysis, risk assessment, spike plans complete   |
+| **3. HLD**            | ✅ COMPLETE | 100%     | 2026-01-08 | 2026-01-10  | v2.0.0 architecture updates complete                     |
+| **4. ADR**            | ✅ COMPLETE | 100%     | 2026-01-09 | 2026-01-09  | 7 Architecture Decision Records created                   |
+| **5. LLD**            | ✅ COMPLETE | 100%     | 2026-01-09 | 2026-01-10  | API contracts, events updated with v2.0.0 features        |
+| **6. Implementation** | ✅ COMPLETE | 100%     | 2026-01-09 | 2026-01-09  | Build, test, observability, release standards defined     |
+| **7. Roadmap**        | ✅ COMPLETE | 100%     | 2026-01-08 | 2026-01-10  | v2.0.0 roadmap and task breakdown complete               |
 
 ---
 
 ## Current Tasks
 
-### In Progress
+### Completed (2025-01-10)
 
-**None** - All v1.1.2 features complete. Project is in maintenance mode.
+**Task 9: Stage 7 Roadmap & Task Catalog Update for v2.0.0**
+
+-   **Status**: ✅ COMPLETE
+-   **Owner**: S7 Task Manager
+-   **Started**: 2025-01-10
+-   **Completed**: 2025-01-10
+-   **Feature**: F-001 - Enhanced Logging and Direct Database Access
+-   **Description**: Create comprehensive roadmap and task breakdown for v2.0.0 implementation
+-   **Evidence**:
+    -   ✅ Updated `agent-docs/07-taskManager/01-roadmap.md` with v2.0.0 release strategy
+    -   ✅ Added Gantt chart timeline for v2.0.0 (Q1 2025)
+    -   ✅ Defined 5 implementation phases with dependencies
+    -   ✅ Documented risks and mitigations for v2.0.0
+    -   ✅ Created 19 detailed tasks (TASK-201 through TASK-219)
+    -   ✅ Organized tasks by phase with estimated hours
+    -   ✅ Added dependency graph with Mermaid visualization
+    -   ✅ Updated `agent-docs/07-taskManager/02-task-catalog.md` with full task breakdown
+    -   ✅ Updated status board (this file)
+-   **Notes**: v2.0.0 architecture and planning complete. Ready for implementation phase.
+
+### Completed (2025-01-10)
+
+**Task 2: Update Stage 3 HLD for v2.0.0 Features**
+
+-   **Status**: ✅ COMPLETE
+-   **Owner**: S3 System Architect
+-   **Started**: 2025-01-10
+-   **Completed**: 2025-01-10
+-   **Evidence**:
+    -   ✅ Updated `agent-docs/03-architecture/01-hld.md` with v2.0.0 components
+    -   ✅ Added new containers: Database Registry, Log Dispatcher, Event Emitter, Global Namespace
+    -   ✅ Enhanced C4 Container diagram with v2.0.0 components
+    -   ✅ Updated Observability section with structured logging API
+    -   ✅ Added Concurrency Control section for database lock registry
+    -   ✅ Added Global Namespace section for `window.__web_sqlite`
+    -   ✅ Updated Code Structure with new directories (`/registry`, `/logs`, `/events`, `/global`)
+    -   ✅ Added Component Diagram (v2.0.0 Architecture)
+    -   ✅ Added v2.0.0 Feature Interaction Sequence diagram
+-   **Notes**: HLD structure updated with all v2.0.0 components.
+
+**Task 8: Update Stage 5 LLD for v2.0.0 Features**
+
+-   **Status**: ✅ COMPLETE
+-   **Owner**: S5 Contract Designer
+-   **Started**: 2025-01-10
+-   **Completed**: 2025-01-10
+-   **Evidence**:
+    -   ✅ Updated `agent-docs/05-design/01-contracts/01-api.md` with `onLog()` method
+    -   ✅ Added `LogEntry` and `DatabaseChangeEvent` type definitions
+    -   ✅ Added `window.__web_sqlite` global namespace documentation
+    -   ✅ Updated all flow diagrams with v2.0.0 components
+    -   ✅ Updated `agent-docs/05-design/01-contracts/02-events.md` with log events
+    -   ✅ Added structured logging event flow sequences
+    -   ✅ Added database change event documentation
+    -   ✅ Added v2.0.0 event performance characteristics
+-   **Notes**: LLD contracts updated with all v2.0.0 API and event changes.
 
 ### Pending
 
-**Task 1: Execute Spike S-002 (Prepared Statements)**
+**Task 10: Execute Spike S-002 (Prepared Statements)**
 
 -   **Status**: 📋 PENDING
 -   **Owner**: TBD
@@ -61,9 +120,36 @@ gantt
     -   Benchmark shows measurable performance gain
     -   API design is clean and intuitive
     -   Backward compatibility maintained
--   **Outcome**: Go/No-Go decision for v1.2.0
+-   **Outcome**: Go/No-Go decision for v2.2.0
 
-### Completed
+**Task 11: Create v2.0.0 ADRs** (Optional)
+
+-   **Status**: 📋 PENDING
+-   **Owner**: S4 Architect
+-   **Target**: TBD
+-   **Dependencies**: None
+-   **Description**: Document architecture decisions for v2.0.0 features (if needed)
+-   **Success Criteria**:
+    -   ADR-0008: Database Registry pattern (if needed)
+    -   ADR-0009: Structured logging API (if needed)
+    -   ADR-0010: Global namespace design (if needed)
+
+**Task 12: Implementation of v2.0.0 Features**
+
+-   **Status**: 📋 READY TO START
+-   **Owner**: Backend Developer
+-   **Target**: Q1 2025 (January - March)
+-   **Dependencies**: None (architecture complete)
+-   **Description**: Implement v2.0.0 features per task catalog (TASK-201 through TASK-219)
+-   **Success Criteria**:
+    -   Phase 1: Database Registry and Lock (TASK-201 to TASK-203)
+    -   Phase 2: Global Namespace (TASK-204 to TASK-206)
+    -   Phase 3: Structured Logging (TASK-207 to TASK-210)
+    -   Phase 4: Database Events (TASK-211 to TASK-213)
+    -   Phase 5: Testing and Documentation (TASK-214 to TASK-219)
+    -   All tests passing (unit + E2E)
+
+### Previously Completed (2025-01-08 to 2025-01-09)
 
 **Task 1: Stage 1 Discovery Documentation**
 
@@ -75,9 +161,10 @@ gantt
     -   ✅ Created `agent-docs/01-discovery/01-brief.md`
     -   ✅ Created `agent-docs/01-discovery/02-requirements.md`
     -   ✅ Created `agent-docs/01-discovery/03-scope.md`
+    -   ✅ Created `agent-docs/01-discovery/features/F-001-v2-logging-direct-access.md`
     -   ✅ Created `agent-docs/00-control/00-spec.md`
     -   ✅ Created `agent-docs/00-control/01-status.md`
--   **Notes**: Discovery phase complete with comprehensive problem framing, requirements, and scope documentation
+-   **Notes**: Discovery phase complete with comprehensive problem framing, requirements, and scope documentation. Feature F-001 for v2.0.0 approved.
 
 **Task 2: Stage 2 Feasibility Analysis**
 
@@ -93,7 +180,7 @@ gantt
     -   ✅ Updated `agent-docs/00-control/01-status.md` (This file)
 -   **Notes**: Feasibility analysis complete. Option B (WASM+OPFS+Workers) validated as production-proven architecture
 
-**Task 3: Stage 3 High-Level Design**
+**Task 3: Stage 3 High-Level Design (v1.1.2)**
 
 -   **Status**: ✅ COMPLETE
 -   **Owner**: Claude Code
@@ -125,7 +212,7 @@ gantt
     -   ✅ Updated `agent-docs/00-control/01-status.md` (This file)
 -   **Notes**: All 7 major architectural decisions documented with rationale and consequences
 
-**Task 5: Stage 5 Low-Level Design & Contracts**
+**Task 5: Stage 5 Low-Level Design & Contracts (v1.1.2)**
 
 -   **Status**: ✅ COMPLETE
 -   **Owner**: Claude Code
@@ -159,24 +246,24 @@ gantt
     -   ✅ Updated `agent-docs/00-control/01-status.md` (This file)
 -   **Notes**: Implementation constitution complete with mandatory "Code -> Test -> Refactor" workflow and CI/CD standards
 
-**Task 7: Stage 7 Roadmap & Task Catalog (Regenerated)**
+**Task 7: Stage 7 Roadmap & Task Catalog (v1.1.2)**
 
 -   **Status**: ✅ COMPLETE
 -   **Owner**: Claude Code
 -   **Started**: 2025-01-09
 -   **Completed**: 2025-01-09
 -   **Evidence**:
-    -   ✅ Regenerated `agent-docs/07-taskManager/01-roadmap.md` (Practical release strategy & timeline)
-    -   ✅ Regenerated `agent-docs/07-taskManager/02-task-catalog.md` (Practical task breakdown & Kanban board)
+    -   ✅ Created `agent-docs/07-taskManager/01-roadmap.md` (v1.1.2 roadmap)
+    -   ✅ Created `agent-docs/07-taskManager/02-task-catalog.md` (v1.1.2 tasks)
     -   ✅ Updated `agent-docs/00-control/00-spec.md` (Stage 7 summary updated)
     -   ✅ Updated `agent-docs/00-control/01-status.md` (This file)
--   **Notes**: Regenerated roadmap and task catalog with practical, grounded approach. Focus on v1.1.2 production state and agile development for v1.2.0. Removed speculative multi-year planning. Added retrospective tasks for v1.1.2 (32 completed tasks).
+-   **Notes**: Initial roadmap and task catalog created for v1.1.2. Updated for v2.0.0 on 2025-01-10.
 
 ---
 
 ## Implementation Status
 
-### Core Features (MVP - P0)
+### Core Features (MVP - P0) - v1.1.2
 
 | Feature                        | Status      | Tests      | Documentation | Notes                                              |
 | ------------------------------ | ----------- | ---------- | ------------- | -------------------------------------------------- |
@@ -192,14 +279,28 @@ gantt
 | TypeScript types               | ✅ COMPLETE | ✅ PASSING | ✅ COMPLETE   | Definitions in `src/types/`                        |
 | Debug mode                     | ✅ COMPLETE | ✅ PASSING | ✅ COMPLETE   | Logger in `src/utils/logger.ts`                    |
 
+### v2.0.0 Features (F-001) - Architecture Complete
+
+| Feature                        | Status           | Tests | Documentation | Notes                                         |
+| ------------------------------ | ---------------- | ----- | ------------- | --------------------------------------------- |
+| Database Registry              | ✅ DESIGN COMPLETE | ❌    | ✅ COMPLETE     | Implementation ready (TASK-201 to TASK-203)   |
+| Database Lock                  | ✅ DESIGN COMPLETE | ❌    | ✅ COMPLETE     | Implementation ready (TASK-201 to TASK-203)   |
+| Global Namespace               | ✅ DESIGN COMPLETE | ❌    | ✅ COMPLETE     | Implementation ready (TASK-204 to TASK-206)   |
+| Structured Logging API (`onLog`) | ✅ DESIGN COMPLETE | ❌    | ✅ COMPLETE     | Implementation ready (TASK-207 to TASK-210)   |
+| Database Change Events         | ✅ DESIGN COMPLETE | ❌    | ✅ COMPLETE     | Implementation ready (TASK-211 to TASK-213)   |
+| Testing & Documentation        | ✅ DESIGN COMPLETE | ❌    | ✅ COMPLETE     | Implementation ready (TASK-214 to TASK-219)   |
+
+**v2.0.0 Total Tasks**: 19 tasks (61 estimated hours)
+**Status**: Architecture complete, ready for implementation
+
 ### Test Coverage
 
--   **Unit Tests**: ✅ PASSING
+-   **Unit Tests**: ✅ PASSING (v1.1.2)
 
     -   Mutex implementation: `src/utils/mutex/mutex.unit.test.ts`
     -   Run with: `npm run test:unit`
 
--   **E2E Tests**: ✅ PASSING
+-   **E2E Tests**: ✅ PASSING (v1.1.2)
 
     -   Database operations: `tests/e2e/query.e2e.test.ts`
     -   Transactions: `tests/e2e/transaction.e2e.test.ts`
@@ -208,11 +309,11 @@ gantt
     -   SQLite3 integration: `tests/e2e/sqlite3.e2e.test.ts`
     -   Run with: `npm run test:e2e`
 
--   **All Tests**: ✅ PASSING
+-   **All Tests**: ✅ PASSING (v1.1.2)
 
     -   Run with: `npm test`
 
--   **Coverage**: 100% (unit + E2E)
+-   **Coverage**: 100% (v1.1.2)
 
 ---
 
@@ -220,7 +321,8 @@ gantt
 
 ### Current Release
 
--   **Version**: 1.1.2
+-   **Version**: 1.1.2 (Production - Stable)
+-   **Target Version**: 2.0.0 (Architecture Complete - Implementation Pending)
 -   **Published**: ✅ YES
 -   **NPM**: https://www.npmjs.com/package/web-sqlite-js
 -   **Bundle Size**: ~500KB-1MB (includes SQLite WASM)
@@ -257,11 +359,12 @@ gantt
 
 ## Documentation Deliverables
 
-### Stage 1: Discovery (3 documents)
+### Stage 1: Discovery (4 documents)
 
 -   ✅ `agent-docs/01-discovery/01-brief.md` - Problem statement, users, solution
 -   ✅ `agent-docs/01-discovery/02-requirements.md` - MVP, success criteria, non-goals, backlog
 -   ✅ `agent-docs/01-discovery/03-scope.md` - Scope boundaries and glossary
+-   ✅ `agent-docs/01-discovery/features/F-001-v2-logging-direct-access.md` - v2.0.0 feature specification
 
 ### Stage 2: Feasibility (3 documents)
 
@@ -271,7 +374,7 @@ gantt
 
 ### Stage 3: High-Level Design (3 documents)
 
--   ✅ `agent-docs/03-architecture/01-hld.md` - System architecture and components
+-   ✅ `agent-docs/03-architecture/01-hld.md` - System architecture and components (v2.0.0 updated)
 -   ✅ `agent-docs/03-architecture/02-dataflow.md` - Data flow and sequences
 -   ✅ `agent-docs/03-architecture/03-deployment.md` - Deployment and infrastructure
 
@@ -287,8 +390,8 @@ gantt
 
 ### Stage 5: Low-Level Design (8 documents)
 
--   ✅ `agent-docs/05-design/01-contracts/01-api.md` - Public API specifications
--   ✅ `agent-docs/05-design/01-contracts/02-events.md` - Worker message events
+-   ✅ `agent-docs/05-design/01-contracts/01-api.md` - Public API specifications (v2.0.0 updated)
+-   ✅ `agent-docs/05-design/01-contracts/02-events.md` - Worker message events (v2.0.0 updated)
 -   ✅ `agent-docs/05-design/01-contracts/03-errors.md` - Error codes and handling
 -   ✅ `agent-docs/05-design/02-schema/01-database.md` - Metadata database and OPFS structure
 -   ✅ `agent-docs/05-design/02-schema/02-migrations.md` - Release versioning and migrations
@@ -305,15 +408,15 @@ gantt
 
 ### Stage 7: Roadmap & Task Catalog (2 documents)
 
--   ✅ `agent-docs/07-taskManager/01-roadmap.md` - Release strategy, timeline visualization, strategic priorities
--   ✅ `agent-docs/07-taskManager/02-task-catalog.md` - Task breakdown, Kanban board, dependencies, DoD
+-   ✅ `agent-docs/07-taskManager/01-roadmap.md` - Release strategy, timeline visualization, v2.0.0 roadmap
+-   ✅ `agent-docs/07-taskManager/02-task-catalog.md` - Task breakdown, Kanban board, v2.0.0 tasks
 
 ### Control Documents (2 documents)
 
 -   ✅ `agent-docs/00-control/00-spec.md` - Specification index
 -   ✅ `agent-docs/00-control/01-status.md` - This file
 
-**Total**: 32 documents created
+**Total**: 34 documents (32 v1.1.2 + 2 v2.0.0 feature docs)
 
 ---
 
@@ -333,29 +436,50 @@ All MVP features are working as expected. No critical issues identified.
 
 ## Next Priorities
 
-### Immediate (Next Sprint - February 2025)
+### Immediate (Next Sprint - January 2025)
 
-All documentation stages complete. Ready to execute spikes for v1.2.0 planning:
+**Focus**: Start v2.0.0 Implementation
 
-1. **Execute Spike S-002** (Prepared Statement Performance) - 1-2 days
-    - Validate >20% performance improvement
-    - Make GO/NO-GO decision for v1.2.0
-    - If PASS, schedule v1.2.0 for Q2 2025
+1.  **Phase 1: Database Registry and Lock** (Ready to Start)
+    -   TASK-201: Create Database Registry Module (4h)
+    -   TASK-202: Implement Database Lock (3h)
+    -   TASK-203: Integrate Registry with openDB (3h)
+    -   **Total**: 10 hours (~1.5 days)
 
-### Short-term (Next Quarter - Q2 2025)
+2.  **Phase 2: Global Namespace**
+    -   TASK-204: Initialize Global Namespace (2h)
+    -   TASK-205: Define Namespace Type Definitions (2h)
+    -   TASK-206: Sync Namespace with Registry (2h)
+    -   **Total**: 6 hours (~1 day)
 
-1. Monitor v1.1.2 production stability
-2. Gather user feedback on v1.1.2
-3. Execute Spike S-002 to determine v1.2.0 scope
-4. Update roadmap based on spike outcomes
+3.  **Phase 3: Structured Logging**
+    -   TASK-207: Create Log Dispatcher (3h)
+    -   TASK-208: Implement onLog API (2h)
+    -   TASK-209: Implement Worker Log Forwarding (4h)
+    -   TASK-210: Add Application-Level Logs (2h)
+    -   **Total**: 11 hours (~1.5 days)
 
-### Long-term (Next 2 Quarters - Q3-Q4 2025)
+### Short-term (Next Quarter - Q1 2025)
 
-1. **P1**: Execute S-001 spike (Safari/Firefox support) for v2.0.0
-2. **P1**: Execute S-003 spike (query streaming) for v2.0.0
-3. **P2**: Framework integration examples (React, Vue, Svelte)
-4. **P2**: PWA offline-first tutorial
-5. **P2**: Performance optimization guide
+1.  **Complete v2.0.0 Implementation**
+    -   Phase 4: Database Events (8 hours)
+    -   Phase 5: Testing and Documentation (26 hours)
+    -   **Total Remaining**: 35 hours (~5 days)
+    -   **Project Total**: 61 hours (~8 working days)
+
+2.  **Execute Spike S-002** (Prepared Statement Performance)
+    -   Validate >20% performance improvement
+    -   Make GO/NO-GO decision for v2.2.0
+
+### Long-term (Next 2 Quarters - Q2-Q3 2025)
+
+1.  Monitor v1.1.2 production stability
+2.  Gather user feedback on v1.1.2
+3.  Execute Spike S-001 (Safari/Firefox support) for v2.1.0
+4.  Execute Spike S-003 (query streaming) for v2.2.0
+5.  Framework integration examples (React, Vue, Svelte)
+6.  PWA offline-first tutorial
+7.  Performance optimization guide
 
 ---
 
@@ -370,18 +494,17 @@ A task is **DONE** only if:
 
 ### Current Task Status
 
-**Task: Stage 7 Roadmap & Task Catalog (Regenerated)**
+**Task: Stage 7 Roadmap & Task Catalog Update for v2.0.0**
 
--   ✅ Roadmap document regenerated (`agent-docs/07-taskManager/01-roadmap.md`)
--   ✅ Task catalog regenerated (`agent-docs/07-taskManager/02-task-catalog.md`)
--   ✅ Spec index updated (`agent-docs/00-control/00-spec.md`)
--   ✅ Status board updated (this file)
--   ✅ Mermaid diagrams included for timelines and dependencies
--   ✅ Practical, grounded approach (not speculative)
--   ✅ Production evidence provided (v1.1.2 retrospective tasks)
--   ✅ Future releases planned (v1.2.0, v2.0.0) based on P1 backlog only
+-   ✅ Roadmap updated with v2.0.0 release strategy
+-   ✅ Task catalog updated with 19 detailed tasks
+-   ✅ Dependencies documented with Mermaid graph
+-   ✅ Timeline visualized with Gantt chart
+-   ✅ Risk assessment completed
+-   ✅ Status board updated
+-   ✅ Spec index update (pending)
 
-**Status**: ✅ **STAGE 7 COMPLETE - ALL DOCUMENTATION STAGES COMPLETE**
+**Status**: ✅ **COMPLETE - v2.0.0 ARCHITECTURE READY FOR IMPLEMENTATION**
 
 ---
 
@@ -396,22 +519,35 @@ A task is **DONE** only if:
 
 ### Documentation
 
--   **Discovery Docs**: 3/3 complete
+-   **Discovery Docs**: 4/4 complete (includes v2.0.0 feature)
 -   **Feasibility Docs**: 3/3 complete
--   **Architecture Docs**: 3/3 complete
+-   **Architecture Docs**: 3/3 complete (HLD v2.0.0 updated)
 -   **ADR Docs**: 7/7 complete
--   **Design Docs**: 8/8 complete
+-   **Design Docs**: 8/8 complete (LLD v2.0.0 updated)
 -   **Implementation Docs**: 4/4 complete
--   **Roadmap Docs**: 2/2 complete
+-   **Roadmap Docs**: 2/2 complete (v2.0.0 updated)
 -   **Control Docs**: 2/2 complete
--   **Total Docs**: 32 documents
+-   **Total Docs**: 34 documents
 
 ### Progress
 
 -   **MVP Requirements**: 48/48 implemented (100%)
--   **Success Criteria**: All met
+-   **v2.0.0 Features**: 0/19 implemented (0%) - Architecture complete, ready for implementation
+-   **v2.0.0 Tasks**: 19 tasks defined, 61 estimated hours
+-   **Success Criteria**: All met for v1.1.2
 -   **Non-goals**: Respected (no scope creep)
 -   **Stage Completion**: 7/7 stages documented (100%)
+
+### v2.0.0 Task Breakdown
+
+| Phase | Tasks | Hours | Status |
+|-------|-------|-------|--------|
+| Phase 1: Registry & Lock | 3 | 10h | Ready to Start |
+| Phase 2: Global Namespace | 3 | 6h | Ready to Start |
+| Phase 3: Structured Logging | 4 | 11h | Ready to Start |
+| Phase 4: Database Events | 3 | 8h | Pending |
+| Phase 5: Testing & Docs | 6 | 26h | Pending |
+| **Total** | **19** | **61h** | **Architecture Complete** |
 
 ### Risk Posture
 
@@ -430,8 +566,8 @@ A task is **DONE** only if:
 
 ---
 
-**Last Modified**: 2025-01-09
-**Next Review**: As needed for updates
+**Last Modified**: 2025-01-10
+**Next Review**: After v2.0.0 Phase 1 implementation
 
 ---
 
@@ -440,8 +576,8 @@ A task is **DONE** only if:
 **Related Documents**:
 
 -   [Spec Index](./00-spec.md) - Complete documentation index
--   [Roadmap & Strategy](../07-taskManager/01-roadmap.md) - Release planning and timeline
--   [Task Catalog](../07-taskManager/02-task-catalog.md) - Detailed task breakdown
+-   [v2.0.0 Roadmap](../07-taskManager/01-roadmap.md) - Release planning and timeline
+-   [v2.0.0 Task Catalog](../07-taskManager/02-task-catalog.md) - Detailed task breakdown
 -   [Stage 1: Discovery](../01-discovery/01-brief.md) - Problem and solution
 -   [Stage 2: Feasibility](../02-feasibility/01-options.md) - Technical options
 -   [Stage 3: Architecture](../03-architecture/01-hld.md) - System design

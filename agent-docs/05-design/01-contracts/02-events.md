@@ -21,6 +21,7 @@ type SqliteResMsg<T> = {
   id: number;           // Same ID as request
   success: true;        // Indicates success
   payload: T;           // Response payload (event-specific)
+  logs?: LogEntry[];    // v2.0.0: Structured logs from worker
 };
 ```
 
@@ -218,6 +219,24 @@ type ExecuteResult = {
 - Typical execution time: 0.2-0.5ms for simple operations
 - Timing logged if debug mode enabled
 
+**v2.0.0 Structured Logging**:
+
+Worker responses now include structured logs:
+
+```typescript
+{
+  id: 2,
+  success: true,
+  payload: {
+    changes: 1,
+    lastInsertRowid: 1
+  },
+  logs: [
+    { level: "debug", data: { sql: "INSERT INTO users...", duration: 0.35, bind: ["Alice"] } }
+  ]
+}
+```
+
 **Example**:
 
 ```typescript
@@ -239,7 +258,10 @@ type ExecuteResult = {
   payload: {
     changes: 1,
     lastInsertRowid: 1
-  }
+  },
+  logs: [
+    { level: "debug", data: { sql: "...", duration: 0.35, bind: ["Alice", "alice@example.com"] } }
+  ]
 }
 
 // Response (error)
@@ -260,7 +282,7 @@ type ExecuteResult = {
 // When debug mode is enabled
 console.debug({
     sql: "INSERT INTO users (name, email) VALUES (?, ?)",
-    duration: 0.35, // milliseconds
+    duration: 0.35,
     bind: ["Alice", "alice@example.com"],
 });
 ```
@@ -306,6 +328,23 @@ type QueryResult<T = unknown> = T[]; // Array of row objects
 - Timing logged if debug mode enabled
 - Full result set transferred via structured clone
 
+**v2.0.0 Structured Logging**:
+
+Worker responses now include structured logs:
+
+```typescript
+{
+  id: 4,
+  success: true,
+  payload: [
+    { id: 1, name: "Alice", email: "alice@example.com" }
+  ],
+  logs: [
+    { level: "debug", data: { sql: "SELECT * FROM users", duration: 0.28, bind: [] } }
+  ]
+}
+```
+
 **Example**:
 
 ```typescript
@@ -327,6 +366,9 @@ type QueryResult<T = unknown> = T[]; // Array of row objects
   payload: [
     { id: 1, name: "Alice", email: "alice@example.com" },
     { id: 2, name: "Bob", email: "bob@example.com" }
+  ],
+  logs: [
+    { level: "debug", data: { sql: "...", duration: 0.28, bind: [18] } }
   ]
 }
 
@@ -334,7 +376,8 @@ type QueryResult<T = unknown> = T[]; // Array of row objects
 {
   id: 4,
   success: true,
-  payload: []
+  payload: [],
+  logs: []
 }
 
 // Response (error)
@@ -714,7 +757,237 @@ const terminate = () => {
 
 ---
 
-## 5) Event Flow Examples
+## 5) v2.0.0 Structured Logging Events
+
+### Event: Log Entry Generation (Worker → Main Thread)
+
+**Description**: Worker generates structured log entries for SQL operations and forwards them to main thread for dispatch to registered callbacks.
+
+**Triggered By**:
+
+- SQL execution (EXECUTE, QUERY operations)
+- Transaction operations (BEGIN, COMMIT, ROLLBACK)
+- Application events (open, close)
+
+**Payload Schema**:
+
+```typescript
+type LogEntry = {
+    level: 'info' | 'debug' | 'error';
+    data: unknown;
+};
+```
+
+**Log Sources**:
+
+- **SQL Execution**: `{level: "debug", data: {sql, duration, bind}}`
+- **Transaction Events**: `{level: "info", data: {action: "commit|rollback", sql}}`
+- **Application Events**: `{level: "info", data: {action: "open|close", dbName}}`
+- **Errors**: `{level: "error", data: {error, sql}}`
+
+**Flow Diagram**:
+
+```mermaid
+sequenceDiagram
+    participant App as Application
+    participant DB as DBInterface
+    participant Bridge as Worker Bridge
+    participant Worker as Web Worker
+    participant SQLite as SQLite Engine
+    participant Log as Log Dispatcher
+    participant Callback as User Callback
+
+    App->>DB: db.onLog(callback)
+    DB->>Log: register(callback)
+    Log-->>App: cancel function
+
+    App->>DB: db.exec(sql, params)
+    DB->>Bridge: sendMsg(EXECUTE, {sql, params})
+    Bridge->>Worker: postMessage({id, event, payload})
+
+    Worker->>SQLite: db.exec({sql, bind})
+    SQLite-->>Worker: result
+
+    Worker->>Worker: generate log entry
+    Note over Worker: {level: "debug", data: {sql, duration, bind}}
+
+    Worker->>Bridge: postMessage({id, success: true, payload, logs[]})
+    Bridge->>Log: dispatch logs to callbacks
+    Log->>Callback: callback({level, data})
+
+    Note over Callback: Process log entry
+    Note over Callback: Errors don't break DB operations
+
+    Bridge-->>DB: resolve promise
+    DB-->>App: result
+```
+
+**Response Format**:
+
+```typescript
+// Worker response includes logs array
+{
+  id: 2,
+  success: true,
+  payload: {
+    changes: 1,
+    lastInsertRowid: 1
+  },
+  logs: [
+    { level: "debug", data: { sql: "INSERT INTO users...", duration: 0.35, bind: ["Alice"] } }
+  ]
+}
+```
+
+**Log Dispatch Behavior**:
+
+- Logs are dispatched to all registered callbacks in order
+- Callback errors are caught and don't break database operations
+- Multiple callbacks can be registered per database
+- Each callback gets its own cancel function
+
+**Example**:
+
+```typescript
+// Register log listener
+const cancel1 = db.onLog((log) => {
+    console.log(`[${log.level}]`, log.data);
+});
+
+// Register another listener
+const cancel2 = db.onLog((log) => {
+    if (log.level === 'error') {
+        sendToErrorTracking(log.data);
+    }
+});
+
+// Both callbacks receive the same log entries
+```
+
+---
+
+## 6) v2.0.0 Database Change Events
+
+### Event: Database Lifecycle Changes
+
+**Description**: Emitted when a database is opened or closed. Subscribers can listen to these events via the global namespace.
+
+**Triggered By**:
+
+- `openDB()` successful completion (action: "opened")
+- `close()` successful completion (action: "closed")
+
+**Payload Schema**:
+
+```typescript
+type DatabaseChangeEvent = {
+    action: 'opened' | 'closed';
+    dbName: string; // Normalized database name (e.g., "myapp.sqlite3")
+    databases: string[]; // All currently opened database names
+};
+```
+
+**Subscription API**:
+
+```typescript
+// Subscribe via global namespace
+const unsubscribe = window.__web_sqlite.onDatabaseChange((event) => {
+    console.log(`Database ${event.action}: ${event.dbName}`);
+    console.log('Current databases:', event.databases);
+});
+```
+
+**Flow Diagram**:
+
+```mermaid
+sequenceDiagram
+    participant App as Application
+    participant API as openDB API
+    participant Reg as Registry
+    participant Event as Event Emitter
+    participant NS as window.__web_sqlite
+    participant Sub as Subscriber
+
+    Note over NS: Namespace initialized on library load
+
+    Sub->>NS: onDatabaseChange(callback)
+    NS->>Event: register(callback)
+    Event-->>Sub: cancel function
+
+    App->>API: openDB("myapp")
+    API->>Reg: checkLock("myapp.sqlite3")
+    Reg-->>API: available
+
+    API->>Reg: register("myapp.sqlite3", db)
+    Reg->>NS: update databases record
+
+    API->>Event: emit({action: "opened", dbName: "myapp.sqlite3", databases})
+    Event->>Sub: callback(event)
+
+    Sub->>Sub: Handle database opened event
+    Note over Sub: Access newly opened database<br/>via window.__web_sqlite.databases
+
+    App->>API: close()
+    API->>Reg: unregister("myapp.sqlite3")
+    Reg->>NS: remove from databases record
+
+    API->>Event: emit({action: "closed", dbName: "myapp.sqlite3", databases})
+    Event->>Sub: callback(event)
+
+    Sub->>Sub: Handle database closed event
+```
+
+**Event Properties**:
+
+- `action`: What happened ("opened" or "closed")
+- `dbName`: Which database changed (normalized name with .sqlite3 suffix)
+- `databases`: Array of all currently opened database names
+
+**Example**:
+
+```typescript
+// Subscribe to database changes
+const unsubscribe = window.__web_sqlite.onDatabaseChange((event) => {
+    if (event.action === 'opened') {
+        console.log(`✅ Database opened: ${event.dbName}`);
+        // Access the newly opened database directly
+        const db = window.__web_sqlite.databases[event.dbName];
+        console.log('Database instance:', db);
+    } else {
+        console.log(`❌ Database closed: ${event.dbName}`);
+    }
+    console.log('Current databases:', event.databases);
+});
+
+// Open a database
+await openDB('app');
+// Output: ✅ Database opened: app.sqlite3
+// Output: Current databases: ["app.sqlite3"]
+
+// Open another database
+await openDB('users');
+// Output: ✅ Database opened: users.sqlite3
+// Output: Current databases: ["app.sqlite3", "users.sqlite3"]
+
+// Close first database
+await window.__web_sqlite.databases['app.sqlite3'].close();
+// Output: ❌ Database closed: app.sqlite3
+// Output: Current databases: ["users.sqlite3"]
+
+// Unsubscribe
+unsubscribe();
+```
+
+**Use Cases**:
+
+- **DevTools Integration**: Show active databases in browser DevTools
+- **UI Synchronization**: Update database list UI when databases open/close
+- **Monitoring**: Track database lifecycle for debugging
+- **Cross-Module Communication**: React to database changes without imports
+
+---
+
+## 7) Event Flow Examples
 
 ### Flow: Database Initialization with Release
 
@@ -754,6 +1027,7 @@ sequenceDiagram
     participant App as Application
     participant Main as Main Thread
     participant Worker as Worker
+    participant Log as Log Dispatcher
 
     App->>Main: transaction(callback)
     Main->>Worker: EXECUTE "BEGIN"
@@ -763,21 +1037,29 @@ sequenceDiagram
 
     App->>Main: tx.exec("INSERT ...")
     Main->>Worker: EXECUTE INSERT
-    Worker-->>Main: SUCCESS
+    Worker->>Log: Generate log entry
+    Worker-->>Main: SUCCESS + logs[]
+    Main->>Log: Dispatch logs
 
     App->>Main: tx.query("SELECT ...")
     Main->>Worker: QUERY SELECT
-    Worker-->>Main: RESULTS
+    Worker->>Log: Generate log entry
+    Worker-->>Main: RESULTS + logs[]
+    Main->>Log: Dispatch logs
 
     alt Callback Succeeds
         App-->>Main: Return result
         Main->>Worker: EXECUTE "COMMIT"
-        Worker-->>Main: SUCCESS
+        Worker->>Log: Generate log entry
+        Worker-->>Main: SUCCESS + logs[]
+        Main->>Log: Dispatch logs
         Main-->>App: Resolve with result
     else Callback Throws
         App-->>Main: Throw error
         Main->>Worker: EXECUTE "ROLLBACK"
-        Worker-->>Main: SUCCESS
+        Worker->>Log: Generate log entry
+        Worker-->>Main: SUCCESS + logs[]
+        Main->>Log: Dispatch logs
         Main-->>App: Reject with error
     end
 ```
@@ -812,7 +1094,96 @@ sequenceDiagram
 
 ---
 
-## 6) Event Timing Characteristics
+### Flow: Structured Log Dispatch (v2.0.0)
+
+```mermaid
+sequenceDiagram
+    participant App as Application
+    participant DB as DBInterface
+    participant Log as Log Dispatcher
+    participant Callback1 as Callback 1
+    participant Callback2 as Callback 2
+    participant Worker as Web Worker
+
+    App->>DB: onLog(callback1)
+    DB->>Log: register(callback1)
+    Log-->>App: cancel1 function
+
+    App->>DB: onLog(callback2)
+    DB->>Log: register(callback2)
+    Log-->>App: cancel2 function
+
+    App->>DB: db.exec(sql, params)
+    DB->>Worker: EXECUTE request
+    Worker->>Worker: Execute SQL
+    Worker->>Worker: Generate log entries
+
+    Worker->>Log: Response with logs[]
+    Note over Log: [{level: "debug", data: {...}}]
+
+    Log->>Callback1: callback1({level, data})
+    Callback1->>Callback1: Process log
+
+    Log->>Callback2: callback2({level, data})
+    Callback2->>Callback2: Process log
+
+    Note over Callback1,Callback2: Independent processing<br/>Errors don't break DB
+
+    Log-->>DB: Resolve promise
+    DB-->>App: Result
+
+    App->>Log: cancel1()
+    Log->>Log: Remove callback1
+
+    Worker->>Log: Future logs
+    Note over Log: Only callback2 invoked
+```
+
+---
+
+### Flow: Database Change Events (v2.0.0)
+
+```mermaid
+sequenceDiagram
+    participant ModuleA as Module A
+    participant ModuleB as Module B
+    participant API as openDB API
+    participant Reg as Registry
+    participant Event as Event Emitter
+    participant NS as window.__web_sqlite
+
+    Note over NS: Namespace initialized
+
+    ModuleB->>NS: onDatabaseChange(callback)
+    NS->>Event: register(callback)
+    Event-->>ModuleB: unsubscribe function
+
+    ModuleA->>API: openDB("app")
+    API->>Reg: checkLock("app.sqlite3")
+    Reg-->>API: available
+
+    API->>Reg: register("app.sqlite3", db)
+    Reg->>NS: update databases
+
+    API->>Event: emit({action: "opened", dbName, databases})
+    Event->>ModuleB: callback(event)
+
+    ModuleB->>ModuleB: Handle open event
+    Note over ModuleB: Update UI<br/>Access DB via namespace
+
+    ModuleA->>API: close()
+    API->>Reg: unregister("app.sqlite3")
+    Reg->>NS: update databases
+
+    API->>Event: emit({action: "closed", dbName, databases})
+    Event->>ModuleB: callback(event)
+
+    ModuleB->>ModuleB: Handle close event
+```
+
+---
+
+## 8) Event Timing Characteristics
 
 ### Message Latency Breakdown
 
@@ -836,9 +1207,16 @@ sequenceDiagram
 - **Release Application**: 50-100ms per version
 - **Rollback**: 10-50ms (directory removal + metadata cleanup)
 
+### v2.0.0 Event Performance
+
+- **Log Callback Dispatch**: <0.01ms per callback per log entry
+- **Database Change Event Dispatch**: <0.001ms per subscriber
+- **Registry Lookup**: <0.001ms per database check
+- **Global DB Access**: 0ms (direct reference, no overhead)
+
 ---
 
-## 7) Event Correlation
+## 9) Event Correlation
 
 ### Message ID Generation
 
@@ -876,7 +1254,7 @@ type Task<T> = {
 
 ---
 
-## 8) Event Serialization
+## 10) Event Serialization
 
 ### Structured Clone Algorithm
 
@@ -915,7 +1293,7 @@ reconstructed.stack = serialized.stack;
 
 ---
 
-## 9) Event Security
+## 11) Event Security
 
 ### Input Validation
 
@@ -939,7 +1317,7 @@ reconstructed.stack = serialized.stack;
 
 ---
 
-## 10) Event Debugging
+## 12) Event Debugging
 
 ### Debug Mode Activation
 
@@ -976,6 +1354,22 @@ const db = await openDB("myapp", {
 [devTool.release] end 1.2.0
 [devTool.rollback] start 1.0.0
 [devTool.rollback] end 1.0.0
+```
+
+### v2.0.0 Structured Logging Output
+
+```typescript
+// Log callback receives structured entries
+db.onLog((log) => {
+    console.log(`[${log.level}]`, log.data);
+});
+
+// Output examples:
+[debug] {sql: "SELECT * FROM users", duration: 0.28, bind: []}
+[info] {action: "commit", sql: "COMMIT"}
+[error] {error: "SQLITE_CONSTRAINT: UNIQUE constraint failed", sql: "INSERT INTO users..."}
+[info] {action: "open", dbName: "myapp.sqlite3"}
+[info] {action: "close", dbName: "myapp.sqlite3"}
 ```
 
 ### Worker Debug Tools

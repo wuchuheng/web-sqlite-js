@@ -1,329 +1,582 @@
-# 02 Task Catalog (Kanban)
+# 02 Task Catalog (Release Grouped)
 
 **Project**: web-sqlite-js
 **Current Version**: 1.1.2 (Production)
-**Last Updated**: 2025-01-09
-**Status**: Production - Stable Release
+**Target Version**: 2.0.0 (In Development)
+**Last Updated**: 2025-01-10
+**Status**: v1.1.2 Stable - v2.0.0 Task Breakdown Complete
 
 ---
 
 ## Status Legend
 
--   `[ ]` **Pending**: Ready to be picked up
--   `[-]` **In Progress**: Currently being executed
--   `[x]` **Completed**: Tested, verified, and merged
+- `[ ]` **Pending**: Ready to be picked up
+- `[-]` **In Progress**: Currently being executed
+- `[x]` **Completed**: Tested, verified, and merged
 
 ---
 
-## 1. Backlog (Pending)
+## Release v2.0.0 (Active Development)
 
-> Tasks ready to be pulled for v1.1.x maintenance.
+> **Focus**: Enhanced Logging and Direct Database Access
+> **Target Date**: Q1 2025
+> **Status**: Architecture Complete - Implementation Pending
 
-### Maintenance Tasks
+### Phase 1: Database Registry and Lock (Foundation)
 
--   [ ] **TASK-101**: [Maintenance] Monitor v1.1.2 production stability
+- [ ] **TASK-201**: [Registry] Create Database Registry Module
+  - **Priority**: P0 (Blocker)
+  - **Dependencies**: None
+  - **Boundary**: `src/registry/database-registry.ts`
+  - **Description**: Implement singleton registry for tracking opened database instances
+  - **Implementation Details**:
+    - Create `DatabaseRegistry` class with singleton pattern
+    - Implement `register(filename: string, db: DBInterface): void`
+    - Implement `unregister(filename: string): void`
+    - Implement `get(filename: string): DBInterface | undefined`
+    - Implement `list(): string[]` (returns all registered database names)
+    - Implement `has(filename: string): boolean`
+  - **DoD**:
+    - Registry singleton pattern implemented
+    - All CRUD operations working
+    - Thread-safe operations (if needed)
+    - Unit tests pass (`src/registry/database-registry.unit.test.ts`)
+  - **Estimated**: 4 hours
 
-    -   **Priority**: P0 (Ongoing)
-    -   **Dependencies**: None
-    -   **Boundary**: Issue triage, bug reports, npm comments
-    -   **DoD**: Weekly review of issues, respond to critical bugs within 24 hours
-    -   **Estimated**: 2 hours/week ongoing
+- [ ] **TASK-202**: [Registry] Implement Database Lock
+  - **Priority**: P0 (Blocker)
+  - **Dependencies**: TASK-201
+  - **Boundary**: `src/registry/database-registry.ts`
+  - **Description**: Add lock mechanism to prevent duplicate database opens
+  - **Implementation Details**:
+    - Implement `checkLock(filename: string): void` (throws if locked)
+    - Implement `acquireLock(filename: string): void`
+    - Implement `releaseLock(filename: string): void`
+    - Lock state stored in registry
+    - Error message: "Database '{filename}' is already open"
+  - **DoD**:
+    - Lock prevents duplicate opens
+    - Lock releases on database close
+    - Proper error messages
+    - Unit tests pass (lock scenarios)
+  - **Estimated**: 3 hours
 
--   [ ] **TASK-102**: [Documentation] Improve error message documentation
+- [ ] **TASK-203**: [Registry] Integrate Registry with openDB
+  - **Priority**: P0 (Blocker)
+  - **Dependencies**: TASK-202
+  - **Boundary**: `src/main.ts` (openDB function)
+  - **Description**: Update openDB to use registry for lock checking and registration
+  - **Implementation Details**:
+    - Call `registry.checkLock()` before opening database
+    - Call `registry.register()` after successful open
+    - Call `registry.unregister()` in close() method
+    - Normalize filenames consistently
+  - **DoD**:
+    - Opening same database twice throws error
+    - Database registered after successful open
+    - Database unregistered after close
+    - E2E tests pass
+  - **Estimated**: 3 hours
 
-    -   **Priority**: P1
-    -   **Dependencies**: None
-    -   **Boundary**: `agent-docs/05-design/01-contracts/03-errors.md`
-    -   **DoD**: Add common error scenarios with solutions, verify examples work
-    -   **Estimated**: 4 hours
+### Phase 2: Global Namespace
 
--   [ ] **TASK-103**: [Testing] Add edge case E2E tests
+- [ ] **TASK-204**: [Namespace] Initialize Global Namespace
+  - **Priority**: P0
+  - **Dependencies**: TASK-203
+  - **Boundary**: `src/global/namespace.ts`
+  - **Description**: Create and initialize `window.__web_sqlite` namespace object
+  - **Implementation Details**:
+    - Create `initializeNamespace()` function
+    - Define non-enumerable property on `window` object
+    - Initialize `databases` property as empty object
+    - Initialize `onDatabaseChange` property
+    - Call initialization on library load (IIFE)
+  - **DoD**:
+    - Namespace accessible via `window.__web_sqlite`
+    - Namespace not enumerable in `Object.keys(window)`
+    - `databases` property exists (empty initially)
+    - `onDatabaseChange` function exists
+  - **Estimated**: 2 hours
 
-    -   **Priority**: P1
-    -   **Dependencies**: None
-    -   **Boundary**: `tests/e2e/*.e2e.test.ts`
-    -   **DoD**: Cover edge cases (concurrent transactions, large datasets, OPFS quota)
-    -   **Estimated**: 8 hours
+- [ ] **TASK-205**: [Namespace] Define Namespace Type Definitions
+  - **Priority**: P0
+  - **Dependencies**: TASK-204
+  - **Boundary**: `src/global/namespace.ts`, `src/types/global.ts`
+  - **Description**: Add TypeScript type definitions for global namespace
+  - **Implementation Details**:
+    - Extend `Window` interface with `__web_sqlite` property
+    - Define `WebSqliteNamespace` interface
+    - Define `DatabaseChangeEvent` type
+    - Export types for consumers
+  - **DoD**:
+    - TypeScript types compile without errors
+    - IntelliSense shows namespace properties
+    - Type definitions included in build output
+  - **Estimated**: 2 hours
 
--   [ ] **TASK-104**: [Docs] Framework integration examples
-    -   **Priority**: P2
-    -   **Dependencies**: None
-    -   **Boundary**: `examples/` (new directory)
-    -   **DoD**: React/Vue/Svelte examples working, README with setup instructions
-    -   **Estimated**: 12 hours
+- [ ] **TASK-206**: [Namespace] Sync Namespace with Registry
+  - **Priority**: P0
+  - **Dependencies**: TASK-205
+  - **Boundary**: `src/registry/database-registry.ts`
+  - **Description**: Update namespace `databases` property when registry changes
+  - **Implementation Details**:
+    - Update `register()` to add to `window.__web_sqlite.databases`
+    - Update `unregister()` to remove from `window.__web_sqlite.databases`
+    - Make `databases` property readonly externally
+  - **DoD**:
+    - Namespace `databases` reflects current registry state
+    - Direct access to database instances works
+    - Readonly enforced externally
+  - **Estimated**: 2 hours
+
+### Phase 3: Structured Logging
+
+- [ ] **TASK-207**: [Logging] Create Log Dispatcher
+  - **Priority**: P0
+  - **Dependencies**: TASK-206
+  - **Boundary**: `src/logs/log-dispatcher.ts`
+  - **Description**: Implement log dispatcher for callback management
+  - **Implementation Details**:
+    - Create `LogDispatcher` class
+    - Implement `register(callback: LogCallback): () => void` (returns cancel function)
+    - Implement `unregister(cancelFn: () => void): void`
+    - Implement `dispatch(log: LogEntry): void`
+    - Handle callback errors (error isolation)
+  - **DoD**:
+    - Multiple callbacks supported per dispatcher
+    - Callback errors don't break dispatching
+    - Cancel function works (idempotent)
+    - Unit tests pass
+  - **Estimated**: 3 hours
+
+- [ ] **TASK-208**: [Logging] Implement onLog API
+  - **Priority**: P0
+  - **Dependencies**: TASK-207
+  - **Boundary**: `src/release/release-manager.ts` (DBInterface)
+  - **Description**: Add `onLog(callback)` method to DBInterface
+  - **Implementation Details**:
+    - Add `logDispatcher` property to DBInterface
+    - Implement `onLog(callback: LogCallback): () => void`
+    - Store cancel function for cleanup
+    - Document in JSDoc comments
+  - **DoD**:
+    - `onLog()` method accessible on database instance
+    - Returns cancel function
+    - Multiple callbacks supported
+    - JSDoc documentation complete
+  - **Estimated**: 2 hours
+
+- [ ] **TASK-209**: [Logging] Implement Worker Log Forwarding
+  - **Priority**: P0
+  - **Dependencies**: TASK-208
+  - **Boundary**: `src/worker.ts`, `src/worker-bridge.ts`
+  - **Description**: Generate logs in worker and forward to main thread for dispatching
+  - **Implementation Details**:
+    - Update worker to generate `LogEntry` objects
+    - Include `logs` array in worker response messages
+    - Update worker bridge to extract logs from responses
+    - Dispatch logs to registered callbacks
+  - **DoD**:
+    - Worker generates structured logs (SQL, timing, errors)
+    - Logs forwarded to main thread
+    - Logs dispatched to callbacks
+    - E2E tests pass
+  - **Estimated**: 4 hours
+
+- [ ] **TASK-210**: [Logging] Add Application-Level Logs
+  - **Priority**: P1
+  - **Dependencies**: TASK-209
+  - **Boundary**: `src/main.ts`, `src/release/release-manager.ts`
+  - **Description**: Emit log entries for application events (open, close, transactions)
+  - **Implementation Details**:
+    - Emit `{level: "info", data: {action: "open", dbName}}` on open
+    - Emit `{level: "info", data: {action: "close", dbName}}` on close
+    - Emit transaction logs (commit/rollback)
+    - Use log dispatcher for application events
+  - **DoD**:
+    - Application events logged
+    - Logs dispatched to callbacks
+    - E2E tests pass
+  - **Estimated**: 2 hours
+
+### Phase 4: Database Events
+
+- [ ] **TASK-211**: [Events] Create Event Emitter
+  - **Priority**: P0
+  - **Dependencies**: TASK-210
+  - **Boundary**: `src/events/event-emitter.ts`
+  - **Description**: Implement event emitter for database lifecycle events
+  - **Implementation Details**:
+    - Create `EventEmitter` class
+    - Implement `subscribe(callback: EventCallback): () => void`
+    - Implement `unsubscribe(callback: EventCallback): void`
+    - Implement `emit(event: DatabaseChangeEvent): void`
+    - Handle subscriber errors (error isolation)
+  - **DoD**:
+    - Multiple subscribers supported
+    - Subscriber errors don't break emitting
+    - Cancel function works
+    - Unit tests pass
+  - **Estimated**: 3 hours
+
+- [ ] **TASK-212**: [Events] Implement onDatabaseChange API
+  - **Priority**: P0
+  - **Dependencies**: TASK-211
+  - **Boundary**: `src/global/namespace.ts`
+  - **Description**: Add `onDatabaseChange(callback)` to global namespace
+  - **Implementation Details**:
+    - Add `onDatabaseChange` method to namespace
+    - Integrate with event emitter
+    - Return cancel function
+    - Document in JSDoc comments
+  - **DoD**:
+    - `onDatabaseChange()` accessible via `window.__web_sqlite`
+    - Returns cancel function
+    - Multiple subscribers supported
+    - JSDoc documentation complete
+  - **Estimated**: 2 hours
+
+- [ ] **TASK-213**: [Events] Emit Database Change Events
+  - **Priority**: P0
+  - **Dependencies**: TASK-212
+  - **Boundary**: `src/main.ts`, `src/registry/database-registry.ts`
+  - **Description**: Emit events when databases are opened or closed
+  - **Implementation Details**:
+    - Emit `{action: "opened", dbName, databases}` on open
+    - Emit `{action: "closed", dbName, databases}` on close
+    - Get current database list from registry
+    - Forward to event emitter
+  - **DoD**:
+    - Events emitted on open/close
+    - Event payload correct (action, dbName, databases)
+    - Subscribers receive events
+    - E2E tests pass
+  - **Estimated**: 3 hours
+
+### Phase 5: Testing and Documentation
+
+- [ ] **TASK-214**: [Test] Unit Tests for Database Registry
+  - **Priority**: P0
+  - **Dependencies**: TASK-203
+  - **Boundary**: `src/registry/database-registry.unit.test.ts`
+  - **Description**: Comprehensive unit tests for registry module
+  - **Test Cases**:
+    - Register database and retrieve
+    - Unregister database
+    - Check if database exists
+    - List all databases
+    - Lock prevents duplicate opens
+    - Lock releases on close
+    - Normalized filenames
+  - **DoD**:
+    - All test cases pass
+    - Edge cases covered
+    - 100% code coverage for registry module
+  - **Estimated**: 4 hours
+
+- [ ] **TASK-215**: [Test] Unit Tests for Log Dispatcher
+  - **Priority**: P0
+  - **Dependencies**: TASK-210
+  - **Boundary**: `src/logs/log-dispatcher.unit.test.ts`
+  - **Description**: Comprehensive unit tests for log dispatcher
+  - **Test Cases**:
+    - Register callback
+    - Unregister callback
+    - Dispatch log to single callback
+    - Dispatch log to multiple callbacks
+    - Cancel function works
+    - Callback errors don't break dispatching
+  - **DoD**:
+    - All test cases pass
+    - Edge cases covered
+    - 100% code coverage for log dispatcher
+  - **Estimated**: 3 hours
+
+- [ ] **TASK-216**: [Test] Unit Tests for Event Emitter
+  - **Priority**: P0
+  - **Dependencies**: TASK-213
+  - **Boundary**: `src/events/event-emitter.unit.test.ts`
+  - **Description**: Comprehensive unit tests for event emitter
+  - **Test Cases**:
+    - Subscribe to events
+    - Unsubscribe from events
+    - Emit event to single subscriber
+    - Emit event to multiple subscribers
+    - Cancel function works
+    - Subscriber errors don't break emitting
+  - **DoD**:
+    - All test cases pass
+    - Edge cases covered
+    - 100% code coverage for event emitter
+  - **Estimated**: 3 hours
+
+- [ ] **TASK-217**: [Test] E2E Tests for v2.0.0 Features
+  - **Priority**: P0
+  - **Dependencies**: TASK-213
+  - **Boundary**: `tests/e2e/v2-features.e2e.test.ts`
+  - **Description**: End-to-end tests for all v2.0.0 features
+  - **Test Scenarios**:
+    - Database registry (register, unregister, get, list)
+    - Database lock (prevent duplicate opens)
+    - Global namespace (access databases)
+    - Structured logging (onLog callback, cancel)
+    - Database events (onDatabaseChange callback, cancel)
+    - Multiple callbacks/subscribers
+    - Error isolation
+  - **DoD**:
+    - All test scenarios pass
+    - Real browser testing (Playwright)
+    - Coverage of all v2.0.0 features
+  - **Estimated**: 8 hours
+
+- [ ] **TASK-218**: [Docs] Update API Documentation
+  - **Priority**: P0
+  - **Dependencies**: TASK-217
+  - **Boundary**: `agent-docs/05-design/01-contracts/01-api.md`
+  - **Description**: Update API documentation with v2.0.0 features
+  - **Updates**:
+    - Add `onLog()` method documentation
+    - Add `window.__web_sqlite` namespace documentation
+    - Add `onDatabaseChange()` method documentation
+    - Update examples with new features
+    - Add migration notes (if breaking changes)
+  - **DoD**:
+    - All v2.0.0 APIs documented
+    - Examples provided
+    - JSDoc comments complete
+  - **Estimated**: 4 hours
+
+- [ ] **TASK-219**: [Docs] Update README and Examples
+  - **Priority**: P1
+  - **Dependencies**: TASK-218
+  - **Boundary**: `README.md`, `examples/`
+  - **Description**: Update README and create examples for v2.0.0 features
+  - **Updates**:
+    - Add v2.0.0 features section to README
+    - Create example for database registry
+    - Create example for structured logging
+    - Create example for database events
+    - Update usage examples
+  - **DoD**:
+    - README updated
+    - Examples working
+    - Code snippets tested
+  - **Estimated**: 4 hours
 
 ---
 
-## 2. In Progress
+## Release v2.1.0 (Backlog - Planned Q2 2025)
 
-> Currently being executed.
+> **Focus**: Safari/Firefox Support
+> **Dependencies**: Spike S-001 completion
 
-_(None - v1.1.2 is complete and stable)_
-
----
-
-## 3. Review / QA
-
-> Implemented but waiting for final check.
-
-_(None - v1.1.2 is complete and stable)_
+- [ ] **TASK-301**: [Spike] Execute Spike S-001 (Safari/Firefox OPFS)
+  - **Priority**: P0
+  - **Dependencies**: None
+  - **Boundary**: `spikes/S-001-safari-firefox-opfs/`
+  - **Description**: Investigate Safari/Firefox OPFS support and fallback mechanisms
+  - **DoD**: Spike report with GO/NO-GO recommendation
 
 ---
 
-## 4. Done (v1.1.2 Completed)
+## Release v2.2.0 (Backlog - Planned Q3 2025)
 
-> All tasks completed for v1.1.2 release.
+> **Focus**: Performance Enhancements
+> **Dependencies**: Spike S-002 completion
+
+- [ ] **TASK-401**: [Spike] Execute Spike S-002 (Prepared Statements)
+  - **Priority**: P0
+  - **Dependencies**: None
+  - **Boundary**: `spikes/S-002-prepared-statements/`
+  - **Description**: Benchmark prepared statement performance vs current approach
+  - **DoD**: Spike report with performance metrics and GO/NO-GO recommendation
+
+---
+
+## Release v1.1.x (Maintenance)
+
+> **Focus**: Bug fixes and documentation
+> **Status**: Active Maintenance
+
+- [ ] **TASK-101**: [Maintenance] Monitor v1.1.2 production stability
+  - **Priority**: P0 (Ongoing)
+  - **Dependencies**: None
+  - **Boundary**: Issue triage, npm comments
+  - **DoD**: Weekly review of issues, critical bugs responded to within 24 hours
+  - **Estimated**: 2 hours/week ongoing
+
+- [ ] **TASK-102**: [Documentation] Improve error message documentation
+  - **Priority**: P1
+  - **Dependencies**: None
+  - **Boundary**: `agent-docs/05-design/01-contracts/03-errors.md`
+  - **Description**: Document common error scenarios with solutions
+  - **DoD**: Common errors documented with troubleshooting steps
+  - **Estimated**: 4 hours
+
+- [ ] **TASK-103**: [Testing] Add edge case E2E tests
+  - **Priority**: P1
+  - **Dependencies**: None
+  - **Boundary**: `tests/e2e/*.e2e.test.ts`
+  - **Description**: Add E2E tests for edge cases (concurrent transactions, large datasets, OPFS quota)
+  - **DoD**: Edge case tests pass, coverage improved
+  - **Estimated**: 8 hours
+
+- [ ] **TASK-104**: [Documentation] Framework integration examples
+  - **Priority**: P2
+  - **Dependencies**: None
+  - **Boundary**: `examples/` (new directory)
+  - **Description**: Create React/Vue/Svelte integration examples
+  - **DoD**: Examples working, README with setup instructions
+  - **Estimated**: 12 hours
+
+---
+
+## Release v1.1.2 (Completed)
+
+> **Status**: ✅ Production Release
+> **Completed**: 2025-01-09
 
 ### Core Database Implementation
 
--   [x] **TASK-001**: [Core] Implement openDB API
-
-    -   **Priority**: P0
-    -   **Boundary**: `src/main.ts` (openDB function)
-    -   **DoD**: Database opens successfully, OPFS storage initialized, worker created
-    -   **Completed**: 2024
-
--   [x] **TASK-002**: [Core] Implement exec API
-
-    -   **Priority**: P0
-    -   **Boundary**: `src/release/release-manager.ts` (DBInterface.exec)
-    -   **DoD**: INSERT, UPDATE, DELETE, CREATE operations work, E2E tests pass
-    -   **Completed**: 2024
-
--   [x] **TASK-003**: [Core] Implement query API
-
-    -   **Priority**: P0
-    -   **Boundary**: `src/release/release-manager.ts` (DBInterface.query)
-    -   **DoD**: SELECT operations work, type-safe results, E2E tests pass
-    -   **Completed**: 2024
-
--   [x] **TASK-004**: [Core] Implement transaction API
-
-    -   **Priority**: P0
-    -   **Boundary**: `src/release/release-manager.ts` (DBInterface.transaction)
-    -   **DoD**: Transactions work atomically, auto rollback on error, E2E tests pass
-    -   **Completed**: 2024
-
--   [x] **TASK-005**: [Core] Implement close API
-    -   **Priority**: P0
-    -   **Boundary**: `src/release/release-manager.ts` (DBInterface.close)
-    -   **DoD**: Database closes cleanly, further operations fail with "Database is not open", E2E tests pass
-    -   **Completed**: 2024
+- [x] **TASK-001**: [Core] Implement openDB API
+- [x] **TASK-002**: [Core] Implement exec API
+- [x] **TASK-003**: [Core] Implement query API
+- [x] **TASK-004**: [Core] Implement transaction API
+- [x] **TASK-005**: [Core] Implement close API
 
 ### Web Worker Architecture
 
--   [x] **TASK-006**: [Worker] Create Web Worker implementation
-
-    -   **Priority**: P0
-    -   **Boundary**: `src/worker.ts`
-    -   **DoD**: Worker loads SQLite WASM, handles messages, executes SQL
-    -   **Completed**: 2024
-
--   [x] **TASK-007**: [Worker] Implement worker bridge
-
-    -   **Priority**: P0
-    -   **Boundary**: `src/worker-bridge.ts`
-    -   **DoD**: Message passing works, promises resolve correctly
-    -   **Completed**: 2024
-
--   [x] **TASK-008**: [Worker] Implement mutex queue
-    -   **Priority**: P0
-    -   **Boundary**: `src/utils/mutex/`
-    -   **DoD**: Operations execute sequentially, queue handles errors, unit tests pass
-    -   **Completed**: 2024
+- [x] **TASK-006**: [Worker] Create Web Worker implementation
+- [x] **TASK-007**: [Worker] Implement worker bridge
+- [x] **TASK-008**: [Worker] Implement mutex queue
 
 ### Release Versioning System
 
--   [x] **TASK-009**: [Release] Design release data structures
-
-    -   **Priority**: P0
-    -   **Boundary**: `src/release/types.ts`
-    -   **DoD**: Release types defined, TypeScript types work
-    -   **Completed**: 2024
-
--   [x] **TASK-010**: [Release] Implement release manager
-
-    -   **Priority**: P0
-    -   **Boundary**: `src/release/release-manager.ts`
-    -   **DoD**: Release application works, migrations execute, E2E tests pass
-    -   **Completed**: 2024
-
--   [x] **TASK-011**: [Release] Implement OPFS utilities
-
-    -   **Priority**: P0
-    -   **Boundary**: `src/release/opfs-utils.ts`
-    -   **DoD**: File operations work, directory management works
-    -   **Completed**: 2024
-
--   [x] **TASK-012**: [Release] Implement SHA-256 hashing
-    -   **Priority**: P0
-    -   **Boundary**: `src/release/hash-utils.ts`
-    -   **DoD**: Hash computation works correctly, matches reference
-    -   **Completed**: 2024
+- [x] **TASK-009**: [Release] Design release data structures
+- [x] **TASK-010**: [Release] Implement release manager
+- [x] **TASK-011**: [Release] Implement OPFS utilities
+- [x] **TASK-012**: [Release] Implement SHA-256 hashing
 
 ### Dev Tooling
 
--   [x] **TASK-013**: [DevTool] Implement devTool.release API
-
-    -   **Priority**: P0
-    -   **Boundary**: `src/release/release-manager.ts`
-    -   **DoD**: Dev version creation works, metadata tracked, E2E tests pass
-    -   **Completed**: 2024
-
--   [x] **TASK-014**: [DevTool] Implement devTool.rollback API
-
-    -   **Priority**: P0
-    -   **Boundary**: `src/release/release-manager.ts`
-    -   **DoD**: Rollback removes correct versions, validates constraints, E2E tests pass
-    -   **Completed**: 2024
-
--   [x] **TASK-015**: [DevTool] Implement metadata lock
-    -   **Priority**: P0
-    -   **Boundary**: `src/release/release-manager.ts`
-    -   **DoD**: Lock prevents concurrent modifications, E2E tests pass
-    -   **Completed**: 2024
+- [x] **TASK-013**: [DevTool] Implement devTool.release API
+- [x] **TASK-014**: [DevTool] Implement devTool.rollback API
+- [x] **TASK-015**: [DevTool] Implement metadata lock
 
 ### TypeScript & Types
 
--   [x] **TASK-016**: [Types] Define main type interfaces
-
-    -   **Priority**: P0
-    -   **Boundary**: `src/types/DB.ts`
-    -   **DoD**: DBInterface, Release, and other types defined, TypeScript compiles
-    -   **Completed**: 2024
-
--   [x] **TASK-017**: [Types] Define worker event types
-    -   **Priority**: P0
-    -   **Boundary**: `src/types/message.ts`
-    -   **DoD**: Worker message types defined, type-safe communication
-    -   **Completed**: 2024
+- [x] **TASK-016**: [Types] Define main type interfaces
+- [x] **TASK-017**: [Types] Define worker event types
 
 ### Testing
 
--   [x] **TASK-018**: [Test] Write mutex unit tests
-
-    -   **Priority**: P0
-    -   **Boundary**: `src/utils/mutex/mutex.unit.test.ts`
-    -   **DoD**: Unit tests pass, edge cases covered
-    -   **Completed**: 2024
-
--   [x] **TASK-019**: [Test] Write E2E tests for core operations
-
-    -   **Priority**: P0
-    -   **Boundary**: `tests/e2e/sqlite3.e2e.test.ts`
-    -   **DoD**: E2E tests pass for open/exec/query/close
-    -   **Completed**: 2024
-
--   [x] **TASK-020**: [Test] Write E2E tests for transactions
-
-    -   **Priority**: P0
-    -   **Boundary**: `tests/e2e/transaction.e2e.test.ts`
-    -   **Completed**: 2024
-
--   [x] **TASK-021**: [Test] Write E2E tests for release versioning
-
-    -   **Priority**: P0
-    -   **Boundary**: `tests/e2e/release.e2e.test.ts`
-    -   **Completed**: 2024
-
--   [x] **TASK-022**: [Test] Write E2E tests for error handling
-    -   **Priority**: P0
-    -   **Boundary**: `tests/e2e/error.e2e.test.ts`
-    -   **Completed**: 2024
+- [x] **TASK-018**: [Test] Write mutex unit tests
+- [x] **TASK-019**: [Test] Write E2E tests for core operations
+- [x] **TASK-020**: [Test] Write E2E tests for transactions
+- [x] **TASK-021**: [Test] Write E2E tests for release versioning
+- [x] **TASK-022**: [Test] Write E2E tests for error handling
 
 ### Debug & Error Handling
 
--   [x] **TASK-023**: [Debug] Implement debug logger
-
-    -   **Priority**: P0
-    -   **Boundary**: `src/utils/logger.ts`
-    -   **DoD**: Debug mode works, SQL timing logged, console output correct
-    -   **Completed**: 2024
-
--   [x] **TASK-024**: [Error] Implement error handling
-    -   **Priority**: P0
-    -   **Boundary**: `src/main.ts`, `src/worker-bridge.ts`
-    -   **DoD**: Errors propagate correctly, stack traces preserved, E2E tests pass
-    -   **Completed**: 2024
+- [x] **TASK-023**: [Debug] Implement debug logger
+- [x] **TASK-024**: [Error] Implement error handling
 
 ### Build & Release
 
--   [x] **TASK-025**: [Build] Configure Vite build
-
-    -   **Priority**: P0
-    -   **Boundary**: `vite.config.ts`, `package.json`
-    -   **DoD**: Build outputs correct files, WASM optimized, bundle size acceptable
-    -   **Completed**: 2024
-
--   [x] **TASK-026**: [Build] Configure TypeScript
-
-    -   **Priority**: P0
-    -   **Boundary**: `tsconfig.json`
-    -   **DoD**: TypeScript compiles without errors, types generated correctly
-    -   **Completed**: 2024
-
--   [x] **TASK-027**: [Build] Configure Vitest
-
-    -   **Priority**: P0
-    -   **Boundary**: `vitest.unit.config.ts`, `vitest.e2e.config.ts`
-    -   **DoD**: Tests run correctly, coverage works
-    -   **Completed**: 2024
-
--   [x] **TASK-028**: [Release] Set up npm publish workflow
-
-    -   **Priority**: P0
-    -   **Boundary**: `package.json`, npm scripts
-    -   **DoD**: Package publishes to npm, version correct
-    -   **Completed**: 2024
-
--   [x] **TASK-029**: [Release] Publish v1.1.2 to npm
-    -   **Priority**: P0
-    -   **Boundary**: npm publish
-    -   **DoD**: v1.1.2 available on npm, installation works
-    -   **Completed**: 2025-01-09
+- [x] **TASK-025**: [Build] Configure Vite build
+- [x] **TASK-026**: [Build] Configure TypeScript
+- [x] **TASK-027**: [Build] Configure Vitest
+- [x] **TASK-028**: [Release] Set up npm publish workflow
+- [x] **TASK-029**: [Release] Publish v1.1.2 to npm
 
 ### Documentation
 
--   [x] **TASK-030**: [Docs] Write API documentation
+- [x] **TASK-030**: [Docs] Write API documentation
+- [x] **TASK-031**: [Docs] Create README
+- [x] **TASK-032**: [Docs] Deploy documentation site
 
-    -   **Priority**: P0
-    -   **Boundary**: JSDoc comments in source
-    -   **DoD**: All public APIs documented, examples provided
-    -   **Completed**: 2024
-
--   [x] **TASK-031**: [Docs] Create README
-
-    -   **Priority**: P0
-    -   **Boundary**: `README.md`
-    -   **DoD**: README contains installation, usage, examples
-    -   **Completed**: 2024
-
--   [x] **TASK-032**: [Docs] Deploy documentation site
-    -   **Priority**: P0
-    -   **Boundary**: VitePress site
-    -   **DoD**: Documentation deployed, accessible at https://web-sqlite-js.wuchuheng.com
-    -   **Completed**: 2024
+**Total v1.1.2 Tasks Completed**: 32
 
 ---
 
 ## Summary
 
-**v1.1.2 Status**: ✅ Production Release
+### v2.0.0 Task Breakdown
 
-| Category               | Tasks Completed |
-| ---------------------- | --------------- |
-| Core Database          | 5               |
-| Worker Architecture    | 3               |
-| Release Versioning     | 4               |
-| Dev Tooling            | 3               |
-| TypeScript & Types     | 2               |
-| Testing                | 5               |
-| Debug & Error Handling | 2               |
-| Build & Release        | 5               |
-| Documentation          | 3               |
-| **Total**              | **32**          |
+| Phase | Tasks | Estimated Hours | Status |
+|-------|-------|----------------|--------|
+| Phase 1: Registry & Lock | 3 | 10h | Pending |
+| Phase 2: Global Namespace | 3 | 6h | Pending |
+| Phase 3: Structured Logging | 4 | 11h | Pending |
+| Phase 4: Database Events | 3 | 8h | Pending |
+| Phase 5: Testing & Docs | 6 | 26h | Pending |
+| **Total** | **19** | **61h** | **Pending** |
 
-All 32 P0 tasks completed for v1.1.2 production release.
+### Task Priority Distribution
+
+| Priority | v2.0.0 | v1.1.x | Total |
+|----------|--------|--------|-------|
+| P0 | 16 | 1 | 17 |
+| P1 | 3 | 3 | 6 |
+| P2 | 0 | 1 | 1 |
+| **Total** | **19** | **5** | **24** |
+
+### Kanban Board View
+
+**Backlog** (Ready to start):
+- TASK-201 through TASK-219 (v2.0.0 implementation)
+- TASK-301, TASK-401 (Future spikes)
+
+**In Progress**:
+- None (architecture phase complete)
+
+**Review / QA**:
+- None
+
+**Done**:
+- TASK-001 through TASK-032 (v1.1.2 completed)
+
+---
+
+## Dependencies Graph
+
+```mermaid
+graph TD
+    %% Phase 1
+    TASK202[TASK-202: Lock] --> TASK201[TASK-201: Registry]
+    TASK203[TASK-203: Integration] --> TASK202
+
+    %% Phase 2
+    TASK205[TASK-205: Types] --> TASK204[TASK-204: Namespace]
+    TASK206[TASK-206: Sync] --> TASK205
+    TASK206 --> TASK203
+
+    %% Phase 3
+    TASK208[TASK-208: onLog API] --> TASK207[TASK-207: Dispatcher]
+    TASK209[TASK-209: Worker Logs] --> TASK208
+    TASK210[TASK-210: App Logs] --> TASK209
+    TASK210 --> TASK206
+
+    %% Phase 4
+    TASK212[TASK-212: onDatabaseChange] --> TASK211[TASK-211: Emitter]
+    TASK213[TASK-213: Emit Events] --> TASK212
+    TASK213 --> TASK210
+
+    %% Phase 5
+    TASK214[TASK-214: Registry Tests] --> TASK203
+    TASK215[TASK-215: Dispatcher Tests] --> TASK210
+    TASK216[TASK-216: Emitter Tests] --> TASK213
+    TASK217[TASK-217: E2E Tests] --> TASK213
+    TASK218[TASK-218: API Docs] --> TASK217
+    TASK219[TASK-219: README] --> TASK218
+
+    style TASK201 fill:#e1f5fe
+    style TASK203 fill:#e1f5fe
+    style TASK206 fill:#fff3e0
+    style TASK210 fill:#fff3e0
+    style TASK213 fill:#f3e5f5
+    style TASK217 fill:#f3e5f5
+```
 
 ---
 
