@@ -1,5 +1,6 @@
 import type { ReleaseConfig, OpenDBOptions } from "../types/DB";
 import type { SqliteEvent } from "../types/message";
+import type { LogDispatcher } from "../logs/log-dispatcher";
 
 /** Release config decorated with hashes for validation. */
 export type ReleaseConfigWithHash = ReleaseConfig & {
@@ -30,4 +31,5 @@ export type ReleaseManagerDeps = {
   options?: OpenDBOptions;
   sendMsg: SendMsg;
   runMutex: <T>(fn: () => Promise<T>) => Promise<T>;
+  logDispatcher: LogDispatcher;
 };

@@ -50,6 +50,55 @@ gantt
 
 ### Completed (2026-01-11)
 
+**TASK-209: Implement Worker Log Forwarding**
+
+- **Status**: ✅ COMPLETE
+- **Owner**: S8 Worker
+- **Started**: 2026-01-11
+- **Completed**: 2026-01-11
+- **Feature**: F-001 - Enhanced Logging and Direct Database Access
+- **Description**: Generate logs in worker and forward to main thread for dispatching
+- **Evidence**:
+  - ✅ Added `WorkerLogEntry` type to `src/types/message.ts`
+  - ✅ Updated `SqliteResMsg` to include `logs` array
+  - ✅ Worker generates logs via `addLog()` helper function
+  - ✅ Worker includes logs in response messages (success and error)
+  - ✅ Worker bridge dispatches logs via `logDispatcher.dispatch()`
+  - ✅ Release manager passes log dispatcher to worker bridge
+  - ✅ Created `tests/e2e/worker-logs.e2e.test.ts` (5 tests)
+  - ✅ All 31 E2E tests passing
+  - ✅ TypeScript compiles without errors
+- **Test Results**:
+  - 5 worker log E2E tests passing
+  - Logs dispatched for SQL execution (debug level)
+  - Logs dispatched for errors (error level)
+  - SQL and timing included in log data
+  - Multiple callbacks supported
+  - Cancel function stops dispatching
+- **Notes**: Worker log forwarding complete. SQL execution logs now flow from worker → main thread → registered callbacks.
+
+**TASK-208: Implement onLog API**
+
+- **Status**: ✅ COMPLETE
+- **Owner**: S8 Worker
+- **Started**: 2026-01-11
+- **Completed**: 2026-01-11
+- **Feature**: F-001 - Enhanced Logging and Direct Database Access
+- **Description**: Integrate log dispatcher with DBInterface
+- **Evidence**:
+  - ✅ Added `createLogDispatcher` import to `src/release/release-manager.ts`
+  - ✅ Created `logDispatcher` instance per database
+  - ✅ Implemented `onLog(callback)` to call `logDispatcher.register(callback)`
+  - ✅ Removed placeholder implementation
+  - ✅ All 53 unit tests passing
+  - ✅ TypeScript compiles without errors
+- **Test Results**:
+  - 53 unit tests passing (no new tests needed for this task)
+  - `onLog()` method accessible on database instance
+  - Returns cancel function from log dispatcher
+  - Supports multiple callbacks per database
+- **Notes**: onLog API complete. Database instances now have functional `onLog()` method. Log forwarding from worker will be implemented in TASK-209.
+
 **TASK-207: Create Log Dispatcher**
 
 - **Status**: ✅ COMPLETE
@@ -422,25 +471,28 @@ gantt
 
 ### v2.0.0 Features (F-001) - Implementation In Progress
 
-| Feature                          | Status             | Tests      | Documentation | Notes                                           |
-| -------------------------------- | ------------------ | ---------- | ------------- | ----------------------------------------------- |
-| Database Registry                | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-201 Complete                               |
-| Database Lock                    | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | Included in Registry Module                     |
-| Registry Integration with openDB | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-203 Complete                               |
-| Global Namespace                 | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-204, TASK-205, TASK-206 Complete           |
-| Log Dispatcher                   | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-207 Complete                               |
-| Structured Logging API (`onLog`) | 🔄 IN PROGRESS     | 📋 PARTIAL | ✅ COMPLETE   | TASK-207 Complete, TASK-208 to TASK-210 Pending |
-| Database Change Events           | 📋 DESIGN COMPLETE | ❌         | ✅ COMPLETE   | Implementation ready (TASK-211 to TASK-213)     |
-| Testing & Documentation          | 📋 DESIGN COMPLETE | ❌         | ✅ COMPLETE   | Implementation ready (TASK-214 to TASK-219)     |
+| Feature                          | Status             | Tests      | Documentation | Notes                                               |
+| -------------------------------- | ------------------ | ---------- | ------------- | --------------------------------------------------- |
+| Database Registry                | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-201 Complete                                   |
+| Database Lock                    | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | Included in Registry Module                         |
+| Registry Integration with openDB | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-203 Complete                                   |
+| Global Namespace                 | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-204, TASK-205, TASK-206 Complete               |
+| Log Dispatcher                   | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-207 Complete                                   |
+| onLog API                        | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-208 Complete                                   |
+| Worker Log Forwarding            | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-209 Complete                                   |
+| Structured Logging API (`onLog`) | 🔄 IN PROGRESS     | ✅ PASSING | ✅ COMPLETE   | TASK-207 to TASK-209 Complete, TASK-210 Pending      |
+| Database Change Events           | 📋 DESIGN COMPLETE | ❌         | ✅ COMPLETE   | Implementation ready (TASK-211 to TASK-213)         |
+| Testing & Documentation          | 📋 DESIGN COMPLETE | ❌         | ✅ COMPLETE   | Implementation ready (TASK-214 to TASK-219)         |
 
 **v2.0.0 Total Tasks**: 19 tasks (61 estimated hours)
-**Status**: 7/19 tasks complete (~37%), Phase 1 (Registry & Lock) complete, Phase 2 (Global Namespace) complete, Phase 3 (Structured Logging) in progress
+**Status**: 9/19 tasks complete (~47%), Phase 1 (Registry & Lock) complete, Phase 2 (Global Namespace) complete, Phase 3 (Structured Logging) in progress (3/4 complete)
 
 ### Test Coverage
 
 - **Unit Tests**: ✅ PASSING (v1.1.2 + v2.0.0 Registry)
   - Mutex implementation: `src/utils/mutex/mutex.unit.test.ts`
   - Database Registry: `src/registry/database-registry.unit.test.ts` (v2.0.0)
+  - Log Dispatcher: `src/logs/log-dispatcher.unit.test.ts` (v2.0.0)
   - Run with: `npm run test:unit`
 
 - **E2E Tests**: ✅ PASSING (v1.1.2 + v2.0.0)
@@ -451,10 +503,13 @@ gantt
   - SQLite3 integration: `tests/e2e/sqlite3.e2e.test.ts`
   - Registry integration: `tests/e2e/registry-integration.e2e.test.ts` (v2.0.0)
   - Namespace sync: `tests/e2e/namespace-sync.e2e.test.ts` (v2.0.0)
+  - Worker log forwarding: `tests/e2e/worker-logs.e2e.test.ts` (v2.0.0)
   - Run with: `npm run test:e2e`
 
-- **All Tests**: ✅ PASSING (v1.1.2)
+- **All Tests**: ✅ PASSING (v1.1.2 + v2.0.0)
   - Run with: `npm test`
+  - 31 E2E tests passing
+  - 53 Unit tests passing
 
 - **Coverage**: 100% (v1.1.2)
 
@@ -675,8 +730,8 @@ A task is **DONE** only if:
 ### Progress
 
 - **MVP Requirements**: 48/48 implemented (100%)
-- **v2.0.0 Features**: 7/19 implemented (~37%) - Database Registry & Lock complete, Global Namespace complete, Log Dispatcher complete
-- **v2.0.0 Tasks**: 19 tasks defined, 61 estimated hours, 7 completed
+- **v2.0.0 Features**: 9/19 implemented (~47%) - Database Registry & Lock complete, Global Namespace complete, Log Dispatcher complete, onLog API complete, Worker Log Forwarding complete
+- **v2.0.0 Tasks**: 19 tasks defined, 61 estimated hours, 9 completed
 - **Success Criteria**: All met for v1.1.2
 - **Non-goals**: Respected (no scope creep)
 - **Stage Completion**: 7/7 stages documented (100%)
@@ -687,10 +742,10 @@ A task is **DONE** only if:
 | --------------------------- | ------ | ------- | ------------------------ |
 | Phase 1: Registry & Lock    | 3      | 10h     | ✅ Complete              |
 | Phase 2: Global Namespace   | 3      | 6h      | ✅ Complete              |
-| Phase 3: Structured Logging | 4      | 11h     | 🔄 In Progress (1/4)     |
+| Phase 3: Structured Logging | 4      | 11h     | 🔄 In Progress (3/4)     |
 | Phase 4: Database Events    | 3      | 8h      | Pending                  |
 | Phase 5: Testing & Docs     | 6      | 26h     | Pending                  |
-| **Total**                   | **19** | **61h** | **7/19 Complete (~37%)** |
+| **Total**                   | **19** | **61h** | **9/19 Complete (~47%)** |
 
 ### Risk Posture
 

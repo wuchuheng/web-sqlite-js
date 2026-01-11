@@ -6,6 +6,7 @@ import {
   SqliteEvent,
   type SqliteReqMsg,
   type SqliteResMsg,
+  type WorkerLogEntry,
 } from "./types/message";
 
 import { configureLogger, SqlLogInfo } from "./utils/logger";
@@ -15,14 +16,18 @@ let metaDb: Sqlite3DB | null = null;
 let sqlite3: Sqlite3 | null = null;
 let isDebug = false;
 
+// Log collection for structured logging
+let workerLogs: WorkerLogEntry[] = [];
+
+/**
+ * Add a log entry to be sent with the next response
+ */
+const addLog = (level: WorkerLogEntry["level"], data: unknown) => {
+  workerLogs.push({ level, data });
+};
+
 // Initial call to set up the logger state (starts disabled)
 configureLogger(isDebug);
-
-// sqlite3InitModuleState = Object.assign(sqlite3InitModuleState || {}, {
-//   debugModule: (...args: readonly unknown[]) => {
-//     console.log("[sIMS Debug]", ...args);
-//   },
-// } as Partial<Sqlite3InitModuleState>);
 
 const handleOpen = async (payload: OpenDBArgs) => {
   if (typeof payload.filename !== "string") {
@@ -89,16 +94,28 @@ const handleExecute = (payload: unknown) => {
     throw new Error("Database is not open");
   }
 
-  db.exec({ sql, bind });
-  const end = performance.now();
-  const duration = end - start;
-  if (isDebug) {
-    console.debug({ sql, duration, bind } as SqlLogInfo);
+  try {
+    db.exec({ sql, bind });
+    const end = performance.now();
+    const duration = end - start;
+
+    // Generate debug log for SQL execution
+    addLog("debug", { sql, duration, bind });
+
+    if (isDebug) {
+      console.debug({ sql, duration, bind } as SqlLogInfo);
+    }
+
+    return {
+      changes: db.changes(),
+      lastInsertRowid: db.selectValue("SELECT last_insert_rowid()"),
+    };
+  } catch (error) {
+    // Generate error log
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    addLog("error", { sql, error: errorMessage });
+    throw error;
   }
-  return {
-    changes: db.changes(),
-    lastInsertRowid: db.selectValue("SELECT last_insert_rowid()"),
-  };
 };
 
 const handleQuery = (payload: ExecParams) => {
@@ -122,6 +139,9 @@ const handleQuery = (payload: ExecParams) => {
   const rows = db.selectObjects(sql, bind);
   const end = performance.now();
   const duration = end - start;
+
+  // Generate debug log for query
+  addLog("debug", { sql, duration, bind });
 
   if (isDebug) {
     console.debug({
@@ -148,6 +168,9 @@ const handleClose = () => {
 
 self.onmessage = async (msg: MessageEvent<SqliteReqMsg<unknown>>) => {
   const { id, event, payload } = msg.data;
+
+  // Clear logs for this request
+  workerLogs = [];
 
   try {
     if (sqlite3 === null && event !== SqliteEvent.OPEN) {
@@ -177,14 +200,18 @@ self.onmessage = async (msg: MessageEvent<SqliteReqMsg<unknown>>) => {
         throw new Error(`Unknown event: ${event}`);
     }
 
+    // Include logs in response
     const res: SqliteResMsg<unknown> = {
       id,
       success: true,
       payload: result,
+      logs: workerLogs.length > 0 ? [...workerLogs] : undefined,
     };
     self.postMessage(res);
   } catch (err) {
     const errorObj = err instanceof Error ? err : new Error(String(err));
+
+    // Include logs in error response
     const res: SqliteResMsg<void> = {
       id,
       success: false,
@@ -193,6 +220,7 @@ self.onmessage = async (msg: MessageEvent<SqliteReqMsg<unknown>>) => {
         message: errorObj.message,
         stack: errorObj.stack,
       } as Error,
+      logs: workerLogs.length > 0 ? [...workerLogs] : undefined,
     };
     self.postMessage(res);
   }

@@ -186,39 +186,51 @@
   - **Estimated**: 3 hours
   - **Micro-Spec**: [complete](../08-task/active/TASK-207.md)
 
-- [ ] **TASK-208**: [Logging] Implement onLog API
+- [x] **TASK-208**: [Logging] Implement onLog API
+  - **Status**: ✅ COMPLETE
+  - **Completed**: 2026-01-11
   - **Priority**: P0
   - **Dependencies**: TASK-207
   - **Boundary**: `src/release/release-manager.ts` (DBInterface)
   - **Description**: Add `onLog(callback)` method to DBInterface
   - **Implementation Details**:
-    - Add `logDispatcher` property to DBInterface
-    - Implement `onLog(callback: LogCallback): () => void`
-    - Store cancel function for cleanup
-    - Document in JSDoc comments
-  - **DoD**:
-    - `onLog()` method accessible on database instance
-    - Returns cancel function
-    - Multiple callbacks supported
-    - JSDoc documentation complete
+    - Added `createLogDispatcher` import
+    - Created `logDispatcher` instance per database
+    - Implemented `onLog(callback: LogCallback): () => void`
+    - Removed placeholder implementation
+  - **Evidence**:
+    - ✅ Imported `createLogDispatcher` from `../logs/log-dispatcher`
+    - ✅ Created `logDispatcher` instance in `openReleaseDB()`
+    - ✅ Implemented `onLog()` to call `logDispatcher.register()`
+    - ✅ All 53 unit tests passing
+    - ✅ TypeScript compiles without errors
   - **Estimated**: 2 hours
+  - **Micro-Spec**: [complete](../08-task/active/TASK-208.md)
 
-- [ ] **TASK-209**: [Logging] Implement Worker Log Forwarding
+- [x] **TASK-209**: [Logging] Implement Worker Log Forwarding
+  - **Status**: ✅ COMPLETE
+  - **Completed**: 2026-01-11
   - **Priority**: P0
   - **Dependencies**: TASK-208
-  - **Boundary**: `src/worker.ts`, `src/worker-bridge.ts`
+  - **Boundary**: `src/types/message.ts`, `src/worker.ts`, `src/worker-bridge.ts`
   - **Description**: Generate logs in worker and forward to main thread for dispatching
   - **Implementation Details**:
-    - Update worker to generate `LogEntry` objects
-    - Include `logs` array in worker response messages
-    - Update worker bridge to extract logs from responses
-    - Dispatch logs to registered callbacks
-  - **DoD**:
-    - Worker generates structured logs (SQL, timing, errors)
-    - Logs forwarded to main thread
-    - Logs dispatched to callbacks
-    - E2E tests pass
+    - Added `WorkerLogEntry` type to `src/types/message.ts`
+    - Updated `SqliteResMsg` to include `logs` array
+    - Worker generates logs for SQL execution (debug level)
+    - Worker generates logs for errors (error level)
+    - Worker bridge extracts logs and dispatches them
+    - Release manager passes log dispatcher to worker bridge
+  - **Evidence**:
+    - ✅ Added `WorkerLogEntry` type
+    - ✅ Worker collects logs via `addLog()` helper
+    - ✅ Worker includes logs in response messages
+    - ✅ Worker bridge dispatches logs via `logDispatcher.dispatch()`
+    - ✅ Created `tests/e2e/worker-logs.e2e.test.ts` (5 tests)
+    - ✅ All 31 E2E tests passing
+    - ✅ TypeScript compiles without errors
   - **Estimated**: 4 hours
+  - **Micro-Spec**: [complete](../08-task/active/TASK-209.md)
 
 - [ ] **TASK-210**: [Logging] Add Application-Level Logs
   - **Priority**: P1

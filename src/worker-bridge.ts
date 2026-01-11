@@ -4,21 +4,29 @@ import {
   type SqliteResMsg,
   SqliteEvent,
 } from "./types/message";
+import type { LogDispatcher } from "./logs/log-dispatcher";
 
 type Task<T> = {
   resolve: (value: T | PromiseLike<T>) => void;
   reject: (reason?: unknown) => void;
 };
 
-export const createWorkerBridge = () => {
+export const createWorkerBridge = (logDispatcher: LogDispatcher) => {
   const worker = new Sqlite3Worker();
   const idMapPromise: Map<number, Task<unknown>> = new Map();
 
   worker.onmessage = (event: MessageEvent<SqliteResMsg<unknown>>) => {
-    const { id, success, error, payload } = event.data;
+    const { id, success, error, payload, logs } = event.data;
     const task = idMapPromise.get(id);
 
     if (!task) return;
+
+    // Dispatch logs to registered callbacks
+    if (logs && logs.length > 0) {
+      for (const log of logs) {
+        logDispatcher.dispatch(log);
+      }
+    }
 
     if (!success) {
       const newError = new Error(error!.message);

@@ -1,5 +1,6 @@
 import { createWorkerBridge } from "./worker-bridge";
 import { createMutex } from "./utils/mutex/mutex";
+import { createLogDispatcher } from "./logs/log-dispatcher";
 import type { DBInterface, OpenDBOptions } from "./types/DB";
 import { abilityCheck } from "./validations/shareBufferAbiliCheck";
 import { openReleaseDB } from "./release/release-manager";
@@ -26,7 +27,11 @@ export const openDB = async (
   // Check lock before opening to prevent duplicate opens
   DatabaseRegistry.checkLock(filename);
 
-  const { sendMsg } = createWorkerBridge();
+  // Create log dispatcher for this database instance
+  const logDispatcher = createLogDispatcher();
+
+  // Create worker bridge with log dispatcher
+  const { sendMsg } = createWorkerBridge(logDispatcher);
   const runMutex = createMutex();
 
   const db = await openReleaseDB({
@@ -34,6 +39,7 @@ export const openDB = async (
     options,
     sendMsg,
     runMutex,
+    logDispatcher,
   });
 
   // Register after successful open

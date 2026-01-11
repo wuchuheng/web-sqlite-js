@@ -50,6 +50,7 @@ export const openReleaseDB = async ({
   options,
   sendMsg,
   runMutex,
+  logDispatcher,
 }: ReleaseManagerDeps): Promise<DBInterface> => {
   console.debug("[openDB] input validation start");
   if (typeof filename !== "string" || filename.trim() === "") {
@@ -453,12 +454,9 @@ export const openReleaseDB = async ({
     rollback: devToolRollback,
   };
 
-  // Placeholder for onLog - will be implemented in TASK-208
-  const onLog = (_callback: (log: LogEntry) => void): (() => void) => {
-    // TODO: Implement log callback registration (TASK-208)
-    return () => {
-      // Placeholder cancel function
-    };
+  // Implement onLog method using the log dispatcher from main
+  const onLog = (callback: (log: LogEntry) => void): (() => void) => {
+    return logDispatcher.register(callback);
   };
 
   const db: DBInterface = {
