@@ -24,6 +24,9 @@ export default defineConfig({
       // "src/**/*.test.ts",
     ],
 
+    // Setup file for E2E tests
+    setupFiles: ["./vitest.e2e.setup.ts"],
+
     // Browser testing configuration
     browser: {
       enabled: true,

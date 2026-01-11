@@ -1,13 +1,7 @@
 /**
- * Setup file for unit tests
- * Provides a mock window object for browser API simulation
+ * Setup file for E2E tests
+ * Suppresses expected error and debug logs during testing
  */
-
-// Create a minimal mock window object for unit tests
-// The namespace is a singleton, so we don't reset it between tests
-if (typeof global.window === "undefined") {
-  global.window = {} as unknown as Window & typeof globalThis;
-}
 
 // Suppress expected error logs from error isolation tests
 // These tests intentionally throw errors to verify error handling
@@ -26,4 +20,14 @@ console.error = (...args: unknown[]) => {
   }
   // Pass through other errors
   originalError(...args);
+};
+
+// Suppress debug logs during E2E tests
+// These are for development troubleshooting but clutter test output
+const _originalDebug = console.debug;
+
+console.debug = (..._args: unknown[]) => {
+  // Suppress all console.debug output during tests
+  // Uncomment to enable debug logs when troubleshooting:
+  // _originalDebug(..._args);
 };
