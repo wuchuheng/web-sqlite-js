@@ -80,6 +80,34 @@ Closes the database connection.
 await db.close();
 ```
 
+### `db.onLog(callback)`
+
+Subscribe to structured log events from database operations. Returns an unsubscribe function.
+
+```ts
+const unsubscribe = db.onLog((log) => {
+  console.log(`[${log.level}]`, log.data);
+});
+
+// Later: unsubscribe();
+```
+
+**Log Entry Format:**
+
+```ts
+interface LogEntry {
+  level: "info" | "debug" | "error";
+  data: unknown;
+}
+```
+
+**Examples of log data:**
+
+- SQL execution: `{sql: "SELECT * FROM users", duration: 0.28, bind: []}`
+- Transaction: `{action: "commit", sql: "COMMIT"}`
+- Error: `{error: "SQLITE_CONSTRAINT: UNIQUE constraint failed", sql: "..."}`
+- Application: `{action: "open", dbName: "myapp.sqlite3"}`
+
 ### `db.devTool`
 
 Dev-only helpers for testing releases locally.

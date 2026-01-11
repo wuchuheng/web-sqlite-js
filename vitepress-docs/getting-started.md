@@ -259,3 +259,37 @@ await db.transaction(async (tx) => {
   // throw new Error('Something went wrong');
 });
 ```
+
+## Logging
+
+For more advanced logging and monitoring, you can subscribe to structured log events from database operations.
+
+### Subscribe to Log Events
+
+```typescript
+const unsubscribe = db.onLog((log) => {
+  console.log(`[${log.level}]`, log.data);
+});
+
+// Logs include:
+// - SQL execution with timing: {sql: "SELECT * FROM users", duration: 0.28, bind: []}
+// - Transaction events: {action: "commit", sql: "COMMIT"}
+// - Errors: {error: "SQLITE_CONSTRAINT: UNIQUE constraint failed", sql: "..."}
+// - Application events: {action: "open", dbName: "myapp.sqlite3"}
+
+// Later: unsubscribe();
+```
+
+### Filter by Log Level
+
+```typescript
+db.onLog((log) => {
+  if (log.level === "error") {
+    // Send to error tracking service
+    errorTracker.capture(log.data);
+  } else if (log.level === "debug") {
+    // Log SQL execution details
+    console.log("SQL:", log.data.sql, "Duration:", log.data.duration);
+  }
+});
+```
