@@ -9,8 +9,26 @@ class SampleNav extends HTMLElement {
   }
 
   connectedCallback() {
+    this.injectGlobalStyles();
     this.render();
     this.initEventListeners();
+  }
+
+  injectGlobalStyles() {
+    // Check if global styles are already injected
+    if (document.querySelector("#sample-nav-global-styles")) return;
+
+    const style = document.createElement("style");
+    style.id = "sample-nav-global-styles";
+    style.textContent = `
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   static get observedAttributes() {
