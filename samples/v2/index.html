@@ -4,320 +4,52 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>web-sqlite-js v2.0.0 Examples</title>
-    <style>
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-      body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        background: #f5f5f5;
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-      }
-      header {
-        background: #4285f4;
-        color: white;
-        padding: 20px 30px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      }
-      header h1 {
-        font-size: 24px;
-        margin-bottom: 5px;
-      }
-      header p {
-        opacity: 0.9;
-        font-size: 14px;
-      }
-      .badge {
-        display: inline-block;
-        background: rgba(255, 255, 255, 0.2);
-        padding: 4px 12px;
-        border-radius: 16px;
-        font-size: 12px;
-        margin-left: 10px;
-      }
-      .container {
-        display: flex;
-        flex: 1;
-        overflow: hidden;
-      }
-      .sidebar {
-        width: 280px;
-        background: white;
-        border-right: 1px solid #e0e0e0;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-      }
-      .sidebar-header {
-        padding: 20px;
-        border-bottom: 1px solid #e0e0e0;
-        background: #f8f9fa;
-      }
-      .sidebar-header h2 {
-        font-size: 14px;
-        text-transform: uppercase;
-        color: #666;
-        letter-spacing: 1px;
-      }
-      .nav-menu {
-        padding: 10px 0;
-      }
-      .nav-item {
-        padding: 12px 20px;
-        cursor: pointer;
-        border-left: 3px solid transparent;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-      .nav-item:hover {
-        background: #f0f4ff;
-      }
-      .nav-item.active {
-        background: #e8f0fe;
-        border-left-color: #4285f4;
-      }
-      .nav-icon {
-        width: 32px;
-        height: 32px;
-        background: #e8f0fe;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 16px;
-      }
-      .nav-item.active .nav-icon {
-        background: #4285f4;
-        color: white;
-      }
-      .nav-text {
-        flex: 1;
-      }
-      .nav-title {
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 2px;
-      }
-      .nav-item.active .nav-title {
-        color: #1967d2;
-      }
-      .nav-desc {
-        font-size: 12px;
-        color: #666;
-      }
-      .content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-      }
-      .toolbar {
-        background: white;
-        padding: 12px 20px;
-        border-bottom: 1px solid #e0e0e0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .toolbar-left {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-      }
-      .current-page {
-        font-weight: 600;
-        color: #333;
-      }
-      .open-new-tab {
-        padding: 8px 16px;
-        background: #4285f4;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 13px;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-      }
-      .open-new-tab:hover {
-        background: #3367d6;
-      }
-      .iframe-container {
-        flex: 1;
-        background: #fff;
-        overflow: hidden;
-      }
-      iframe {
-        width: 100%;
-        height: 100%;
-        border: none;
-      }
-      .footer {
-        background: white;
-        padding: 10px 20px;
-        border-top: 1px solid #e0e0e0;
-        font-size: 12px;
-        color: #666;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .footer a {
-        color: #4285f4;
-        text-decoration: none;
-      }
-      .footer a:hover {
-        text-decoration: underline;
-      }
-    </style>
+    <script src="../sample-nav.js" type="module"></script>
   </head>
   <body>
-    <header>
-      <h1>web-sqlite-js v2.0.0 Examples <span class="badge">New</span></h1>
-      <p>Explore the new v2.0.0 features through interactive examples</p>
-    </header>
-
-    <div class="container">
-      <div class="sidebar">
-        <div class="sidebar-header">
-          <h2>Examples</h2>
-        </div>
-        <div class="nav-menu">
-          <div
-            class="nav-item"
-            data-page="comprehensive.html"
-            data-title="Comprehensive"
-          >
-            <div class="nav-icon">🚀</div>
-            <div class="nav-text">
-              <div class="nav-title">Comprehensive</div>
-              <div class="nav-desc">All v2.0.0 features combined</div>
-            </div>
-          </div>
-          <div
-            class="nav-item"
-            data-page="structured-logging.html"
-            data-title="Structured Logging"
-          >
-            <div class="nav-icon">📝</div>
-            <div class="nav-text">
-              <div class="nav-title">Structured Logging</div>
-              <div class="nav-desc">Subscribe to SQL logs via onLog()</div>
-            </div>
-          </div>
-          <div
-            class="nav-item"
-            data-page="global-namespace.html"
-            data-title="Global Namespace"
-          >
-            <div class="nav-icon">🌐</div>
-            <div class="nav-text">
-              <div class="nav-title">Global Namespace</div>
-              <div class="nav-desc">Access DBs via window.__web_sqlite</div>
-            </div>
-          </div>
-          <div
-            class="nav-item"
-            data-page="database-events.html"
-            data-title="Database Events"
-          >
-            <div class="nav-icon">📡</div>
-            <div class="nav-text">
-              <div class="nav-title">Database Events</div>
-              <div class="nav-desc">Listen to open/close events</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="content">
-        <div class="toolbar">
-          <div class="toolbar-left">
-            <span class="current-page" id="currentPageTitle"
-              >Comprehensive</span
-            >
-          </div>
-          <a href="#" class="open-new-tab" id="openNewTab" target="_blank">
-            <span>↗</span> Open in New Tab
-          </a>
-        </div>
-        <div class="iframe-container">
-          <iframe
-            id="contentFrame"
-            src="./comprehensive.html"
-            title="Example Content"
-          ></iframe>
-        </div>
-      </div>
-    </div>
-
-    <div class="footer">
-      <span>web-sqlite-js v2.0.0 • Examples</span>
-      <span>
-        <a href="https://web-sqlite-js.wuchuheng.com" target="_blank"
-          >Documentation</a
-        >
-        •
-        <a href="https://github.com/wuchuheng/web-sqlite-js" target="_blank"
-          >GitHub</a
-        >
-      </span>
-    </div>
-
-    <script>
-      const navItems = document.querySelectorAll(".nav-item");
-      const iframe = document.getElementById("contentFrame");
-      const currentPageTitle = document.getElementById("currentPageTitle");
-      const openNewTabBtn = document.getElementById("openNewTab");
-
-      let currentPage = "./comprehensive.html";
-
-      function setActiveItem(page) {
-        navItems.forEach((item) => {
-          if (item.dataset.page === page) {
-            item.classList.add("active");
-            currentPageTitle.textContent = item.dataset.title;
-          } else {
-            item.classList.remove("active");
-          }
-        });
-        openNewTabBtn.href = `./${page}`;
-      }
-
-      navItems.forEach((item) => {
-        item.addEventListener("click", () => {
-          const page = `./${item.dataset.page}`;
-          currentPage = page;
-          iframe.src = page;
-          setActiveItem(item.dataset.page);
-        });
-      });
-
-      // Handle iframe navigation
-      iframe.addEventListener("load", () => {
-        // Update active state based on current iframe URL
-        try {
-          const iframePath = new URL(iframe.src).pathname;
-          const pageName = iframePath.split("/").pop();
-          if (pageName && pageName !== "index.html") {
-            currentPage = pageName;
-            setActiveItem(pageName);
-          }
-        } catch (e) {
-          // Ignore cross-origin or other URL errors
+    <sample-nav
+      title="web-sqlite-js v2.0.0 Examples"
+      badge="New"
+      bypass-cache="true"
+      pages='[
+        {
+          "page": "comprehensive.html",
+          "title": "Comprehensive",
+          "desc": "All v2.0.0 features combined",
+          "icon": "🚀"
+        },
+        {
+          "page": "structured-logging.html",
+          "title": "Structured Logging",
+          "desc": "Subscribe to SQL logs via onLog()",
+          "icon": "📝"
+        },
+        {
+          "page": "global-namespace.html",
+          "title": "Global Namespace",
+          "desc": "Access DBs via window.__web_sqlite",
+          "icon": "🌐"
+        },
+        {
+          "page": "database-events.html",
+          "title": "Database Events",
+          "desc": "Listen to open/close events",
+          "icon": "📡"
         }
-      });
-
-      // Initialize
-      setActiveItem(currentPage);
-    </script>
+      ]'
+      default-page="comprehensive.html"
+      versions='[
+        {
+          "label": "v1.x",
+          "href": "../index.html",
+          "active": false
+        },
+        {
+          "label": "v2.0.0",
+          "href": "./index.html",
+          "active": true
+        }
+      ]'
+    ></sample-nav>
   </body>
 </html>

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>web-sqlite-js: Basic Example</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 0 20px;
+        background: #f5f5f5;
+      }
+      h1 {
+        color: #333;
+      }
+      .info-box {
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border-left: 4px solid #007acc;
+      }
+      code {
+        background: #f5f5f5;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: "Monaco", "Menlo", monospace;
+      }
+      pre {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 15px;
+        border-radius: 8px;
+        overflow-x: auto;
+      }
+      .result {
+        background: #e8f5e9;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #4caf50;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Basic Example</h1>
+
+    <div class="info-box">
+      <p>
+        This is a minimal example showing basic CRUD operations with
+        <code>web-sqlite-js</code>.
+      </p>
+      <p>It demonstrates:</p>
+      <ul>
+        <li>Opening a database</li>
+        <li>Creating tables</li>
+        <li>Inserting data with named parameters</li>
+        <li>Querying data with positional parameters</li>
+      </ul>
+    </div>
+
+    <h2>Code</h2>
+    <pre>
+import WebSqlite from "../dist/index.js";
+const db = await WebSqlite("hello-word.sqlite", { debug: true });
+
+// Create table
+await db.exec("CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, name TEXT);");
+
+// Insert with named parameters
+await db.exec("INSERT INTO test (id, name) VALUES ($id, $name);", {
+  $id: 1,
+  $name: "Alice",
+});
+
+// Query with positional parameters
+const rows = await db.query("SELECT * FROM test WHERE id IN (?, ?) ORDER BY id;", [1, 2]);
+    </pre>
+
+    <h2>Result</h2>
+    <div class="result" id="result">
+      Check the browser console (F12) for results.
+    </div>
+
+    <script type="module">
+      import WebSqlite from "../dist/index.js";
+      const resultEl = document.getElementById("result");
+
+      async function main() {
+        try {
+          const db = await WebSqlite("hello-word.sqlite", { debug: true });
+
+          // Remove existing table, then create table and insert data.
+          await db.exec("DROP TABLE IF EXISTS test;");
+          await db.exec(
+            "CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, name TEXT);",
+          );
+
+          const testData = [
+            { id: 1, name: "Alice" },
+            { id: 2, name: "Bob" },
+          ];
+
+          // Fill the mock data.
+          for (const row of testData) {
+            await db.exec("INSERT INTO test (id, name) VALUES ($id, $name);", {
+              $id: row.id,
+              $name: row.name,
+            });
+          }
+
+          // Test the query API.
+          const ids = testData.map((item) => item.id);
+          const placeholders = ids.map(() => "?").join(", ");
+          const rows = await db.query(
+            `SELECT * FROM test WHERE id IN (${placeholders}) ORDER BY id;`,
+            ids,
+          );
+
+          resultEl.innerHTML = `
+            <strong>Query returned ${rows.length} rows:</strong><br>
+            ${JSON.stringify(rows, null, 2)}
+          `;
+        } catch (error) {
+          resultEl.innerHTML = `<strong style="color: #f44336;">Error: ${error.message}</strong>`;
+          console.error(error);
+        }
+      }
+
+      main();
+    </script>
+  </body>
+</html>

@@ -30,7 +30,7 @@
     "test:unit": "vitest run --config vitest.unit.config.ts --coverage",
     "http": "tsx scripts/http-service.ts ./ --port 8399",
     "http:docs": "tsx scripts/http-service.ts ./vitepress-docs/.vitepress/dist --port 8399",
-    "http:v2": "tsx scripts/http-service.ts ./ --port 8400 --base-url /samples/v2/index.html",
+    "http:v2": "tsx scripts/http-service.ts ./ --port 8500 --base-url /samples/v2/index.html",
     "test:e2e": "HEADERS='true' vitest run --config vitest.e2e.config.ts",
     "test:debug": "vitest run --config vitest.e2e.config.ts --no-file-parallelism",
     "prebuild": "npx wasm-opt -Oz --all-features src/jswasm/sqlite3.wasm -o src/jswasm/sqlite3.wasm.tmp && gzip -9 -c src/jswasm/sqlite3.wasm.tmp | base64 -w 0 > src/jswasm/sqlite3.wasm.base64 && echo \"export const wasmBase64 = '$(cat src/jswasm/sqlite3.wasm.base64)';\" > src/jswasm/wasm-asset.js && rm src/jswasm/sqlite3.wasm.tmp src/jswasm/sqlite3.wasm.base64 && npx tsx scripts/bundle-proxy-asset.ts",

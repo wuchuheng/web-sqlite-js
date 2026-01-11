@@ -3,42 +3,39 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>web-sqlite-js Examples</title>
+    <script src="./sample-nav.js" type="module"></script>
   </head>
-
   <body>
-    hello
-    <script type="module">
-      import WebSqlite from "../dist/index.js";
-      const db = await WebSqlite("hello-word.sqlite", { debug: true });
-
-      // 1.1 Remove existing table, then create table and insert data.
-      await db.exec("DROP TABLE IF EXISTS test;");
-      await db.exec(
-        "CREATE TABLE IF NOT EXISTS test (id INTEGER PRIMARY KEY, name TEXT);",
-      );
-
-      const testData = [
-        { id: 1, name: "Alice" },
-        { id: 2, name: "Bob" },
-      ];
-
-      // 1.2 Fill the mock data.
-      for (const row of testData) {
-        await db.exec("INSERT INTO test (id, name) VALUES ($id, $name);", {
-          $id: row.id,
-          $name: row.name,
-        });
-      }
-
-      // 2. Test the query API.
-      const ids = testData.map((item) => item.id);
-      const placeholders = ids.map(() => "?").join(", ");
-      const rows = await db.query(
-        `SELECT * FROM test where id IN (${placeholders}) ORDER BY id;`,
-        ids,
-      );
-      debugger;
-    </script>
+    <sample-nav
+      title="web-sqlite-js Examples"
+      pages='[
+        {
+          "page": "basic-example.html",
+          "title": "Basic Example",
+          "desc": "Basic CRUD operations with local build",
+          "icon": "🚀"
+        },
+        {
+          "page": "cdn.html",
+          "title": "CDN Example",
+          "desc": "Load from CDN with no bundler",
+          "icon": "📦"
+        }
+      ]'
+      default-page="basic-example.html"
+      versions='[
+        {
+          "label": "v1.x",
+          "href": "./index.html",
+          "active": true
+        },
+        {
+          "label": "v2.0.0",
+          "href": "./v2/index.html",
+          "active": false
+        }
+      ]'
+    ></sample-nav>
   </body>
 </html>
