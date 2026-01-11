@@ -130,31 +130,36 @@ interface Window {
      * Key: normalized database name (e.g., "myapp.sqlite3")
      * Value: Database record with SQL mappings and DB interface
      */
-    readonly databases: Record<string, {
-      migrationSQL: Map<string, string>;  // Version → migration SQL
-      seedSQL: Map<string, string>;       // Version → seed SQL
-      db: DBInterface;                    // Database instance
-    }>;
+    readonly databases: Record<
+      string,
+      {
+        migrationSQL: Map<string, string>; // Version → migration SQL
+        seedSQL: Map<string, string>; // Version → seed SQL
+        db: DBInterface; // Database instance
+      }
+    >;
 
     /**
      * Subscribe to database open/close events
      * @returns Unsubscribe function
      */
-    onDatabaseChange(callback: (event: {
-      action: "opened" | "closed";
-      dbName: string;
-      databases: string[];
-    }) => void): () => void;
+    onDatabaseChange(
+      callback: (event: {
+        action: "opened" | "closed";
+        dbName: string;
+        databases: string[];
+      }) => void,
+    ): () => void;
   };
 }
 ```
 
 ### Properties
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `databases` | `Record<string, DatabaseRecord>` | Map of opened database records (read-only) |
-| `onDatabaseChange` | `(callback) => () => void` | Subscribe to database lifecycle events |
+| Property           | Type                             | Description                                |
+| ------------------ | -------------------------------- | ------------------------------------------ |
+| `databases`        | `Record<string, DatabaseRecord>` | Map of opened database records (read-only) |
+| `onDatabaseChange` | `(callback) => () => void`       | Subscribe to database lifecycle events     |
 
 ### DatabaseRecord Structure
 
@@ -185,16 +190,12 @@ const db = dbRecord.db;
 const users = await db.query("SELECT * FROM users");
 
 // With parameters (positional)
-const user = await db.query(
-  "SELECT * FROM users WHERE id = ?",
-  [1]
-);
+const user = await db.query("SELECT * FROM users WHERE id = ?", [1]);
 
 // With parameters (named)
-const users = await db.query(
-  "SELECT * FROM users WHERE name LIKE $pattern",
-  { $pattern: "%Alice%" }
-);
+const users = await db.query("SELECT * FROM users WHERE name LIKE $pattern", {
+  $pattern: "%Alice%",
+});
 
 // With TypeScript type
 interface User {
@@ -202,27 +203,22 @@ interface User {
   name: string;
   email: string;
 }
-const typedUsers = await db.query<User>(
-  "SELECT id, name, email FROM users"
-);
+const typedUsers = await db.query<User>("SELECT id, name, email FROM users");
 ```
 
 ### Execute (INSERT, UPDATE, DELETE, DDL)
 
 ```typescript
 // Insert with result
-const result = await db.exec(
-  "INSERT INTO users (name, email) VALUES (?, ?)",
-  ["Alice", "alice@example.com"]
-);
+const result = await db.exec("INSERT INTO users (name, email) VALUES (?, ?)", [
+  "Alice",
+  "alice@example.com",
+]);
 console.log("Inserted row ID:", result.lastInsertRowid);
 console.log("Rows affected:", result.changes);
 
 // Update
-await db.exec(
-  "UPDATE users SET email = ? WHERE id = ?",
-  ["new@email.com", 1]
-);
+await db.exec("UPDATE users SET email = ? WHERE id = ?", ["new@email.com", 1]);
 
 // Delete
 await db.exec("DELETE FROM users WHERE id = ?", [1]);
@@ -243,17 +239,17 @@ await db.exec(`
 ```typescript
 // All-or-nothing transaction
 const result = await db.transaction(async (tx) => {
-  await tx.exec(
-    "INSERT INTO users (name, email) VALUES (?, ?)",
-    ["Bob", "bob@example.com"]
-  );
+  await tx.exec("INSERT INTO users (name, email) VALUES (?, ?)", [
+    "Bob",
+    "bob@example.com",
+  ]);
 
   const userId = /* Get last insert ID */ 1;
 
-  await tx.exec(
-    "INSERT INTO posts (title, authorId) VALUES (?, ?)",
-    ["Hello World", userId]
-  );
+  await tx.exec("INSERT INTO posts (title, authorId) VALUES (?, ?)", [
+    "Hello World",
+    userId,
+  ]);
 
   return { success: true, userId };
 });
@@ -420,7 +416,7 @@ const db = dbRecord.db;
 await db.devTool.release({
   version: "1.0.1",
   migrationSQL: "ALTER TABLE users ADD COLUMN age INTEGER;",
-  seedSQL: "UPDATE users SET age = 25 WHERE age IS NULL;"
+  seedSQL: "UPDATE users SET age = 25 WHERE age IS NULL;",
 });
 
 // Rollback to previous version
@@ -480,7 +476,9 @@ if ("storage" in navigator && "getDirectory" in navigator.storage) {
 interface DBInterface {
   exec(sql: string, params?: SQLParams): Promise<ExecResult>;
   query<T = unknown>(sql: string, params?: SQLParams): Promise<T[]>;
-  transaction<T>(fn: (tx: Pick<DBInterface, "exec" | "query">) => Promise<T>): Promise<T>;
+  transaction<T>(
+    fn: (tx: Pick<DBInterface, "exec" | "query">) => Promise<T>,
+  ): Promise<T>;
   close(): Promise<void>;
   onLog(callback: (log: LogEntry) => void): () => void;
   devTool: DevTool;
@@ -517,9 +515,9 @@ type DevTool = {
 
 ```typescript
 interface DatabaseRecord {
-  migrationSQL: Map<string, string>;  // Version → migration SQL
-  seedSQL: Map<string, string>;       // Version → seed SQL
-  db: DBInterface;                    // Database instance
+  migrationSQL: Map<string, string>; // Version → migration SQL
+  seedSQL: Map<string, string>; // Version → seed SQL
+  db: DBInterface; // Database instance
 }
 ```
 
@@ -529,13 +527,13 @@ interface DatabaseRecord {
 
 ### Common Errors
 
-| Error | Cause | Solution |
-|-------|-------|----------|
-| `[web-sqlite-js] SharedArrayBuffer is not enabled` | COOP/COEP headers not configured | Configure HTTP headers |
-| `Database is already open` | Attempting to open same database twice | Close existing or use different name |
-| `SQLITE_CONSTRAINT: UNIQUE constraint failed` | Duplicate value in UNIQUE column | Handle duplicates in application |
-| `no such table: users` | Table doesn't exist or migration not applied | Check table name or run migration |
-| `near "SELECT": syntax error` | SQL syntax error | Fix SQL syntax |
+| Error                                              | Cause                                        | Solution                             |
+| -------------------------------------------------- | -------------------------------------------- | ------------------------------------ |
+| `[web-sqlite-js] SharedArrayBuffer is not enabled` | COOP/COEP headers not configured             | Configure HTTP headers               |
+| `Database is already open`                         | Attempting to open same database twice       | Close existing or use different name |
+| `SQLITE_CONSTRAINT: UNIQUE constraint failed`      | Duplicate value in UNIQUE column             | Handle duplicates in application     |
+| `no such table: users`                             | Table doesn't exist or migration not applied | Check table name or run migration    |
+| `near "SELECT": syntax error`                      | SQL syntax error                             | Fix SQL syntax                       |
 
 ### Error Handling Pattern
 
@@ -587,16 +585,16 @@ If the library detects a v2.0.0 nested structure, it automatically migrates to v
 
 ## Performance Characteristics
 
-| Operation | Typical Latency | Notes |
-|-----------|----------------|-------|
-| openDB (first time) | 50-100ms | Includes WASM initialization |
-| openDB (subsequent) | 10-50ms | Depends on pending migrations |
-| exec | 0.2-0.5ms | Simple INSERT/UPDATE |
-| query | 0.2-0.5ms | Simple SELECT |
-| transaction | 0.5-2ms | Depends on operations count |
-| devTool.release | 50-100ms | Includes DB copy and migration |
-| devTool.rollback | 10-50ms | Directory removal and cleanup |
-| Global DB access | 0ms | Direct reference, no overhead |
+| Operation           | Typical Latency | Notes                          |
+| ------------------- | --------------- | ------------------------------ |
+| openDB (first time) | 50-100ms        | Includes WASM initialization   |
+| openDB (subsequent) | 10-50ms         | Depends on pending migrations  |
+| exec                | 0.2-0.5ms       | Simple INSERT/UPDATE           |
+| query               | 0.2-0.5ms       | Simple SELECT                  |
+| transaction         | 0.5-2ms         | Depends on operations count    |
+| devTool.release     | 50-100ms        | Includes DB copy and migration |
+| devTool.rollback    | 10-50ms         | Directory removal and cleanup  |
+| Global DB access    | 0ms             | Direct reference, no overhead  |
 
 ---
 
@@ -624,7 +622,7 @@ const db = record.db;
 
 // === Query ===
 await db.query("SELECT * FROM users WHERE id = ?", [1]);
-await db.query<User>("SELECT * FROM users");
+(await db.query) < User > "SELECT * FROM users";
 
 // === Execute ===
 await db.exec("INSERT INTO users (name) VALUES (?)", ["Alice"]);
@@ -652,7 +650,7 @@ record.migrationSQL.get("1.0.0");
 record.seedSQL.get("1.0.0");
 
 // === Dev tools ===
-await db.devTool.release({version: "1.0.1", migrationSQL: "..."});
+await db.devTool.release({ version: "1.0.1", migrationSQL: "..." });
 await db.devTool.rollback("1.0.0");
 ```
 
