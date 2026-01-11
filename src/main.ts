@@ -4,7 +4,11 @@ import { createLogDispatcher } from "./logs/log-dispatcher";
 import type { DBInterface, OpenDBOptions } from "./types/DB";
 import { abilityCheck } from "./validations/shareBufferAbiliCheck";
 import { openReleaseDB } from "./release/release-manager";
-import { DatabaseRegistry } from "./registry/database-registry";
+import {
+  DatabaseRegistry,
+  normalizeDatabaseName,
+} from "./registry/database-registry";
+import { globalNamespace } from "./global/namespace";
 // Initialize global namespace on library load
 import "./global/namespace";
 
@@ -44,6 +48,14 @@ export const openDB = async (
 
   // Register after successful open
   DatabaseRegistry.register(filename, db);
+
+  // Emit database change event for open
+  const normalizedDbName = normalizeDatabaseName(filename);
+  globalNamespace._emitEvent({
+    action: "opened",
+    dbName: normalizedDbName,
+    databases: DatabaseRegistry.list(),
+  });
 
   // Emit application log for database open
   logDispatcher.dispatch({

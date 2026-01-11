@@ -3,8 +3,8 @@
 **Project**: web-sqlite-js
 **Current Version**: 1.1.2 (Production)
 **Target Version**: 2.0.0 (In Development)
-**Last Updated**: 2026-01-10
-**Status**: v1.1.2 Stable - v2.0.0 Implementation In Progress (TASK-201 Complete)
+**Last Updated**: 2026-01-11
+**Status**: v1.1.2 Stable - v2.0.0 Implementation In Progress (11/12 tasks complete)
 
 ---
 
@@ -20,7 +20,7 @@
 
 > **Focus**: Enhanced Logging and Direct Database Access
 > **Target Date**: Q1 2026
-> **Status**: Implementation In Progress (1/19 tasks complete)
+> **Status**: Implementation In Progress (11/12 tasks complete)
 
 ### Phase 1: Database Registry and Lock (Foundation)
 
@@ -261,11 +261,23 @@
 
 ### Phase 4: Database Events
 
-- [ ] **TASK-221**: [Events] Database Events System
+- [x] **TASK-221**: [Events] Database Events System
   - **Priority**: P0
   - **Dependencies**: TASK-220
   - **Boundary**: `src/events/event-emitter.ts`, `src/global/namespace.ts`, `src/main.ts`, `src/registry/database-registry.ts`
   - **Description**: Complete database change events system (emitter, API, event emission)
+  - **Micro-Spec**: [active/TASK-221.md](../08-task/active/TASK-221.md)
+  - **Estimated**: 8 hours
+  - **Completed**: 2026-01-11
+  - **Evidence**:
+    - ✅ Updated `src/main.ts` to emit "opened" event after `DatabaseRegistry.register()`
+    - ✅ Updated `src/release/release-manager.ts` to emit "closed" event after `DatabaseRegistry.unregister()`
+    - ✅ Created `src/events/event-emitter.unit.test.ts` (9 tests)
+    - ✅ Created `tests/e2e/database-events.e2e.test.ts` (10 tests)
+    - ✅ All 62 unit tests passing (9 new + 53 existing)
+    - ✅ All 41 E2E tests passing (10 new + 31 existing)
+    - ✅ TypeScript compiles without errors
+  - **Notes**: Database events system complete. Event emitter was already implemented in namespace module. Integrated event emission with database open/close flow.
   - **Implementation Details**:
     - Create `EventEmitter` class (subscribe, unsubscribe, emit)
     - Handle subscriber errors (error isolation)

@@ -1,5 +1,6 @@
 import { OpenDBArgs, SqliteEvent, WorkerOpenDBOptions } from "../types/message";
 import { DatabaseRegistry } from "../registry/database-registry";
+import { globalNamespace } from "../global/namespace";
 import type {
   DBInterface,
   SQLParams,
@@ -400,6 +401,13 @@ export const openReleaseDB = async ({
       await sendMsg(SqliteEvent.CLOSE);
       // Unregister from registry after close
       DatabaseRegistry.unregister(normalizedFilename);
+
+      // Emit database change event AFTER unregister (so databases list is accurate)
+      globalNamespace._emitEvent({
+        action: "closed",
+        dbName: normalizedFilename,
+        databases: DatabaseRegistry.list(),
+      });
     });
   };
 
