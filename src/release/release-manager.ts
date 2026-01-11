@@ -12,6 +12,8 @@ import type {
   LogEntry,
   DatabaseRecord,
 } from "../types/DB";
+import { detectStructure } from "../migration/migration-detector";
+import { migrateToV21 } from "../migration/auto-migrator";
 import {
   DEFAULT_VERSION,
   RELEASE_INDEX_SQL,
@@ -68,6 +70,18 @@ export const openReleaseDB = async ({
   const root = await navigator.storage.getDirectory();
   const baseDir = await ensureDir(root, normalizedFilename);
   console.debug(`[openDB] ensured directory: ${normalizedFilename}`);
+
+  // v2.1.0: Auto-migrate v2.0.0 structure to v2.1.0
+  // Declare SQL Maps early for migration (populated below)
+  const migrationSQLMap = new Map<string, string>();
+  const seedSQLMap = new Map<string, string>();
+
+  const structure = await detectStructure(baseDir);
+  if (structure.version === "2.0.0") {
+    console.debug(`[openDB] v2.0.0 structure detected, migrating to v2.1.0`);
+    await migrateToV21(baseDir, migrationSQLMap, seedSQLMap);
+    console.debug(`[openDB] migration complete`);
+  }
 
   await ensureFile(baseDir, "default.sqlite3");
   console.debug("[openDB] ensured default.sqlite3");
@@ -153,10 +167,7 @@ export const openReleaseDB = async ({
     `[openDB] latest version: ${latestRow.version}, release rows: ${releaseRows.length}`,
   );
 
-  // v2.1.0: SQL Maps for storing migration and seed SQL in memory
-  // Must be declared before configByVersion loop to populate existing releases
-  const migrationSQLMap = new Map<string, string>();
-  const seedSQLMap = new Map<string, string>();
+  // v2.1.0: SQL Maps already declared earlier (after baseDir creation, for migration)
 
   const configByVersion = new Map<string, ReleaseConfigWithHash>();
   for (const config of releaseConfigs) {
@@ -164,13 +175,18 @@ export const openReleaseDB = async ({
   }
 
   // v2.1.0: Populate SQL Maps for existing releases from releaseConfigs
+  // v2.1.0: Skip if already populated by migration (avoid overwriting migrated SQL)
   for (const config of releaseConfigs) {
-    migrationSQLMap.set(config.version, config.migrationSQL);
-    if (config.normalizedSeedSQL) {
-      seedSQLMap.set(config.version, config.normalizedSeedSQL);
-    } else {
-      // Store empty string for versions without seed SQL
-      seedSQLMap.set(config.version, "");
+    if (!migrationSQLMap.has(config.version)) {
+      migrationSQLMap.set(config.version, config.migrationSQL);
+    }
+    if (!seedSQLMap.has(config.version)) {
+      if (config.normalizedSeedSQL) {
+        seedSQLMap.set(config.version, config.normalizedSeedSQL);
+      } else {
+        // Store empty string for versions without seed SQL
+        seedSQLMap.set(config.version, "");
+      }
     }
   }
 

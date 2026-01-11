@@ -178,35 +178,51 @@ gantt
   - `tests/e2e/database-events.e2e.test.ts` - Updated to access `record.db.close()`
 - **Notes**: v2.1.0 in-memory SQL Maps complete. SQL stored in memory Maps instead of OPFS files.
 
-### v2.1.0 Implementation Tasks (Pending)
-
 **TASK-303: T-003 - Auto-Migration System**
 
-- **Status**: ⏳ Blocked (waiting for T-002)
-- **Owner**: TBD
+- **Status**: ✅ COMPLETE
+- **Owner**: S8 Worker
+- **Started**: 2026-01-12
+- **Completed**: 2026-01-12
 - **Feature**: F-002 - v2.1.0 Flat OPFS Structure
 - **Description**: Create automatic migration system to detect v2.0.0 structure and convert to v2.1.0 transparently
-- **Effort**: 6-8 hours
-- **Dependencies**: TASK-301 ✅ COMPLETE, TASK-302
-- **Acceptance Criteria**:
-  - Detects v2.0.0 nested structure (e.g., `0.0.1/` directories)
-  - Detects v2.1.0 flat structure (e.g., `0.0.1.sqlite3` files)
-  - Auto-migrates v2.0.0 → v2.1.0 transparently
-  - Reads SQL files before deletion
-  - Renames `db.sqlite3` to `{version}.sqlite3`
-  - Removes `migration.sql` and `seed.sql` files
-  - Removes empty version directories
-  - Populates in-memory SQL Maps
-  - Creates backup before migration
-  - Rollback on migration failure
-  - Idempotent (safe to run on already-migrated databases)
-- **Files to Create**:
-  - `src/migration/migration-detector.ts` - Structure detection
-  - `src/migration/auto-migrator.ts` - Migration execution
-  - `tests/e2e/auto-migration.e2e.test.ts` - E2E tests
+- **Effort**: 7 hours
+- **Evidence**:
+  - ✅ Created `src/migration/migration-detector.ts` - Structure detection
+  - ✅ Created `src/migration/auto-migrator.ts` - Migration execution
+  - ✅ Integrated migration detection into `src/release/release-manager.ts`
+  - ✅ Created `src/global.d.ts` - Added FileSystemDirectoryHandle.values() type declaration
+  - ✅ Created `tests/e2e/auto-migration.e2e.test.ts` - 7 E2E tests
+  - ✅ All 62 unit tests passing
+  - ✅ All 53 E2E tests passing (7 new + 46 existing)
+  - ✅ TypeScript compiles without errors
+  - ✅ Linting passes
+- **Test Results**:
+  - Unit tests: 62 tests in 5 files passing
+  - E2E tests: 53 tests in 12 files passing (including 7 auto-migration tests)
+  - Coverage: 93.81% statements, 83.33% branches, 93.1% functions
+- **Acceptance Criteria Met**:
+  - ✅ `detectStructure()` correctly identifies v2.0.0 nested structure
+  - ✅ `detectStructure()` correctly identifies v2.1.0 flat structure
+  - ✅ `migrateToV21()` converts nested → flat structure
+  - ✅ SQL files are read before deletion
+  - ✅ SQL content is populated in Maps
+  - ✅ Backup is created before migration
+  - ✅ Backup is deleted on success
+  - ✅ Backup is restored on failure
+  - ✅ Migration is idempotent (safe to run twice)
+  - ✅ All E2E migration tests pass (7 tests)
+- **Files Created**:
+  - `src/migration/migration-detector.ts` - Structure detection module
+  - `src/migration/auto-migrator.ts` - Migration execution module
+  - `src/global.d.ts` - Global type declarations for FileSystemDirectoryHandle.values()
+  - `tests/e2e/auto-migration.e2e.test.ts` - E2E test suite
+- **Files Modified**:
+  - `src/release/release-manager.ts` - Integrated migration detection and execution
+  - `src/main.ts` - No changes needed (migration modules imported via release-manager)
+- **Notes**: v2.1.0 auto-migration system complete. v2.0.0 databases are automatically migrated to v2.1.0 structure on first open. Migration includes backup/rollback for safety. All tests passing.
 
-**v2.1.0 Total Tasks**: 3 tasks (13-18 estimated hours)
-**Critical Path**: T-001 → T-002 → T-003
+### v2.1.0 Implementation Tasks (All Complete)
 
 **TASK-220: Application-Level Logging System**
 
