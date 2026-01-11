@@ -13,6 +13,9 @@
   <a href="https://www.npmjs.com/package/web-sqlite-js" target="_blank">
     <img src="https://img.shields.io/npm/v/web-sqlite-js.svg" alt="NPM Version" />
   </a>
+  <a href="https://github.com/wuchuheng/web-sqlite-js/discussions" target="_blank">
+    <img src="https://img.shields.io/badge/v2.0.0-new%20features-blue" alt="v2.0.0" />
+  </a>
   <a href="https://github.com/wuchuheng/web-sqlite-js/blob/main/LICENSE" target="_blank">
     <img src="https://img.shields.io/github/license/wuchuheng/web-sqlite-js.svg" alt="License" />
   </a>
@@ -35,6 +38,9 @@ Designed to be truly effortless, it allows you to get a high-performance relatio
 - [Usage](#usage)
 - [Debug mode](#debug-mode)
 - [Transactions](#transactions)
+- [Structured Logging (v2.0.0)](#structured-logging-v200)
+- [Global Database Access (v2.0.0)](#global-database-access-v200)
+- [Database Events (v2.0.0)](#database-events-v200)
 
 ## Features
 
@@ -43,6 +49,10 @@ Designed to be truly effortless, it allows you to get a high-performance relatio
 - **Concurrency Safe**: Built-in mutex ensures safe, sequential execution of commands.
 - **Type-Safe**: Written in TypeScript with full type definitions.
 - **Transactions**: Supports atomic transactions with automatic rollback on error.
+- **Structured Logging** (v2.0.0): Subscribe to SQL execution logs via `onLog()`.
+- **Global Namespace** (v2.0.0): Access databases from anywhere via `window.__web_sqlite`.
+- **Database Events** (v2.0.0): Listen to database open/close events for UI synchronization.
+- **Database Registry** (v2.0.0): Prevents duplicate database opens with automatic tracking.
 
 ## Quick start
 
@@ -275,6 +285,141 @@ await db.transaction(async (tx) => {
   // throw new Error('Something went wrong');
 });
 ```
+
+## Structured Logging (v2.0.0)
+
+Subscribe to structured log events for monitoring, debugging, and analytics. The `onLog()` API allows you to capture SQL execution details, errors, and application events.
+
+```typescript
+const db = await openDB("myapp");
+
+// Register log listener
+const cancelLog = db.onLog((log) => {
+  if (log.level === "error") {
+    // Send errors to tracking service
+    errorTracking.capture(log.data);
+  } else if (log.level === "debug") {
+    // Log SQL execution details
+    console.log(`SQL: ${log.data.sql}, Duration: ${log.data.duration}ms`);
+  } else if (log.level === "info") {
+    // Track application events (open, close, transactions)
+    console.log(`Event: ${log.data.action}`);
+  }
+});
+
+// Execute some SQL to generate logs
+await db.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)");
+await db.exec("INSERT INTO users (name) VALUES (?)", ["Alice"]);
+
+// Later: stop listening
+cancelLog();
+```
+
+**Log Levels**:
+
+- `"debug"` - SQL execution details (sql, duration, bind parameters)
+- `"info"` - Application events (open, close, commit, rollback)
+- `"error"` - SQL errors and exceptions
+
+**Multiple Callbacks**: You can register multiple log listeners simultaneously:
+
+```typescript
+const cancel1 = db.onLog((log) => console.log("Logger 1:", log));
+const cancel2 = db.onLog((log) => {
+  if (log.level === "error") sendToAlerting(log.data);
+});
+```
+
+---
+
+## Global Database Access (v2.0.0)
+
+Access opened databases from anywhere in your application without imports. The `window.__web_sqlite` global namespace provides direct references to all opened database instances.
+
+```typescript
+// Open database in module A
+const db = await openDB("app");
+
+// In module B (no import needed):
+const db = window.__web_sqlite.databases["app.sqlite3"];
+const users = await db.query("SELECT * FROM users");
+
+// List all opened databases
+console.log(Object.keys(window.__web_sqlite.databases));
+// Output: ["app.sqlite3", "users.sqlite3"]
+```
+
+**Use Cases**:
+
+- **DevTools Integration**: Access databases from browser console for debugging
+- **Cross-Module Communication**: Share database state without prop drilling
+- **Debugging**: Inspect and query databases directly from DevTools console
+
+**Browser Console Example**:
+
+```javascript
+// From browser DevTools console:
+window.__web_sqlite.databases["app.sqlite3"]
+  .query("SELECT * FROM users")
+  .then((users) => console.table(users));
+```
+
+---
+
+## Database Events (v2.0.0)
+
+Subscribe to database open/close events for UI synchronization and monitoring. The `onDatabaseChange()` API notifies you when databases are opened or closed.
+
+```typescript
+// Subscribe to database changes
+const unsubscribe = window.__web_sqlite.onDatabaseChange((event) => {
+  if (event.action === "opened") {
+    console.log(`Database opened: ${event.dbName}`);
+    updateDatabaseList(event.databases);
+  } else if (event.action === "closed") {
+    console.log(`Database closed: ${event.dbName}`);
+    updateDatabaseList(event.databases);
+  }
+  console.log("Current databases:", event.databases);
+});
+
+// Open a database
+await openDB("app");
+// Output: Database opened: app.sqlite3
+// Output: Current databases: ["app.sqlite3"]
+
+// Open another database
+await openDB("users");
+// Output: Database opened: users.sqlite3
+// Output: Current databases: ["app.sqlite3", "users.sqlite3"]
+
+// Close first database
+await window.__web_sqlite.databases["app.sqlite3"].close();
+// Output: Database closed: app.sqlite3
+// Output: Current databases: ["users.sqlite3"]
+
+// Unsubscribe when done
+// unsubscribe();
+```
+
+**Event Structure**:
+
+```typescript
+interface DatabaseChangeEvent {
+  action: "opened" | "closed"; // What happened
+  dbName: string; // Which database (normalized name)
+  databases: string[]; // All currently opened database names
+}
+```
+
+**Use Cases**:
+
+- **DevTools Panels**: Show active databases in browser DevTools
+- **UI Updates**: Refresh database list when databases open/close
+- **Monitoring**: Track database lifecycle for debugging
+- **Multi-Window Sync**: Coordinate database access across browser windows
+
+---
 
 ## Star History
 

@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>web-sqlite-js: Structured Logging Example (v2.0.0)</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      h1 {
+        color: #333;
+      }
+      #log {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: "Monaco", "Menlo", monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        max-height: 500px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .log-info {
+        color: #4ec9b0;
+      }
+      .log-debug {
+        color: #dcdcaa;
+      }
+      .log-error {
+        color: #f48771;
+      }
+      .info-box {
+        background: #fff;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border-left: 4px solid #007acc;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Structured Logging Example (v2.0.0)</h1>
+
+    <div class="info-box">
+      <p>
+        This example demonstrates the <code>onLog()</code> API for subscribing
+        to structured log events.
+      </p>
+      <p>
+        Logs include SQL execution details, timing information, and application
+        events.
+      </p>
+    </div>
+
+    <h2>Log Output</h2>
+    <pre id="log">Initializing...</pre>
+
+    <script type="module">
+      import openDB from "../../dist/index.js";
+
+      const logEl = document.getElementById("log");
+      logEl.textContent = "";
+
+      function appendLog(message, className) {
+        const line = document.createElement("div");
+        line.className = className || "";
+        line.textContent = message;
+        logEl.appendChild(line);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      async function main() {
+        try {
+          appendLog("Opening database with structured logging...", "log-info");
+          const db = await openDB("logging-example", { debug: true });
+          appendLog("Database opened successfully", "log-info");
+
+          // Subscribe to log events
+          appendLog("\n=== Registering log listener ===", "log-info");
+          const cancelLog = db.onLog((log) => {
+            const timestamp = new Date()
+              .toISOString()
+              .split("T")[1]
+              .slice(0, 12);
+            const level = log.level.toUpperCase().padEnd(5);
+            const data = JSON.stringify(log.data, null, 2);
+
+            let className = "";
+            if (log.level === "error") className = "log-error";
+            else if (log.level === "debug") className = "log-debug";
+            else className = "log-info";
+
+            appendLog(`[${timestamp}] [${level}] ${data}`, className);
+          });
+
+          appendLog(
+            "Log listener registered. Executing SQL operations...\n",
+            "log-info",
+          );
+
+          // Execute some SQL to generate logs
+          await db.exec(
+            "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT)",
+          );
+          await new Promise((r) => setTimeout(r, 100));
+
+          await db.exec("INSERT INTO users (name, email) VALUES (?, ?)", [
+            "Alice",
+            "alice@example.com",
+          ]);
+          await new Promise((r) => setTimeout(r, 100));
+
+          await db.exec("INSERT INTO users (name, email) VALUES (?, ?)", [
+            "Bob",
+            "bob@example.com",
+          ]);
+          await new Promise((r) => setTimeout(r, 100));
+
+          const users = await db.query("SELECT * FROM users");
+          await new Promise((r) => setTimeout(r, 100));
+
+          appendLog(
+            `\n=== Query returned ${users.length} rows ===`,
+            "log-info",
+          );
+
+          // Demonstrate transaction logs
+          appendLog("\n=== Executing transaction ===", "log-info");
+          await db.transaction(async (tx) => {
+            await tx.exec("INSERT INTO users (name, email) VALUES (?, ?)", [
+              "Charlie",
+              "charlie@example.com",
+            ]);
+            await tx.exec("INSERT INTO users (name, email) VALUES (?, ?)", [
+              "Diana",
+              "diana@example.com",
+            ]);
+          });
+
+          appendLog("\n=== Unsubscribing from logs ===", "log-info");
+          cancelLog();
+          appendLog("Unsubscribed. Future logs will not appear.", "log-info");
+
+          await db.close();
+          appendLog("\nDatabase closed.", "log-info");
+        } catch (error) {
+          appendLog(`\nError: ${error.message}`, "log-error");
+          console.error(error);
+        }
+      }
+
+      main();
+    </script>
+  </body>
+</html>

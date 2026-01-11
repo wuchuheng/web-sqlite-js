@@ -19,6 +19,7 @@ program
   .option("-p, --port <number>", "port number", "8080")
   .option("--header <header...>", "custom response header (key:value)")
   .option("--cors", "enable CORS")
+  .option("--base-url <url>", "base URL path (e.g., /index.html)")
   .helpOption("-h, --help", "display help");
 
 program.parse();
@@ -117,5 +118,10 @@ const server = http.createServer((req, res) => {
 server.listen(port, () => {
   console.log(`✔ HTTP server running`);
   console.log(`✔ Root: ${rootDir}`);
-  console.log(`✔ http://localhost:${port}`);
+
+  // Build full URL with base-url if provided
+  const baseUrl = opts.baseUrl ?? "";
+  const fullUrl = `http://localhost:${port}${baseUrl}`;
+
+  console.log(`✔ ${fullUrl}`);
 });

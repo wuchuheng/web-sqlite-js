@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>web-sqlite-js: Database Events Example (v2.0.0)</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      h1 {
+        color: #333;
+      }
+      .info-box {
+        background: #fff;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border-left: 4px solid #007acc;
+      }
+      .controls {
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+      button {
+        background: #2196f3;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-right: 10px;
+        margin-bottom: 10px;
+      }
+      button:hover {
+        background: #1976d2;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+      button.danger {
+        background: #f44336;
+      }
+      button.danger:hover {
+        background: #d32f2f;
+      }
+      #events {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 15px;
+        border-radius: 6px;
+        font-family: "Monaco", "Menlo", monospace;
+        font-size: 13px;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+      .event-opened {
+        color: #4ec9b0;
+      }
+      .event-closed {
+        color: #f48771;
+      }
+      .timestamp {
+        color: #858585;
+      }
+      .db-name {
+        color: #dcdcaa;
+      }
+      .db-list {
+        color: #9cdcfe;
+      }
+      #statusBar {
+        background: #fff;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 20px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+      .status-item {
+        flex: 1;
+        text-align: center;
+        padding: 10px;
+        background: #f8f8f8;
+        border-radius: 6px;
+      }
+      .status-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #2196f3;
+      }
+      .status-label {
+        font-size: 12px;
+        color: #666;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Database Lifecycle Events Example (v2.0.0)</h1>
+
+    <div class="info-box">
+      <p>
+        This example demonstrates the <code>onDatabaseChange()</code> API for
+        subscribing to database open/close events.
+      </p>
+      <p>
+        Use these events to synchronize UI, update DevTools panels, or monitor
+        database lifecycle.
+      </p>
+    </div>
+
+    <div class="controls">
+      <h2>Actions</h2>
+      <button id="openDb">Open Database</button>
+      <button id="closeDb">Close Last Database</button>
+      <button id="clearEvents">Clear Events</button>
+      <button id="unsubscribe" class="danger">Unsubscribe from Events</button>
+    </div>
+
+    <div id="statusBar">
+      <div class="status-item">
+        <div class="status-value" id="openedCount">0</div>
+        <div class="status-label">Opened</div>
+      </div>
+      <div class="status-item">
+        <div class="status-value" id="closedCount">0</div>
+        <div class="status-label">Closed</div>
+      </div>
+      <div class="status-item">
+        <div class="status-value" id="activeCount">0</div>
+        <div class="status-label">Active</div>
+      </div>
+    </div>
+
+    <h2>Event Log</h2>
+    <div id="events"></div>
+
+    <script type="module">
+      import openDB from "../../dist/index.js";
+
+      const eventsEl = document.getElementById("events");
+      let dbCounter = 0;
+      let openedCount = 0;
+      let closedCount = 0;
+      let unsubscribeFn = null;
+
+      function updateStats() {
+        document.getElementById("openedCount").textContent = openedCount;
+        document.getElementById("closedCount").textContent = closedCount;
+        document.getElementById("activeCount").textContent =
+          openedCount - closedCount;
+      }
+
+      function logEvent(action, dbName, databases) {
+        const timestamp = new Date().toISOString().split("T")[1].slice(0, 12);
+        const actionClass =
+          action === "opened" ? "event-opened" : "event-closed";
+        const actionIcon = action === "opened" ? "✅" : "❌";
+
+        const line = document.createElement("div");
+        line.innerHTML = `
+        <span class="timestamp">[${timestamp}]</span>
+        <span class="${actionClass}">${actionIcon} ${action.toUpperCase()}</span>
+        <span class="db-name">${dbName}</span>
+        <span>→</span>
+        <span class="db-list">[${databases.length === 0 ? "none" : databases.join(", ")}]</span>
+      `;
+        eventsEl.appendChild(line);
+        eventsEl.scrollTop = eventsEl.scrollHeight;
+
+        updateStats();
+      }
+
+      function logMessage(message) {
+        const timestamp = new Date().toISOString().split("T")[1].slice(0, 12);
+        const line = document.createElement("div");
+        line.innerHTML = `<span class="timestamp">[${timestamp}]</span> <span>${message}</span>`;
+        eventsEl.appendChild(line);
+        eventsEl.scrollTop = eventsEl.scrollHeight;
+      }
+
+      // Subscribe to database changes
+      function subscribeToEvents() {
+        if (unsubscribeFn) {
+          logMessage("Already subscribed to events");
+          return;
+        }
+
+        unsubscribeFn = window.__web_sqlite.onDatabaseChange((event) => {
+          if (event.action === "opened") {
+            openedCount++;
+          } else if (event.action === "closed") {
+            closedCount++;
+          }
+          logEvent(event.action, event.dbName, event.databases);
+        });
+
+        logMessage("Subscribed to database change events");
+      }
+
+      // Open database
+      document.getElementById("openDb").addEventListener("click", async () => {
+        try {
+          const dbName = `test-db-${++dbCounter}`;
+          logMessage(`Opening database: ${dbName}...`);
+          await openDB(dbName);
+        } catch (error) {
+          logMessage(`Error opening database: ${error.message}`);
+        }
+      });
+
+      // Close last database
+      document.getElementById("closeDb").addEventListener("click", async () => {
+        try {
+          const databases = Object.keys(window.__web_sqlite.databases);
+          if (databases.length === 0) {
+            logMessage("No databases to close");
+            return;
+          }
+          const lastDb = databases[databases.length - 1];
+          logMessage(`Closing database: ${lastDb}...`);
+          await window.__web_sqlite.databases[lastDb].close();
+        } catch (error) {
+          logMessage(`Error closing database: ${error.message}`);
+        }
+      });
+
+      // Clear events
+      document.getElementById("clearEvents").addEventListener("click", () => {
+        eventsEl.innerHTML = "";
+        openedCount = 0;
+        closedCount = 0;
+        updateStats();
+        logMessage("Event log cleared");
+      });
+
+      // Unsubscribe
+      document.getElementById("unsubscribe").addEventListener("click", () => {
+        if (unsubscribeFn) {
+          unsubscribeFn();
+          unsubscribeFn = null;
+          logMessage("Unsubscribed from database change events");
+        } else {
+          logMessage("Not currently subscribed to events");
+        }
+      });
+
+      // Initialize
+      subscribeToEvents();
+      logMessage("Database Events Example initialized");
+      logMessage("Click 'Open Database' to see events in action");
+      updateStats();
+    </script>
+  </body>
+</html>

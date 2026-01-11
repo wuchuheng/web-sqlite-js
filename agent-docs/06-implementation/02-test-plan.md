@@ -569,10 +569,27 @@ Output: `coverage/index.html`
 | Lines      | N/A    | Not tracked (E2E-focused)      |
 | E2E Flows  | 100%   | All critical API paths covered |
 
-**Actual Test Coverage**:
+**Actual Test Coverage** (v2.0.0):
 
-- **Unit tests**: 3 files (mutex, registry, event-emitter) - ~600 lines of testable utility code
-- **E2E tests**: 11 test files covering all API surface and critical flows
+- **Unit tests**: 5 files, 62 tests (93.81% coverage)
+  - `src/utils/mutex/mutex.unit.test.ts` - 3 tests
+  - `src/global/namespace.unit.test.ts` - 10 tests
+  - `src/logs/log-dispatcher.unit.test.ts` - 9 tests
+  - `src/registry/database-registry.unit.test.ts` - 31 tests
+  - `src/events/event-emitter.unit.test.ts` - 9 tests
+
+- **E2E tests**: 11 files, 46 tests covering all API surface and critical flows
+  - `tests/e2e/transaction.e2e.test.ts` - 3 tests
+  - `tests/e2e/sqlite3.e2e.test.ts` - 1 test
+  - `tests/e2e/error.e2e.test.ts` - 3 tests
+  - `tests/e2e/exec.e2e.test.ts` - 3 tests
+  - `tests/e2e/release.e2e.test.ts` - 4 tests
+  - `tests/e2e/query.e2e.test.ts` - 3 tests
+  - `tests/e2e/registry-integration.e2e.test.ts` - 6 tests
+  - `tests/e2e/namespace-sync.e2e.test.ts` - 5 tests
+  - `tests/e2e/worker-logs.e2e.test.ts` - 5 tests
+  - `tests/e2e/application-logs.e2e.test.ts` - 5 tests
+  - `tests/e2e/database-events.e2e.test.ts` - 10 tests
 
 ---
 
