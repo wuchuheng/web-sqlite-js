@@ -259,6 +259,12 @@ class SampleNav extends HTMLElement {
           align-items: center;
         }
 
+        .toolbar-right {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
         .toolbar-left {
           display: flex;
           align-items: center;
@@ -286,6 +292,28 @@ class SampleNav extends HTMLElement {
 
         .open-new-tab:hover {
           background: #3367d6;
+        }
+
+        .refresh-btn {
+          padding: 8px 16px;
+          background: #4285f4;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 13px;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .refresh-btn:hover {
+          background: #3367d6;
+        }
+
+        .refresh-btn:active {
+          transform: rotate(180deg);
+          transition: transform 0.3s;
         }
 
         .iframe-container {
@@ -368,12 +396,17 @@ class SampleNav extends HTMLElement {
             <div class="toolbar-left">
               <span class="current-page">${pages[0]?.title || ""}</span>
             </div>
-            <a href="./${defaultPage}" class="open-new-tab" target="_blank">
-              <span>↗</span> Open in New Tab
-            </a>
+            <div class="toolbar-right">
+              <button class="refresh-btn" id="refreshBtn" title="Refresh current page">
+                <span>↻</span> Refresh
+              </button>
+              <a href="./${defaultPage}" class="open-new-tab" target="_blank">
+                <span>↗</span> Open in New Tab
+              </a>
+            </div>
           </div>
           <div class="iframe-container">
-            <iframe src="./${defaultPage}" title="Example Content"></iframe>
+            <iframe src="./${defaultPage}" title="Example Content" id="contentFrame"></iframe>
           </div>
         </div>
       </div>
@@ -391,28 +424,74 @@ class SampleNav extends HTMLElement {
 
   initEventListeners() {
     const navItems = this.shadowRoot.querySelectorAll(".nav-item");
-    const iframe = this.shadowRoot.querySelector("iframe");
+    const iframe = this.shadowRoot.querySelector("#contentFrame");
     const currentPageTitle = this.shadowRoot.querySelector(".current-page");
     const openNewTabBtn = this.shadowRoot.querySelector(".open-new-tab");
+    const refreshBtn = this.shadowRoot.querySelector("#refreshBtn");
     const pages = this.getPages();
     const bypassCache = this.getAttribute("bypass-cache") === "true";
 
+    // Function to load a page
+    const loadPage = (pageName) => {
+      const matchingPage = pages.find((p) => p.page === pageName);
+      if (!matchingPage) return;
+
+      const page = `./${pageName}`;
+      iframe.src = page;
+      currentPageTitle.textContent = matchingPage.title;
+      openNewTabBtn.href = page;
+
+      // Update active state
+      navItems.forEach((nav) => {
+        if (nav.dataset.page === pageName) {
+          nav.classList.add("active");
+        } else {
+          nav.classList.remove("active");
+        }
+      });
+
+      // Update hash
+      window.location.hash = pageName;
+    };
+
+    // Initialize from hash or default page
+    const initFromHash = () => {
+      const hash = window.location.hash.slice(1); // Remove #
+      if (hash && pages.some((p) => p.page === hash)) {
+        loadPage(hash);
+      } else {
+        loadPage(this.getDefaultPage());
+      }
+    };
+
+    // Handle hash changes
+    window.addEventListener("hashchange", () => {
+      const hash = window.location.hash.slice(1);
+      if (hash && pages.some((p) => p.page === hash)) {
+        loadPage(hash);
+      }
+    });
+
+    // Initialize on load
+    initFromHash();
+
+    // Nav item clicks
     navItems.forEach((item) => {
       item.addEventListener("click", () => {
-        const page = `./${item.dataset.page}`;
-        iframe.src = page;
-        currentPageTitle.textContent = item.dataset.title;
-        openNewTabBtn.href = page;
+        loadPage(item.dataset.page);
 
         // Bypass iframe cache if enabled
         if (bypassCache && iframe.contentWindow) {
           iframe.contentWindow.location.reload(true);
         }
-
-        // Update active state
-        navItems.forEach((nav) => nav.classList.remove("active"));
-        item.classList.add("active");
       });
+    });
+
+    // Refresh button
+    refreshBtn.addEventListener("click", () => {
+      if (iframe.contentWindow) {
+        iframe.contentWindow.location.reload(true);
+      }
     });
 
     // Handle iframe navigation
@@ -434,6 +513,11 @@ class SampleNav extends HTMLElement {
                 nav.classList.remove("active");
               }
             });
+
+            // Update hash if different
+            if (window.location.hash.slice(1) !== pageName) {
+              window.location.hash = pageName;
+            }
           }
         }
       } catch (e) {
