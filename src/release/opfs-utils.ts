@@ -64,26 +64,44 @@ export const removeDir = async (
   await dir.removeEntry(name, { recursive: true });
 };
 
-/** Resolve an OPFS path for a versioned database. */
+/** Resolve an OPFS path for a versioned database (v2.1.0 flat structure). */
 export const getDbPathForVersion = (
   dirName: string,
   version: string,
+  mode?: "release" | "dev",
 ): string => {
   if (version === DEFAULT_VERSION) {
     return `${dirName}/default.sqlite3`;
   }
-  return `${dirName}/${version}/db.sqlite3`;
+  // v2.1.0: Use flat file naming {version}.sqlite3 instead of nested directories
+  // For dev versions, use {version}.dev.sqlite3 suffix when mode is provided
+  const filename =
+    mode === "dev" ? `${version}.dev.sqlite3` : `${version}.sqlite3`;
+  return `${dirName}/${filename}`;
 };
 
-/** Get a file handle for a versioned database. */
+/** Get a file handle for a versioned database (v2.1.0 flat structure). */
 export const getDbHandleForVersion = async (
   baseDir: FileSystemDirectoryHandle,
   version: string,
   create: boolean,
+  mode?: "release" | "dev",
 ): Promise<FileSystemFileHandle> => {
   if (version === DEFAULT_VERSION) {
     return await baseDir.getFileHandle("default.sqlite3", { create });
   }
-  const versionDir = await baseDir.getDirectoryHandle(version, { create });
-  return await versionDir.getFileHandle("db.sqlite3", { create });
+  // v2.1.0: Use flat file naming {version}.sqlite3 instead of nested directories
+  // For dev versions, use {version}.dev.sqlite3 suffix when mode is provided
+  const versionFilename =
+    mode === "dev" ? `${version}.dev.sqlite3` : `${version}.sqlite3`;
+  return await baseDir.getFileHandle(versionFilename, { create });
+};
+
+/**
+ * Check if a version string is a dev version (has .dev.sqlite3 suffix).
+ * @param version - Version string with or without .sqlite3 suffix
+ * @returns true if version is a dev version
+ */
+export const isDevVersion = (version: string): boolean => {
+  return version.endsWith(".dev.sqlite3");
 };

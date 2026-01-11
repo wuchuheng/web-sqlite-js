@@ -1,9 +1,9 @@
 # web-sqlite-js Status Board
 
-**Last Updated**: 2026-01-11
+**Last Updated**: 2026-01-12
 **Current Version**: 1.1.2
-**Target Version**: 2.0.0
-**Overall Status**: Production v1.1.2 Stable - v2.0.0 Implementation Complete (12/12 tasks done)
+**Target Version**: 2.1.0
+**Overall Status**: Production v1.1.2 Stable - v2.0.0 Complete - v2.1.0 Implementation In Progress
 
 ---
 
@@ -101,6 +101,90 @@ gantt
   - Test plan updated with current test counts
   - All API contracts already documented (01-api.md, 02-events.md)
 - **Notes**: v2.0.0 testing and documentation complete. All features tested, documented, and with working examples.
+
+### Completed (2026-01-12)
+
+**TASK-301: T-001 - OPFS Structure & File Operations**
+
+- **Status**: ✅ COMPLETE
+- **Owner**: S8 Worker
+- **Started**: 2026-01-12
+- **Completed**: 2026-01-12
+- **Feature**: F-002 - v2.1.0 Flat OPFS Structure
+- **Description**: Update OPFS file operations to use flat file naming, remove SQL file writing, add dev version suffix support
+- **Effort**: 4-6 hours
+- **Evidence**:
+  - ✅ Updated `src/release/opfs-utils.ts` for flat file naming
+  - ✅ Updated `src/release/version-utils.ts` with dev version helpers
+  - ✅ Updated `src/release/release-manager.ts` to use flat structure
+  - ✅ All 62 unit tests passing
+  - ✅ All 46 E2E tests passing
+  - ✅ TypeScript compiles without errors
+- **Test Results**:
+  - Unit tests: 62 tests in 5 files passing
+  - E2E tests: 46 tests in 11 files passing
+  - Coverage: 93.81% statements, 83.33% branches, 93.1% functions
+- **Acceptance Criteria Met**:
+  - ✅ OPFS files use flat naming: `0.0.1.sqlite3`, `0.0.2.sqlite3`
+  - ✅ Dev versions use `.dev.sqlite3` suffix: `0.0.3.dev.sqlite3`
+  - ✅ No `migration.sql` or `seed.sql` files written to OPFS
+  - ✅ No nested version directories created
+  - ✅ All existing tests pass with new structure
+- **Files Modified**:
+  - `src/release/opfs-utils.ts` - Added mode parameter to `getDbPathForVersion()` and `getDbHandleForVersion()`, added `isDevVersion()` helper
+  - `src/release/version-utils.ts` - Added `getDevVersionFilename()` and `extractBaseVersionFromDev()` helpers
+  - `src/release/release-manager.ts` - Updated `applyVersion()` for flat structure, added `versionToModeMap` for mode tracking
+- **Notes**: v2.1.0 OPFS structure complete. Flat file naming implemented, SQL file writing removed. All tests passing.
+
+### v2.1.0 Implementation Tasks (Pending)
+
+**TASK-302: T-002 - In-Memory SQL & Global Namespace**
+
+- **Status**: ⏳ Blocked (waiting for T-001)
+- **Owner**: TBD
+- **Feature**: F-002 - v2.1.0 Flat OPFS Structure
+- **Description**: Update global namespace types to include in-memory SQL Maps, populate Maps on database open
+- **Effort**: 3-4 hours
+- **Dependencies**: TASK-301 ✅ COMPLETE
+- **Acceptance Criteria**:
+  - Global namespace type: `Record<string, {migrationSQL, seedSQL, db}>`
+  - `migrationSQL` Map populated with version → SQL mapping
+  - `seedSQL` Map populated with version → SQL mapping
+  - TypeScript compilation passes without errors
+  - Access pattern updated: `dbRecord.db.query()` instead of `db.query()`
+- **Files to Modify**:
+  - `src/types/global.ts` - Update global namespace type definitions
+  - `src/types/DB.ts` - Add DatabaseRecord interface
+  - `src/release/release-manager.ts` - Populate SQL Maps
+  - `src/global/initialize-namespace.ts` - Initialize with new structure
+
+**TASK-303: T-003 - Auto-Migration System**
+
+- **Status**: ⏳ Blocked (waiting for T-002)
+- **Owner**: TBD
+- **Feature**: F-002 - v2.1.0 Flat OPFS Structure
+- **Description**: Create automatic migration system to detect v2.0.0 structure and convert to v2.1.0 transparently
+- **Effort**: 6-8 hours
+- **Dependencies**: TASK-301 ✅ COMPLETE, TASK-302
+- **Acceptance Criteria**:
+  - Detects v2.0.0 nested structure (e.g., `0.0.1/` directories)
+  - Detects v2.1.0 flat structure (e.g., `0.0.1.sqlite3` files)
+  - Auto-migrates v2.0.0 → v2.1.0 transparently
+  - Reads SQL files before deletion
+  - Renames `db.sqlite3` to `{version}.sqlite3`
+  - Removes `migration.sql` and `seed.sql` files
+  - Removes empty version directories
+  - Populates in-memory SQL Maps
+  - Creates backup before migration
+  - Rollback on migration failure
+  - Idempotent (safe to run on already-migrated databases)
+- **Files to Create**:
+  - `src/migration/migration-detector.ts` - Structure detection
+  - `src/migration/auto-migrator.ts` - Migration execution
+  - `tests/e2e/auto-migration.e2e.test.ts` - E2E tests
+
+**v2.1.0 Total Tasks**: 3 tasks (13-18 estimated hours)
+**Critical Path**: T-001 → T-002 → T-003
 
 **TASK-220: Application-Level Logging System**
 
@@ -564,6 +648,19 @@ gantt
 **v2.0.0 Total Tasks**: 12 tasks (61 estimated hours) - Consolidated from 19 tasks on 2026-01-11
 **Status**: 11/12 tasks complete (92%), Phase 1 (Registry & Lock) complete, Phase 2 (Global Namespace) complete, Phase 3 (Structured Logging) complete, Phase 4 (Database Events) complete, Phase 5 (Testing & Documentation) pending
 
+### v2.1.0 Features (F-002) - Implementation In Progress
+
+| Feature                     | Status                | Tests | Documentation | Notes                                      |
+| --------------------------- | --------------------- | ----- | ------------- | ------------------------------------------ |
+| Flat OPFS Structure         | 📋 READY TO IMPLEMENT | ❌    | ✅ COMPLETE   | F-002 feature spec created                 |
+| In-Memory Release Configs   | 📋 READY TO IMPLEMENT | ❌    | ✅ COMPLETE   | Map<string, string> for migration/seed SQL |
+| Auto-Migration from v2.0.0  | 📋 READY TO IMPLEMENT | ❌    | ✅ COMPLETE   | Transparent migration on openDB()          |
+| Dev Version Suffix Notation | 📋 READY TO IMPLEMENT | ❌    | ✅ COMPLETE   | `.dev.sqlite3` suffix for dev versions     |
+| Retain Hash Validation      | 📋 READY TO IMPLEMENT | ❌    | ✅ COMPLETE   | SHA-256 validation with in-memory SQL      |
+
+**v2.1.0 Status**: Architecture complete (17 documents updated across S1-S6), Task catalog ready
+**Next Steps**: Execute T-001 (OPFS Structure) → T-002 (In-Memory SQL) → T-003 (Auto-Migration)
+
 ### Test Coverage
 
 - **Unit Tests**: ✅ PASSING (v1.1.2 + v2.0.0 Registry)
@@ -637,12 +734,13 @@ gantt
 
 ## Documentation Deliverables
 
-### Stage 1: Discovery (4 documents)
+### Stage 1: Discovery (5 documents)
 
 - ✅ `agent-docs/01-discovery/01-brief.md` - Problem statement, users, solution
 - ✅ `agent-docs/01-discovery/02-requirements.md` - MVP, success criteria, non-goals, backlog
 - ✅ `agent-docs/01-discovery/03-scope.md` - Scope boundaries and glossary
 - ✅ `agent-docs/01-discovery/features/F-001-v2-logging-direct-access.md` - v2.0.0 feature specification
+- ✅ `agent-docs/01-discovery/features/F-002-v2.1.0-flat-opfs-structure.md` - v2.1.0 feature specification
 
 ### Stage 2: Feasibility (3 documents)
 
@@ -656,15 +754,16 @@ gantt
 - ✅ `agent-docs/03-architecture/02-dataflow.md` - Data flow and sequences
 - ✅ `agent-docs/03-architecture/03-deployment.md` - Deployment and infrastructure
 
-### Stage 4: Architecture Decision Records (7 documents)
+### Stage 4: Architecture Decision Records (8 documents)
 
 - ✅ `agent-docs/04-adr/0001-web-worker-architecture.md` - Non-blocking database operations
-- ✅ `agent-docs/04-adr/0002-opfs-persistent-storage.md` - File-based persistence
+- ✅ `agent-docs/04-adr/0002-opfs-persistent-storage.md` - File-based persistence (v2.1.0 updated)
 - ✅ `agent-docs/04-adr/0003-mutex-queue-concurrency.md` - Serialized operation execution
-- ✅ `agent-docs/04-adr/0004-release-versioning-system.md` - Database migration management
+- ✅ `agent-docs/04-adr/0004-release-versioning-system.md` - Database migration management (v2.1.0 updated)
 - ✅ `agent-docs/04-adr/0005-coop-coep-requirement.md` - SharedArrayBuffer support
 - ✅ `agent-docs/04-adr/0006-typescript-type-system.md` - Generic type parameters
 - ✅ `agent-docs/04-adr/0007-error-handling-strategy.md` - Stack trace preservation
+- ✅ `agent-docs/04-adr/0008-auto-migration-strategy.md` - v2.1.0 Auto-migration (NEW)
 
 ### Stage 5: Low-Level Design (8 documents)
 
@@ -684,17 +783,18 @@ gantt
 - ✅ `agent-docs/06-implementation/03-observability.md` - Debug mode and logging standards
 - ✅ `agent-docs/06-implementation/04-release-and-rollback.md` - npm publishing and versioning
 
-### Stage 7: Roadmap & Task Catalog (2 documents)
+### Stage 7: Roadmap & Task Catalog (3 documents)
 
-- ✅ `agent-docs/07-taskManager/01-roadmap.md` - Release strategy, timeline visualization, v2.0.0 roadmap
-- ✅ `agent-docs/07-taskManager/02-task-catalog.md` - Task breakdown, Kanban board, v2.0.0 tasks
+- ✅ `agent-docs/07-tasks/01-roadmap.md` - Release strategy, timeline visualization, v2.0.0 roadmap
+- ✅ `agent-docs/07-tasks/02-task-catalog.md` - Task breakdown, Kanban board, v2.0.0 tasks
+- ✅ `agent-docs/07-tasks/f-002-v2.1.0-tasks.md` - v2.1.0 implementation tasks (NEW)
 
 ### Control Documents (2 documents)
 
 - ✅ `agent-docs/00-control/00-spec.md` - Specification index
 - ✅ `agent-docs/00-control/01-status.md` - This file
 
-**Total**: 34 documents (32 v1.1.2 + 2 v2.0.0 feature docs)
+**Total**: 37 documents (33 v1.1.2 + 2 v2.0.0 feature docs + 1 v2.1.0 feature doc + 1 v2.1.0 task catalog)
 
 ---
 

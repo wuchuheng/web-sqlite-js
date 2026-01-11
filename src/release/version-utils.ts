@@ -1,4 +1,5 @@
 import { DEFAULT_VERSION, VERSION_RE } from "./constants";
+import { isDevVersion } from "./opfs-utils";
 
 /** Normalize database name to a `.sqlite3` suffix. */
 export const normalizeFilename = (filename: string): string => {
@@ -35,4 +36,25 @@ export const getLatestReleaseVersion = (
 ): string => {
   if (rows.length === 0) return DEFAULT_VERSION;
   return rows[rows.length - 1].version;
+};
+
+/**
+ * Get the dev version filename for a version.
+ * @param version - Semver version string (e.g., "1.0.0")
+ * @returns Dev version filename (e.g., "1.0.0.dev.sqlite3")
+ */
+export const getDevVersionFilename = (version: string): string => {
+  return `${version}.dev.sqlite3`;
+};
+
+/**
+ * Extract base version from a dev version filename.
+ * @param devVersion - Dev version filename (e.g., "1.0.0.dev.sqlite3")
+ * @returns Base version string (e.g., "1.0.0")
+ */
+export const extractBaseVersionFromDev = (devVersion: string): string => {
+  if (!isDevVersion(devVersion)) {
+    throw new Error(`Not a dev version: ${devVersion}`);
+  }
+  return devVersion.replace(".dev.sqlite3", "");
 };

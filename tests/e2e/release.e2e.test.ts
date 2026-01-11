@@ -39,16 +39,21 @@ describe("release and devTool e2e tests", () => {
 
     await db.close();
 
+    // v2.1.0: Flat structure - check for version files instead of directories
     const dir = await getDbDir(filename);
-    await dir.getDirectoryHandle("0.0.0");
-    await dir.getDirectoryHandle("0.0.1");
-    const v1Dir = await dir.getDirectoryHandle("0.0.1");
-    const migrationFile = await v1Dir.getFileHandle("migration.sql");
-    const seedFile = await v1Dir.getFileHandle("seed.sql");
-    expect(await (await migrationFile.getFile()).text()).toContain(
-      "ALTER TABLE",
-    );
-    expect(await (await seedFile.getFile()).text()).toContain("INSERT INTO");
+    const v0File = await dir.getFileHandle("0.0.0.sqlite3");
+    const v1File = await dir.getFileHandle("0.0.1.sqlite3");
+    expect(v0File).toBeDefined();
+    expect(v1File).toBeDefined();
+
+    // v2.1.0: No migration.sql or seed.sql files (SQL stored in memory)
+    // These should NOT exist in v2.1.0
+    try {
+      await dir.getDirectoryHandle("0.0.0");
+      throw new Error("Expected no version directories in v2.1.0");
+    } catch (e) {
+      expect((e as Error).name).toBe("NotFoundError");
+    }
   });
 
   test("should throw on release hash mismatch", async () => {

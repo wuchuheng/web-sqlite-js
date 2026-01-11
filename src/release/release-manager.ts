@@ -24,8 +24,6 @@ import {
   ensureFile,
   getDbHandleForVersion,
   getDbPathForVersion,
-  removeDir,
-  writeTextFile,
 } from "./opfs-utils";
 import type {
   ReleaseConfigWithHash,
@@ -34,6 +32,7 @@ import type {
 } from "./types";
 import {
   compareVersions,
+  getDevVersionFilename,
   getLatestReleaseVersion,
   normalizeFilename,
 } from "./version-utils";
@@ -158,6 +157,14 @@ export const openReleaseDB = async ({
     configByVersion.set(config.version, config);
   }
 
+  // v2.1.0: Map version to mode for proper file naming (dev vs release)
+  const versionToModeMap = new Map<string, "release" | "dev">();
+  for (const row of releaseRows) {
+    if (row.version !== DEFAULT_VERSION) {
+      versionToModeMap.set(row.version, row.mode as "release" | "dev");
+    }
+  }
+
   const latestReleaseVersion = getLatestReleaseVersion(
     releaseRows.filter((row) => row.version !== DEFAULT_VERSION),
   );
@@ -197,10 +204,12 @@ export const openReleaseDB = async ({
   }
 
   let latestVersion = latestRow.version;
+  const latestMode = versionToModeMap.get(latestVersion);
   let latestDbHandle = await getDbHandleForVersion(
     baseDir,
     latestVersion,
     latestVersion === DEFAULT_VERSION,
+    latestMode,
   );
 
   // Serialize release operations using a metadata lock transaction.
@@ -249,30 +258,24 @@ export const openReleaseDB = async ({
     mode: "release" | "dev",
   ): Promise<void> => {
     console.debug(`[release] apply start ${config.version} (${mode})`);
-    const versionDir = await baseDir.getDirectoryHandle(config.version, {
-      create: true,
-    });
-    const destDbHandle = await versionDir.getFileHandle("db.sqlite3", {
+
+    // v2.1.0: Use flat file naming {version}.sqlite3 instead of nested directories
+    // For dev versions, use {version}.dev.sqlite3 suffix
+    const versionFilename =
+      mode === "dev"
+        ? getDevVersionFilename(config.version)
+        : `${config.version}.sqlite3`;
+    const destDbHandle = await baseDir.getFileHandle(versionFilename, {
       create: true,
     });
 
     await copyFileHandle(latestDbHandle, destDbHandle);
-    await writeTextFile(versionDir, "migration.sql", config.migrationSQL);
-    if (config.normalizedSeedSQL) {
-      await writeTextFile(versionDir, "seed.sql", config.normalizedSeedSQL);
-    } else {
-      try {
-        await versionDir.removeEntry("seed.sql");
-      } catch (error) {
-        const name = (error as Error).name;
-        if (name !== "NotFoundError") {
-          throw error;
-        }
-      }
-    }
+
+    // v2.1.0: SQL stored in memory Maps (Task T-002), no file writing
+    // Migration/seed SQL will be stored in Map<string, string> structures
 
     await openActiveDb(
-      getDbPathForVersion(normalizedFilename, config.version),
+      getDbPathForVersion(normalizedFilename, config.version, mode),
       true,
     );
 
@@ -294,7 +297,8 @@ export const openReleaseDB = async ({
         true,
       );
       try {
-        await removeDir(baseDir, config.version);
+        // v2.1.0: Remove flat file instead of directory
+        await baseDir.removeEntry(versionFilename);
       } catch (removeError) {
         const name = (removeError as Error).name;
         if (name !== "NotFoundError") {
@@ -315,6 +319,7 @@ export const openReleaseDB = async ({
       ],
     );
 
+    // v2.1.0: Track the actual filename for OPFS operations
     latestVersion = config.version;
     latestDbHandle = destDbHandle;
     latestRow = {
@@ -325,6 +330,8 @@ export const openReleaseDB = async ({
       mode,
       createdAt: new Date().toISOString(),
     };
+    // v2.1.0: Update versionToModeMap for new version
+    versionToModeMap.set(config.version, mode);
     console.debug(`[release] apply end ${config.version} (${mode})`);
   };
 
@@ -342,7 +349,11 @@ export const openReleaseDB = async ({
     }
   }
 
-  const latestDbPath = getDbPathForVersion(normalizedFilename, latestVersion);
+  const latestDbPath = getDbPathForVersion(
+    normalizedFilename,
+    latestVersion,
+    versionToModeMap.get(latestVersion),
+  );
   await openActiveDb(latestDbPath, true);
 
   // Public DB interface for the active DB.
@@ -461,14 +472,29 @@ export const openReleaseDB = async ({
         );
 
         for (const row of devRowsToRemove) {
-          await removeDir(baseDir, row.version);
+          // v2.1.0: Dev versions use .dev.sqlite3 suffix (flat file structure)
+          const devVersionFilename = getDevVersionFilename(row.version);
+          try {
+            await baseDir.removeEntry(devVersionFilename);
+          } catch (removeError) {
+            const name = (removeError as Error).name;
+            if (name !== "NotFoundError") {
+              throw removeError;
+            }
+          }
           await metaExec("DELETE FROM release WHERE id = ?", [row.id]);
         }
 
         latestVersion = version;
-        latestDbHandle = await getDbHandleForVersion(baseDir, version, false);
+        const rollbackMode = versionToModeMap.get(version);
+        latestDbHandle = await getDbHandleForVersion(
+          baseDir,
+          version,
+          false,
+          rollbackMode,
+        );
         await openActiveDb(
-          getDbPathForVersion(normalizedFilename, version),
+          getDbPathForVersion(normalizedFilename, version, rollbackMode),
           true,
         );
       });
