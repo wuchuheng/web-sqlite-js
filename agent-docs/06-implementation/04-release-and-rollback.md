@@ -594,7 +594,161 @@ npm ci  # Uses package-lock.json exactly
 
 ---
 
-## 10. References
+## 10. v2.1.0 Migration Guide
+
+### Upgrading from v2.0.0 to v2.1.0
+
+**Overview**: v2.1.0 introduces a flat OPFS structure and in-memory SQL storage. This guide helps you upgrade smoothly.
+
+### What Changes?
+
+**OPFS Structure**:
+
+- **v2.0.0**: Nested directories (`0.0.1/db.sqlite3`, `migration.sql`, `seed.sql`)
+- **v2.1.0**: Flat files (`0.0.1.sqlite3`, `0.0.2.dev.sqlite3`)
+
+**Global Namespace API**:
+
+- **v2.0.0**: `window.__web_sqlite.databases[name]` returns `DBInterface`
+- **v2.1.0**: `window.__web_sqlite.databases[name]` returns `{migrationSQL, seedSQL, db}`
+
+**SQL Storage**:
+
+- **v2.0.0**: Migration/seed SQL stored in OPFS files
+- **v2.1.0**: SQL stored in `Map<string, string>` in memory
+
+### Automatic Migration
+
+**Good News**: Existing v2.0.0 databases automatically migrate on first `openDB()` call!
+
+**What Happens**:
+
+1. Library detects v2.0.0 nested structure
+2. Reads `migration.sql` and `seed.sql` files
+3. Renames `db.sqlite3` to `{version}.sqlite3`
+4. Removes SQL files and version directories
+5. Populates in-memory SQL Maps
+6. Continues normally with v2.1.0 structure
+
+**No Data Loss**: All database content preserved during migration.
+
+### Manual Steps Required
+
+**If you access `window.__web_sqlite.databases` directly**:
+
+```typescript
+// v2.0.0 code (will break)
+const db = window.__web_sqlite.databases["myapp.sqlite3"];
+await db.query("SELECT * FROM users");
+
+// v2.1.0 code (updated)
+const dbRecord = window.__web_sqlite.databases["myapp.sqlite3"];
+await dbRecord.db.query("SELECT * FROM users");
+
+// Or access release configs
+const migration = dbRecord.migrationSQL.get("0.0.1");
+```
+
+**If you inspect OPFS directly in DevTools**:
+
+- Old structure: Look for version directories (`0.0.1/`, `0.0.2/`)
+- New structure: Look for flat files (`0.0.1.sqlite3`, `0.0.2.sqlite3`)
+- No `migration.sql` or `seed.sql` files in v2.1.0
+
+### Rollback Procedure
+
+**If you need to rollback to v2.0.0**:
+
+```bash
+# 1. Uninstall v2.1.0
+npm uninstall web-sqlite-js
+
+# 2. Install v2.0.0
+npm install web-sqlite-js@2.0.0
+
+# 3. Run your application
+# Databases will auto-migrate back to v2.0.0 structure
+```
+
+**Note**: Databases auto-migrate both directions (v2.0.0 ↔ v2.1.0) automatically.
+
+### Testing Before Production
+
+**Recommended Testing Steps**:
+
+1. **Backup Production Data** (if applicable)
+
+   ```typescript
+   // Export data before upgrade
+   const db = await openDB("myapp");
+   const data = await db.query("SELECT * FROM users");
+   // Save to file or external storage
+   ```
+
+2. **Test in Development**
+
+   ```bash
+   npm install web-sqlite-js@latest
+   npm test
+   # Run your E2E tests
+   ```
+
+3. **Verify Database Access**
+
+   ```typescript
+   // Test global namespace access
+   const dbRecord = window.__web_sqlite.databases["myapp.sqlite3"];
+   console.log("Migration SQL:", dbRecord.migrationSQL);
+   console.log("Seed SQL:", dbRecord.seedSQL);
+   await dbRecord.db.query("SELECT * FROM users LIMIT 1");
+   ```
+
+4. **Check OPFS Structure**
+   ```javascript
+   // In DevTools Console
+   const root = await navigator.storage.getDirectory();
+   const dir = await root.getDirectoryHandle("myapp.sqlite3");
+   for await (const entry of dir.values()) {
+     console.log(entry.name); // Should see "0.0.1.sqlite3", not "0.0.1/"
+   }
+   ```
+
+### Breaking Changes Summary
+
+| Change                    | v2.0.0                            | v2.1.0                                        | Action Required   |
+| ------------------------- | --------------------------------- | --------------------------------------------- | ----------------- |
+| **Global Namespace Type** | `Record<string, DBInterface>`     | `Record<string, {migrationSQL, seedSQL, db}>` | Yes, update code  |
+| **OPFS Structure**        | Nested directories                | Flat files                                    | No, auto-migrates |
+| **SQL Files in OPFS**     | Yes (`migration.sql`, `seed.sql`) | No (in-memory Maps)                           | No, auto-migrates |
+| **Hash Validation**       | Works with files                  | Works with Maps                               | No, unchanged     |
+
+### Common Issues
+
+**Issue**: `Cannot read property 'query' of undefined`
+
+- **Cause**: Using old v2.0.0 access pattern
+- **Fix**: Update to `dbRecord.db.query()` instead of `db.query()`
+
+**Issue**: `migrationSQL is undefined`
+
+- **Cause**: Database has no releases configured
+- **Fix**: Check that `releases` array is passed to `openDB()`
+
+**Issue**: Migration seems slow
+
+- **Cause**: First migration from v2.0.0 takes time
+- **Expected**: < 500ms for typical databases
+- **Note**: One-time cost, subsequent opens are fast
+
+### Additional Resources
+
+- **Feature Spec**: `agent-docs/01-discovery/features/F-002-v2.1.0-flat-opfs-structure.md`
+- **ADR-0008**: `agent-docs/04-adr/0008-auto-migration-strategy.md`
+- **API Docs**: `agent-docs/05-design/01-contracts/01-api.md`
+
+---
+
+## 11. References
 
 ### Internal Documentation
 

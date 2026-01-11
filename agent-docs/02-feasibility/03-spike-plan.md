@@ -68,6 +68,60 @@ This document describes the technical validation and implementation features tha
 
 ---
 
+## v2.1.0 Spikes (Planned)
+
+### S-006: v2.1.0 Auto-Migration Validation
+
+**Status**: 📋 Planned
+**Feature**: F-002 - v2.1.0 Flat OPFS Structure and In-Memory Release Configs
+**Target**: Q1 2026
+
+**Purpose**: Validate that automatic migration from v2.0.0 nested structure to v2.1.0 flat structure works safely and efficiently.
+
+**Spike Questions**:
+
+1. **Data Safety**: Can we migrate without data loss?
+   - Test with various database sizes (small, medium, large)
+   - Test with dev vs release versions
+   - Validate atomic rollback on failure
+
+2. **Hash Integrity**: Does SHA-256 validation survive migration?
+   - Test hash validation before and after migration
+   - Ensure in-memory SQL produces identical hashes
+   - Test with corrupted/hacked SQL files
+
+3. **Performance Impact**: Is migration fast enough?
+   - Benchmark migration time for typical databases
+   - Target: < 500ms for 50MB database (NFR-001.3)
+   - Measure Map lookup performance vs file lookup
+
+4. **Edge Cases**: What can go wrong?
+   - Migration interrupted mid-process (browser crash, tab close)
+   - OPFS quota exceeded during migration
+   - Malformed version directories
+   - Missing migration.sql or seed.sql files
+
+**Success Criteria**:
+
+- All test databases migrate successfully without data loss
+- Hash validation passes after migration
+- Migration completes in < 500ms for typical databases
+- Rollback mechanism works on migration failure
+- Error messages are clear and actionable
+
+**Spike Duration**: 2-3 days
+
+**Evidence to Collect**:
+
+- E2E tests for auto-migration scenarios
+- Performance benchmarks before/after migration
+- Test cases for edge cases and error conditions
+- Documentation of migration flow
+
+**Go/No-Go Decision**: After spike completion, decide if auto-migration is safe enough for v2.1.0 release
+
+---
+
 ## Technical Validation Results
 
 ### Performance Validation

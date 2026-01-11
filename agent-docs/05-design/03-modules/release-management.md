@@ -180,16 +180,18 @@ type ReleaseConfigWithHash = {
 
 ```mermaid
 flowchart TD
-    A[applyVersion] --> B[Create version directory]
+    A[applyVersion] --> B[Create version file]
     B --> C[Copy latest database]
-    C --> D[Write migration.sql file]
-    D --> E[Write seed.sql file]
+    Note over C: v2.1.0: Use flat file naming {version}.sqlite3
+    C --> D[Store migrationSQL in Map]
+    D --> E[Store seedSQL in Map]
+    Note over D,E: v2.1.0: SQL stored in memory, not files
     E --> F[Open new database in worker]
     F --> G[BEGIN transaction]
     G --> H[Execute migrationSQL]
     H --> I{Success?}
     I -->|No| J[ROLLBACK]
-    J --> K[Remove version directory]
+    J --> K[Remove version file]
     K --> L[Switch back to previous version]
     L --> M[Throw error]
     I -->|Yes| N{seedSQL exists?}
@@ -217,17 +219,18 @@ const applyVersion = async (
   config: ReleaseConfigWithHash,
   mode: "release" | "dev",
 ): Promise<void> => {
-  const versionDir = await baseDir.getDirectoryHandle(config.version, {
-    create: true,
-  });
-  const destDbHandle = await versionDir.getFileHandle("db.sqlite3", {
+  // v2.1.0: Use flat file naming {version}.sqlite3
+  const versionFilename = `${config.version}.sqlite3`;
+  const destDbHandle = await baseDir.getFileHandle(versionFilename, {
     create: true,
   });
 
   await copyFileHandle(latestDbHandle, destDbHandle);
-  await writeTextFile(versionDir, "migration.sql", config.migrationSQL);
+
+  // v2.1.0: Store SQL in memory Maps instead of files
+  migrationSQLMap.set(config.version, config.migrationSQL);
   if (config.normalizedSeedSQL) {
-    await writeTextFile(versionDir, "seed.sql", config.normalizedSeedSQL);
+    seedSQLMap.set(config.version, config.normalizedSeedSQL);
   }
 
   await openActiveDb(

@@ -245,15 +245,33 @@ Use OPFS with automatic fallback to IndexedDB for unsupported browsers.
 demo.sqlite3/
   release.sqlite3              # Metadata database
   default.sqlite3              # Initial empty database
+  0.0.0.sqlite3                # Version database (v2.1.0 flat structure)
+  0.0.1.sqlite3                # Version database (v2.1.0 flat structure)
+  0.0.2.dev.sqlite3           # Dev version with suffix (v2.1.0)
+```
+
+**v2.0.0 Structure (Legacy)**:
+
+```
+demo.sqlite3/
+  release.sqlite3              # Metadata database
+  default.sqlite3              # Initial empty database
   0.0.1/
-    db.sqlite3                 # Versioned database
-    migration.sql              # Migration SQL
-    seed.sql                   # Seed SQL
+    db.sqlite3                 # Nested version directory
+    migration.sql              # Migration SQL file (removed in v2.1.0)
+    seed.sql                   # Seed SQL file (removed in v2.1.0)
   0.0.2/
     db.sqlite3
     migration.sql
     seed.sql
 ```
+
+**v2.1.0 Changes**:
+
+- **Flat Structure**: Removed nested version directories
+- **SQL in Memory**: Migration/seed SQL stored in `Map<string, string>` instead of files
+- **Version Suffix**: Dev versions use `.dev.sqlite3` suffix
+- **Auto-Migration**: Automatic conversion from v2.0.0 to v2.1.0 on first `openDB()`
 
 ## Related Decisions
 

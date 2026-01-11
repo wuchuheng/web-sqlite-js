@@ -63,8 +63,9 @@ sequenceDiagram
 
         Main->>OPFS: getDirectoryHandle(version, create: true)
         Main->>OPFS: copyFileHandle(latestDb, versionDb)
-        Main->>OPFS: writeTextFile(versionDir, "migration.sql")
-        Main->>OPFS: writeTextFile(versionDir, "seed.sql")
+        Note over Main,OPFS: v2.1.0: SQL stored in memory Map<string, string>
+        Main->>Main: migrationSQLMap.set(version, migrationSQL)
+        Main->>Main: seedSQLMap.set(version, seedSQL)
 
         Main->>Bridge: sendMsg(OPEN, target="active", filename=versionDb)
         Bridge->>Worker: postMessage({ id, event: OPEN, payload })
@@ -279,8 +280,9 @@ sequenceDiagram
 
     Mutex->>OPFS: getDirectoryHandle(config.version, create: true)
     Mutex->>OPFS: copyFileHandle(latestDbHandle, destDbHandle)
-    Mutex->>OPFS: writeTextFile(versionDir, "migration.sql", config.migrationSQL)
-    Mutex->>OPFS: writeTextFile(versionDir, "seed.sql", config.seedSQL)
+    Note over Mutex,OPFS: v2.1.0: SQL stored in memory Map<string, string>
+    Mutex->>Mutex: migrationSQLMap.set(config.version, config.migrationSQL)
+    Mutex->>Mutex: seedSQLMap.set(config.version, config.seedSQL)
 
     Mutex->>Worker: switch to new database file
     Mutex->>Worker: BEGIN
@@ -343,6 +345,99 @@ sequenceDiagram
     Mutex->>Meta: COMMIT
     Mutex-->>App: resolve (void)
 ```
+
+### Flow 6: v2.1.0 Auto-Migration from v2.0.0
+
+**Goal**: Automatically detect and migrate v2.0.0 nested structure to v2.1.0 flat structure
+**Concurrency**: Metadata lock prevents concurrent operations during migration
+**Trigger**: First `openDB()` call after upgrading to v2.1.0
+
+```mermaid
+sequenceDiagram
+    participant App as User Application
+    participant Main as Main Thread
+    participant Detector as Migration Detector
+    participant Migrator as Auto-Migrator
+    participant OPFS as OPFS Storage
+    participant Meta as Metadata DB
+
+    App->>Main: openDB(filename, options)
+    Main->>OPFS: navigator.storage.getDirectory()
+    OPFS-->>Main: root directory handle
+    Main->>OPFS: ensureDir(root, filename)
+
+    Main->>Detector: detectStructure(baseDir)
+    Detector->>OPFS: list directory entries
+
+    alt v2.0.0 Nested Structure Detected
+        Note over Detector: Found version directories (e.g., 0.0.1/, 0.0.2/)
+        Detector-->>Main: { version: "2.0.0", hasNestedDirs: true }
+        Main->>Migrator: migrateToV21(baseDir)
+
+        Migrator->>Migrator: createBackup(baseDir)
+        Note over Migrator: Store backup for rollback
+
+        loop For each version directory
+            Migrator->>OPFS: getDirectoryHandle(versionDir)
+            Migrator->>OPFS: getFileHandle("migration.sql")
+            alt migration.sql exists
+                Migrator->>OPFS: readTextFile("migration.sql")
+                OPFS-->>Migrator: migrationSQL content
+                Migrator->>Migrator: migrationSQLMap.set(version, migrationSQL)
+            end
+
+            Migrator->>OPFS: getFileHandle("seed.sql")
+            alt seed.sql exists
+                Migrator->>OPFS: readTextFile("seed.sql")
+                OPFS-->>Migrator: seedSQL content
+                Migrator->>Migrator: seedSQLMap.set(version, seedSQL)
+            end
+
+            Migrator->>OPFS: getFileHandle("db.sqlite3")
+            Migrator->>OPFS: renameFile(db.sqlite3, version.sqlite3)
+            Note over Migrator,OPFS: Flat structure: {version}.sqlite3
+
+            Migrator->>OPFS: removeEntry("migration.sql")
+            Migrator->>OPFS: removeEntry("seed.sql")
+            Migrator->>OPFS: removeDirectory(versionDir)
+        end
+
+        Migrator->>Meta: Update metadata if needed
+        Migrator->>Migrator: deleteBackup()
+
+        alt Migration Success
+            Migrator-->>Main: resolve()
+            Main-->>App: Database opened (migrated)
+        end
+    end
+
+    alt Migration Error
+        Migrator->>Migrator: restoreBackup()
+        Migrator-->>Main: throw MigrationError("Failed to migrate, rolled back")
+        Main-->>App: throw Error
+    end
+
+    alt v2.1.0 Flat Structure Detected
+        Note over Detector: Found {version}.sqlite3 files
+        Detector-->>Main: { version: "2.1.0", hasNestedDirs: false }
+        Note over Main: Skip migration, proceed with normal flow
+    end
+```
+
+**Migration Characteristics**:
+
+- **Atomic**: All-or-nothing with rollback on failure
+- **Transparent**: No user intervention required
+- **Preserves Data**: All database content maintained
+- **Hash Validation**: Stored hashes remain valid (SQL content unchanged)
+- **Performance**: Target < 500ms for typical databases
+
+**Error Handling**:
+
+- **Backup Restoration**: Automatic rollback on any failure
+- **Data Loss Prevention**: SQL files read before deletion
+- **Clear Errors**: Descriptive messages for debugging
+- **Retry Support**: Can retry migration after fixing issues
 
 ## 2) Asynchronous Event Flows
 

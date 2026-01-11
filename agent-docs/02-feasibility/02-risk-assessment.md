@@ -20,20 +20,24 @@ This document identifies and assesses technical risks associated with web-sqlite
 
 ## Risk Register
 
-| Risk ID | Risk Category             | Likelihood | Impact   | Severity   | Status       | Mitigation                                                            |
-| ------- | ------------------------- | ---------- | -------- | ---------- | ------------ | --------------------------------------------------------------------- |
-| R-001   | Browser Compatibility     | MEDIUM     | HIGH     | **HIGH**   | ✅ Mitigated | COOP/COEP documentation, feature detection, clear error messages      |
-| R-002   | OPFS Data Loss            | LOW        | CRITICAL | **MEDIUM** | ✅ Mitigated | Transactional writes, release versioning, rollback support            |
-| R-003   | WASM Bundle Size          | MEDIUM     | MEDIUM   | **MEDIUM** | ✅ Accepted  | ~500KB payload, tree-shaking, code splitting, CDN caching             |
-| R-004   | Worker Complexity         | MEDIUM     | MEDIUM   | **MEDIUM** | ✅ Mitigated | Mutex queue, comprehensive tests, debug mode, detailed logging        |
-| R-005   | Performance Degradation   | LOW        | HIGH     | **MEDIUM** | ✅ Mitigated | Performance tests, benchmarks, query optimization patterns            |
-| R-006   | Security Vulnerabilities  | LOW        | CRITICAL | **MEDIUM** | ✅ Mitigated | Parameterized queries, input validation, SQLite security model        |
-| R-007   | OPFS Quota Exhaustion     | LOW        | MEDIUM   | **LOW**    | ✅ Mitigated | Quota detection, graceful degradation, clear error messages           |
-| R-008   | Concurrency Bugs          | LOW        | HIGH     | **MEDIUM** | ✅ Mitigated | Mutex queue, strict serialization, comprehensive e2e tests            |
-| R-009   | SQLite Version Updates    | MEDIUM     | MEDIUM   | **MEDIUM** | ✅ Mitigated | Built-in versioning, isolated releases, zero-downtime upgrades        |
-| R-010   | Debugging Difficulty      | MEDIUM     | LOW      | **LOW**    | ✅ Accepted  | Worker DevTools, debug mode, detailed logging, source maps            |
-| R-011   | Safari/Firefox Support    | HIGH       | MEDIUM   | **HIGH**   | ⚠️ Accepted  | Documented as out-of-scope, monitoring for future OPFS support        |
-| R-012   | Long-Running Transactions | LOW        | HIGH     | **MEDIUM** | ✅ Mitigated | Worker isolation (no UI blocking), timeout warnings, rollback support |
+| Risk ID | Risk Category                    | Likelihood | Impact   | Severity   | Status       | Mitigation                                                            |
+| ------- | -------------------------------- | ---------- | -------- | ---------- | ------------ | --------------------------------------------------------------------- |
+| R-001   | Browser Compatibility            | MEDIUM     | HIGH     | **HIGH**   | ✅ Mitigated | COOP/COEP documentation, feature detection, clear error messages      |
+| R-002   | OPFS Data Loss                   | LOW        | CRITICAL | **MEDIUM** | ✅ Mitigated | Transactional writes, release versioning, rollback support            |
+| R-003   | WASM Bundle Size                 | MEDIUM     | MEDIUM   | **MEDIUM** | ✅ Accepted  | ~500KB payload, tree-shaking, code splitting, CDN caching             |
+| R-004   | Worker Complexity                | MEDIUM     | MEDIUM   | **MEDIUM** | ✅ Mitigated | Mutex queue, comprehensive tests, debug mode, detailed logging        |
+| R-005   | Performance Degradation          | LOW        | HIGH     | **MEDIUM** | ✅ Mitigated | Performance tests, benchmarks, query optimization patterns            |
+| R-006   | Security Vulnerabilities         | LOW        | CRITICAL | **MEDIUM** | ✅ Mitigated | Parameterized queries, input validation, SQLite security model        |
+| R-007   | OPFS Quota Exhaustion            | LOW        | MEDIUM   | **LOW**    | ✅ Mitigated | Quota detection, graceful degradation, clear error messages           |
+| R-008   | Concurrency Bugs                 | LOW        | HIGH     | **MEDIUM** | ✅ Mitigated | Mutex queue, strict serialization, comprehensive e2e tests            |
+| R-009   | SQLite Version Updates           | MEDIUM     | MEDIUM   | **MEDIUM** | ✅ Mitigated | Built-in versioning, isolated releases, zero-downtime upgrades        |
+| R-010   | Debugging Difficulty             | MEDIUM     | LOW      | **LOW**    | ✅ Accepted  | Worker DevTools, debug mode, detailed logging, source maps            |
+| R-011   | Safari/Firefox Support           | HIGH       | MEDIUM   | **HIGH**   | ⚠️ Accepted  | Documented as out-of-scope, monitoring for future OPFS support        |
+| R-012   | Long-Running Transactions        | LOW        | HIGH     | **MEDIUM** | ✅ Mitigated | Worker isolation (no UI blocking), timeout warnings, rollback support |
+| R-013   | v2.1.0 Auto-Migration Data Loss  | LOW        | CRITICAL | **MEDIUM** | 📋 Planned   | Atomic migration with rollback, backup before migration (v2.1.0)      |
+| R-014   | v2.1.0 Hash Validation Breaks    | LOW        | HIGH     | **MEDIUM** | 📋 Planned   | Test migration with hash validation, preserve hashes (v2.1.0)         |
+| R-015   | v2.1.0 Performance Regression    | LOW        | LOW      | **LOW**    | 📋 Planned   | Map lookup is O(1), benchmark before release (v2.1.0)                 |
+| R-016   | v2.1.0 Breaking Change for Tools | MEDIUM     | MEDIUM   | **MEDIUM** | 📋 Planned   | Auto-migration handles most cases, deprecation period (v2.1.0)        |
 
 ---
 
@@ -711,6 +715,216 @@ Long-running transactions could hold locks, preventing other queries and causing
 
 ---
 
+### R-013: v2.1.0 Auto-Migration Data Loss
+
+**Risk Description**
+The automatic migration from v2.0.0 nested structure to v2.1.0 flat structure could potentially fail mid-process, leading to data loss or corruption.
+
+**Impact**
+
+- CRITICAL: User data loss, application failure, need for manual data recovery
+
+**Likelihood**: LOW
+
+- Atomic migration with rollback capability
+- SQL files are read before deletion
+- Existing v2.0.0 data is well-tested
+
+**Mitigation Strategies**
+
+1. **Atomic Migration**
+
+   ```typescript
+   // All-or-nothing migration approach
+   async function migrateV2ToV21(dbName: string): Promise<void> {
+     const backup = await createBackup(dbName);
+     try {
+       // Read SQL files before deletion
+       const migrationSQL = await readMigrationFiles(dbName);
+       // Rename database files
+       await renameDatabaseFiles(dbName);
+       // Remove old structure
+       await cleanupOldStructure(dbName);
+     } catch (error) {
+       // Rollback to backup on failure
+       await restoreBackup(backup);
+       throw new MigrationError("Migration failed, rolled back", error);
+     }
+   }
+   ```
+
+2. **Backup Before Migration**
+   - Create backup of entire OPFS structure
+   - Keep backup until migration verified successful
+   - User can manually restore if needed
+
+3. **Comprehensive Testing**
+   - E2E tests for auto-migration (planned)
+   - Tests with various database sizes
+   - Tests with dev vs release versions
+
+4. **Clear Logging**
+   - Log migration start/progress/complete
+   - Debug mode shows detailed migration steps
+   - Error messages explain what went wrong
+
+**Residual Risk**: LOW (acceptable)
+
+- Atomic rollback prevents data loss
+- SQL files read before deletion
+- Comprehensive test coverage planned
+
+**Status**: 📋 Planned for v2.1.0 implementation
+
+---
+
+### R-014: v2.1.0 Hash Validation Breaks
+
+**Risk Description**
+SHA-256 hash validation might break after auto-migration if in-memory SQL content doesn't match stored hashes from v2.0.0.
+
+**Impact**
+
+- HIGH: Database fails to open, users locked out of data
+
+**Likelihood**: LOW
+
+- Hash computation is deterministic
+- SQL content unchanged during migration
+- Hash validation logic unchanged
+
+**Mitigation Strategies**
+
+1. **Preserve Hash Storage**
+
+   ```typescript
+   // Hash storage in metadata DB unchanged
+   // Migration only moves SQL from files to memory
+   interface ReleaseRecord {
+     version: string;
+     migrationHash: string; // Preserved from v2.0.0
+     seedHash: string; // Preserved from v2.0.0
+     // ... other fields
+   }
+   ```
+
+2. **Hash Validation Testing**
+   - Test hash validation before and after migration
+   - Ensure in-memory SQL produces same hashes
+   - E2E tests for migration + validation flow
+
+3. **Fallback Mechanism**
+   - If hash mismatch detected, provide clear error
+   - User can manually verify SQL content
+   - Can rebuild hashes from SQL if needed
+
+**Residual Risk**: LOW (acceptable)
+
+- Hash computation is deterministic
+- SQL content not modified during migration
+- Hash storage mechanism unchanged
+
+**Status**: 📋 Planned for v2.1.0 implementation
+
+---
+
+### R-015: v2.1.0 Performance Regression
+
+**Risk Description**
+Switching from file-based SQL to in-memory `Map<string, string>` lookup could introduce performance overhead.
+
+**Impact**
+
+- LOW: Slightly slower SQL access (negligible for typical usage)
+
+**Likelihood**: LOW
+
+- Map lookup is O(1) hash-based
+- Similar performance to file path resolution
+- Only accessed during release operations
+
+**Mitigation Strategies**
+
+1. **Benchmark Before Release**
+
+   ```typescript
+   // Compare v2.0.0 vs v2.1.0 performance
+   benchmark("v2.0.0 file lookup", async () => {
+     await opfsUtils.readSQLFile("0.0.1", "migration.sql");
+   });
+
+   benchmark("v2.1.0 Map lookup", async () => {
+     const sql = migrationSQLMap.get("0.0.1");
+   });
+   ```
+
+2. **Map Performance Characteristics**
+   - Map lookup: O(1) average case
+   - File path resolution: O(1) cached
+   - Difference expected < 0.01ms
+
+3. **Profiling**
+   - Profile with realistic database sizes
+   - Measure impact on `openDB()` performance
+   - Ensure NFR-001.2 met (< 0.01ms per version)
+
+**Residual Risk**: LOW (acceptable)
+
+- Map lookup is extremely fast
+- Impact only on release operations
+- Performance target achievable
+
+**Status**: 📋 Planned for v2.1.0 implementation
+
+---
+
+### R-016: v2.1.0 Breaking Change for Tools
+
+**Risk Description**
+Developer tools, debuggers, or external utilities that expect v2.0.0 OPFS structure may break with v2.1.0 flat structure.
+
+**Impact**
+
+- MEDIUM: External tools fail, developer confusion, migration needed
+
+**Likelihood**: MEDIUM
+
+- OPFS structure visible in DevTools
+- Some users may have built tooling around structure
+- Breaking change for direct OPFS inspection
+
+**Mitigation Strategies**
+
+1. **Transparent Auto-Migration**
+   - Existing v2.0.0 databases auto-migrate
+   - No manual intervention required
+   - Migration happens on first `openDB()` call
+
+2. **Documentation**
+   - Clearly document new OPFS structure
+   - Provide migration guide for tool developers
+   - Update DevTools documentation
+
+3. **Deprecation Period**
+   - Support both structures during transition
+   - Clear deprecation warnings
+   - Migration tools if needed
+
+4. **Community Communication**
+   - Announce breaking change early
+   - Provide migration examples
+   - Support tool developers
+
+**Residual Risk**: MEDIUM (acceptable)
+
+- Auto-migration handles most cases
+- Direct OPFS manipulation is rare
+- Clear documentation provided
+
+**Status**: 📋 Planned for v2.1.0 implementation
+
+---
+
 ## Risk Heat Map
 
 ```mermaid
@@ -729,11 +943,15 @@ graph TB
         R008[R-008: Concurrency Bugs<br/>LOW x HIGH = MEDIUM]
         R009[R-009: SQLite Version Updates<br/>MEDIUM x MEDIUM = MEDIUM]
         R012[R-012: Long-Running Transactions<br/>LOW x HIGH = MEDIUM]
+        R013[R-013: v2.1.0 Auto-Migration Data Loss<br/>LOW x CRITICAL = MEDIUM]
+        R014[R-014: v2.1.0 Hash Validation Breaks<br/>LOW x HIGH = MEDIUM]
+        R016[R-016: v2.1.0 Breaking Change for Tools<br/>MEDIUM x MEDIUM = MEDIUM]
     end
 
     subgraph "LOW RISK"
         R007[R-007: OPFS Quota Exhaustion<br/>LOW x MEDIUM = LOW]
         R010[R-010: Debugging Difficulty<br/>MEDIUM x LOW = LOW]
+        R015[R-015: v2.1.0 Performance Regression<br/>LOW x LOW = LOW]
     end
 
     style R001 fill:#f96,stroke:#333,stroke-width:2px
@@ -746,8 +964,12 @@ graph TB
     style R008 fill:#ff9,stroke:#333,stroke-width:2px
     style R009 fill:#ff9,stroke:#333,stroke-width:2px
     style R012 fill:#ff9,stroke:#333,stroke-width:2px
+    style R013 fill:#ff9,stroke:#333,stroke-width:2px
+    style R014 fill:#ff9,stroke:#333,stroke-width:2px
+    style R016 fill:#ff9,stroke:#333,stroke-width:2px
     style R007 fill:#9f9,stroke:#333,stroke-width:2px
     style R010 fill:#9f9,stroke:#333,stroke-width:2px
+    style R015 fill:#9f9,stroke:#333,stroke-width:2px
 ```
 
 ---
@@ -756,10 +978,10 @@ graph TB
 
 ### Summary
 
-- **Total Risks Identified**: 12
+- **Total Risks Identified**: 16
 - **High Severity**: 2 (both mitigated or accepted)
-- **Medium Severity**: 8 (all mitigated or acceptable)
-- **Low Severity**: 2 (both acceptable)
+- **Medium Severity**: 11 (all mitigated or acceptable)
+- **Low Severity**: 3 (all acceptable)
 - **Overall Risk Level**: **MEDIUM** (acceptable for production use)
 
 ### Risk Appetite

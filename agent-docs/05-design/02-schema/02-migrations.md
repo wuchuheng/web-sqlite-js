@@ -128,8 +128,10 @@ flowchart TD
     I --> J[For each new version]
     J --> K[Create version directory]
     K --> L[Copy latest database]
-    L --> M[Write migration.sql file]
-    M --> N[Write seed.sql file]
+    Note over L: v2.1.0: Use flat file naming {version}.sqlite3
+    L --> M[Store migrationSQL in Map]
+    M --> N[Store seedSQL in Map]
+    Note over M,N: v2.1.0: SQL stored in memory, not files
     N --> O[Open new database in worker]
     O --> P[BEGIN transaction]
     P --> Q[EXECUTE migrationSQL]
@@ -178,8 +180,10 @@ sequenceDiagram
         loop For each new version
             Main->>OPFS: getDirectoryHandle(version, create: true)
             Main->>OPFS: copyFileHandle(latestDb, versionDb)
-            Main->>OPFS: writeTextFile(migration.sql)
-            Main->>OPFS: writeTextFile(seed.sql)
+            Note over Main: v2.1.0: Use flat file naming {version}.sqlite3
+            Main->>Main: migrationSQLMap.set(version, migrationSQL)
+            Main->>Main: seedSQLMap.set(version, seedSQL)
+            Note over Main: v2.1.0: SQL stored in memory Maps
 
             Main->>Worker: OPEN version/db.sqlite3
             Main->>Worker: EXECUTE BEGIN
@@ -339,7 +343,120 @@ flowchart TD
 
 ---
 
-## 6) Migration Best Practices
+## 6) v2.1.0 Auto-Migration from v2.0.0
+
+### Migration Trigger
+
+**When**: Automatic on first `openDB()` call after upgrading to v2.1.0
+
+**Detection**:
+
+```typescript
+// Check for v2.0.0 nested structure
+async function detectStructure(baseDir: FileSystemDirectoryHandle): Promise<{
+  version: "2.0.0" | "2.1.0";
+  hasNestedDirs: boolean;
+}> {
+  for await (const entry of baseDir.values()) {
+    if (entry.kind === "directory" && entry.name.match(/^\d+\.\d+\.\d+$/)) {
+      return { version: "2.0.0", hasNestedDirs: true };
+    }
+  }
+  return { version: "2.1.0", hasNestedDirs: false };
+}
+```
+
+### Migration Flow
+
+```mermaid
+flowchart TD
+    A[openDB called] --> B{Detect structure}
+    B -->|v2.0.0 nested| C[Create backup]
+    B -->|v2.1.0 flat| D[Skip migration]
+
+    C --> E[For each version directory]
+    E --> F[Read migration.sql if exists]
+    E --> G[Read seed.sql if exists]
+    E --> H[Rename db.sqlite3 to version.sqlite3]
+    E --> I[Remove migration.sql]
+    E --> I2[Remove seed.sql]
+    E --> J[Remove version directory]
+
+    F --> K{More versions?}
+    G --> K
+    H --> K
+    I --> K
+    I2 --> K
+    J --> K
+
+    K -->|Yes| E
+    K -->|No| L[Populate in-memory SQL Maps]
+    L --> M[Delete backup]
+
+    alt Success
+        M --> N[Database opened]
+    end
+
+    alt Error
+        M --> O[Restore backup]
+        O --> P[Throw MigrationError]
+    end
+
+    style B fill:#ff9,stroke:#333,stroke-width:2px
+    style C fill:#ff9,stroke:#333,stroke-width:2px
+    style P fill:#f99,stroke:#333,stroke-width:2px
+    style N fill:#9f9,stroke:#333,stroke-width:2px
+```
+
+### Migration Steps
+
+1. **Backup**: Create full backup of OPFS directory
+2. **Read SQL**: Read `migration.sql` and `seed.sql` before deletion
+3. **Rename Files**: Rename `db.sqlite3` to `{version}.sqlite3`
+4. **Remove Files**: Delete `migration.sql` and `seed.sql` files
+5. **Remove Directories**: Delete empty version directories
+6. **Populate Maps**: Store SQL in `Map<string, string>` structures
+7. **Delete Backup**: Remove backup on success
+8. **Rollback**: Restore backup on any error
+
+### Characteristics
+
+- **Atomic**: All-or-nothing with rollback
+- **Transparent**: No user intervention required
+- **Preserves Data**: All database content maintained
+- **Hash Validation**: Stored hashes remain valid (SQL unchanged)
+- **Performance**: Target < 500ms for typical databases
+
+### Error Handling
+
+```typescript
+class MigrationError extends Error {
+  constructor(
+    message: string,
+    public cause?: Error,
+  ) {
+    super(message);
+    this.name = "MigrationError";
+  }
+}
+
+async function migrateToV21(baseDir: FileSystemDirectoryHandle): Promise<void> {
+  const backup = await createBackup(baseDir);
+  try {
+    // Perform migration
+    await convertToFlatStructure(baseDir);
+    await populateSQLMaps(baseDir);
+    await deleteBackup(backup);
+  } catch (error) {
+    await restoreBackup(backup);
+    throw new MigrationError("Failed to migrate to v2.1.0, rolled back", error);
+  }
+}
+```
+
+---
+
+## 7) Migration Best Practices
 
 ### DO: Atomic Migrations
 

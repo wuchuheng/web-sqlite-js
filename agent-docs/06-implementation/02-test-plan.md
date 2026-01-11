@@ -590,6 +590,36 @@ Output: `coverage/index.html`
   - `tests/e2e/worker-logs.e2e.test.ts` - 5 tests
   - `tests/e2e/application-logs.e2e.test.ts` - 5 tests
   - `tests/e2e/database-events.e2e.test.ts` - 10 tests
+  - `tests/e2e/auto-migration.e2e.test.ts` - 8 tests (v2.1.0 NEW)
+  - `tests/e2e/flat-structure.e2e.test.ts` - 6 tests (v2.1.0 NEW)
+  - `tests/e2e/in-memory-sql.e2e.test.ts` - 5 tests (v2.1.0 NEW)
+  - `tests/e2e/hash-validation-v21.e2e.test.ts` - 4 tests (v2.1.0 NEW)
+
+**v2.1.0 New Test Suites**:
+
+- **Auto-Migration Tests** (`tests/e2e/auto-migration.e2e.test.ts`):
+  - Test migration from v2.0.0 nested structure to v2.1.0 flat structure
+  - Test rollback on migration failure
+  - Test data preservation during migration
+  - Test hash validation after migration
+  - Test dev version migration
+
+- **Flat Structure Tests** (`tests/e2e/flat-structure.e2e.test.ts`):
+  - Test `{version}.sqlite3` file naming
+  - Test dev version `.dev.sqlite3` suffix notation
+  - Test no `migration.sql` or `seed.sql` files in OPFS
+  - Test version directory removal
+
+- **In-Memory SQL Tests** (`tests/e2e/in-memory-sql.e2e.test.ts`):
+  - Test `migrationSQL` Map population
+  - Test `seedSQL` Map population
+  - Test global namespace type structure
+  - Test SQL access via `window.__web_sqlite.databases[name]`
+
+- **Hash Validation Tests** (`tests/e2e/hash-validation-v21.e2e.test.ts`):
+  - Test hash validation with in-memory SQL
+  - Test hash preservation after auto-migration
+  - Test hash mismatch errors with SQL Maps
 
 ---
 

@@ -264,10 +264,21 @@ Support multiple release branches (e.g., stable, beta, dev).
 demo.sqlite3/
   release.sqlite3              # Metadata database
   default.sqlite3              # Initial empty database (version "default")
+  0.0.1.sqlite3                # Versioned database (v2.1.0 flat structure)
+  0.0.2.sqlite3                # Versioned database (v2.1.0 flat structure)
+  0.0.3.dev.sqlite3           # Dev version with suffix (v2.1.0)
+```
+
+**v2.0.0 Structure (Legacy)**:
+
+```
+demo.sqlite3/
+  release.sqlite3              # Metadata database
+  default.sqlite3              # Initial empty database (version "default")
   0.0.1/
     db.sqlite3                 # Versioned database snapshot
-    migration.sql              # Migration SQL (for inspection)
-    seed.sql                   # Seed SQL (for inspection)
+    migration.sql              # Migration SQL file (removed in v2.1.0)
+    seed.sql                   # Seed SQL file (removed in v2.1.0)
   0.0.2/
     db.sqlite3
     migration.sql
@@ -277,6 +288,13 @@ demo.sqlite3/
     migration.sql
     seed.sql
 ```
+
+**v2.1.0 Changes**:
+
+- **Flat Structure**: Removed nested version directories, direct `{version}.sqlite3` files
+- **SQL in Memory**: Migration/seed SQL stored in `window.__web_sqlite.databases[name]` as `Map<string, string>`
+- **Version Suffix**: Dev versions use `.dev.sqlite3` suffix instead of `mode = "dev"` in metadata
+- **Auto-Migration**: Automatic conversion from v2.0.0 to v2.1.0 on first `openDB()`
 
 **Metadata Database Schema**:
 

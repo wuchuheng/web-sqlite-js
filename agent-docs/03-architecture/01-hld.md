@@ -65,14 +65,20 @@ C4Context
 - **Event Emitter**: TypeScript (Reason: Dispatch database open/close events to subscribers)
 - **Global Namespace**: TypeScript (Reason: Initialize `window.__web_sqlite` for direct database access)
 
+### 3.3 v2.1.0 New Components
+
+- **Migration Detector**: TypeScript (Reason: Detect v2.0.0 vs v2.1.0 OPFS structure)
+- **Auto-Migrator**: TypeScript (Reason: Convert v2.0.0 nested structure to v2.1.0 flat structure)
+
 ```mermaid
 C4Container
-  title Container Diagram (v2.0.0)
+  title Container Diagram (v2.1.0)
   Container(main, "Main Thread", "TypeScript", "User API & Coordination")
   Container(registry, "Database Registry", "TypeScript Singleton", "Track Opened DBs")
   Container(logger, "Log Dispatcher", "TypeScript", "Structured Logging")
   Container(events, "Event Emitter", "TypeScript", "Database Change Events")
   Container(global_ns, "Global Namespace", "window.__web_sqlite", "Direct DB Access")
+  Container(migration, "Auto-Migrator", "TypeScript", "v2.0.0 to v2.1.0 Migration")
   Container(bridge, "Worker Bridge", "TypeScript", "Message Protocol")
   Container(worker, "Web Worker", "SQLite WASM", "Database Engine")
   ContainerDb(opfs, "OPFS Storage", "Origin Private File System", "Persistent File Storage")
@@ -86,6 +92,9 @@ C4Container
   Rel(logger, bridge, "Receives worker logs")
   Rel(events, global_ns, "Subscribes")
   Rel(global_ns, main, "Direct DB access")
+  Rel(main, migration, "Triggers on openDB")
+  Rel(migration, opfs, "Detects & Converts Structure")
+  Rel(migration, meta, "Updates Metadata")
   Rel(main, bridge, "Promise-based API")
   Rel(bridge, worker, "postMessage (Structured Clone)")
   Rel(worker, opfs, "Synchronous File I/O")
@@ -228,6 +237,7 @@ Registered Callbacks (User Code)
     /logs                 # [v2.0.0] Log dispatcher
     /events               # [v2.0.0] Event emitter
     /global               # [v2.0.0] Global namespace initialization
+    /migration            # [v2.1.0] Auto-migration utilities
     main.ts               # Public API entry point (openDB)
     worker-bridge.ts      # Worker communication layer
     worker.ts             # Worker entry point (SQLite operations)
@@ -265,6 +275,10 @@ Registered Callbacks (User Code)
   /global                 # [v2.0.0] Infrastructure: Global namespace
     /initialize-namespace.ts   # Initialize window.__web_sqlite (infrastructure)
 
+  /migration              # [v2.1.0] Domain: Version migration utilities
+    /migration-detector.ts    # Detect v2.0.0 vs v2.1.0 structure (domain)
+    /auto-migrator.ts         # Convert v2.0.0 to v2.1.0 structure (application)
+
   /types                  # Interface: Public API contracts
     /DB.ts                # DBInterface, ReleaseConfig, types
     /message.ts           # Worker protocol types
@@ -283,7 +297,7 @@ Registered Callbacks (User Code)
 **Architectural Layers**:
 
 1. **Interface Layer** (`main.ts`, `types/`): Public API surface, type definitions
-2. **Application Layer** (`release/`, `registry/`, `logs/`, `events/`): Business logic for release management, logging, events
+2. **Application Layer** (`release/`, `registry/`, `logs/`, `events/`, `migration/`): Business logic for release management, logging, events, migration
 3. **Infrastructure Layer** (`worker-bridge.ts`, `worker.ts`, `utils/`, `global/`): Worker communication, OPFS integration, utilities, global namespace
 
 **Key Design Decisions**:
@@ -297,6 +311,7 @@ Registered Callbacks (User Code)
 - **Log Dispatcher** (v2.0.0): Observer pattern enables multiple independent log listeners per database
 - **Event Emitter** (v2.0.0): Pub-sub pattern for database lifecycle events across all databases
 - **Global Namespace** (v2.0.0): IIFE initialization on library load creates `window.__web_sqlite`
+- **Auto-Migration** (v2.1.0): Automatic detection and conversion from v2.0.0 nested structure to v2.1.0 flat structure with rollback capability
 
 ## 7) Component Diagram (v2.0.0 Architecture)
 

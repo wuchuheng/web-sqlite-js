@@ -255,26 +255,45 @@ erDiagram
 
 ## 3) OPFS File Structure
 
-### Directory Layout
+### Directory Layout (v2.1.0)
 
 ```
 OPFS Root
 └── {baseDir}/                           # Base directory (e.g., "demo.sqlite3", "myapp.sqlite3")
     ├── release.sqlite3                  # Metadata database
     ├── default.sqlite3                  # Initial empty database (version "default")
-    ├── 1.0.0/                           # Version 1.0.0 directory
+    ├── 1.0.0.sqlite3                   # Version 1.0.0 database (flat structure)
+    ├── 1.0.1.sqlite3                   # Version 1.0.1 database (flat structure)
+    └── 1.0.2.dev.sqlite3              # Dev version with suffix (flat structure)
+```
+
+**v2.0.0 Structure (Legacy)**:
+
+```
+OPFS Root
+└── {baseDir}/                           # Base directory (e.g., "demo.sqlite3", "myapp.sqlite3")
+    ├── release.sqlite3                  # Metadata database
+    ├── default.sqlite3                  # Initial empty database (version "default")
+    ├── 1.0.0/                           # Version 1.0.0 directory (nested)
     │   ├── db.sqlite3                   # Versioned database snapshot
-    │   ├── migration.sql                # Migration SQL (for inspection)
-    │   └── seed.sql                     # Seed SQL (for inspection)
-    ├── 1.0.1/                           # Version 1.0.1 directory
+    │   ├── migration.sql                # Migration SQL file (removed in v2.1.0)
+    │   └── seed.sql                     # Seed SQL file (removed in v2.1.0)
+    ├── 1.0.1/                           # Version 1.0.1 directory (nested)
     │   ├── db.sqlite3
     │   ├── migration.sql
     │   └── seed.sql
-    └── 1.0.2/                           # Dev version directory (mode = "dev")
+    └── 1.0.2/                           # Dev version directory (mode = "dev", nested)
         ├── db.sqlite3
         ├── migration.sql
         └── seed.sql
 ```
+
+**v2.1.0 Changes**:
+
+- **Flat Structure**: Removed nested version directories, direct `{version}.sqlite3` files
+- **SQL in Memory**: Migration/seed SQL stored in `window.__web_sqlite.databases[name]` as `Map<string, string>`
+- **Version Suffix**: Dev versions use `.dev.sqlite3` suffix (e.g., `1.0.2.dev.sqlite3`)
+- **Auto-Migration**: Automatic conversion from v2.0.0 to v2.1.0 on first `openDB()`
 
 ### File Descriptions
 
@@ -292,26 +311,36 @@ OPFS Root
 - **Location**: `{baseDir}/default.sqlite3`
 - **Size**: Empty SQLite file (typically 8KB)
 
-#### `{version}/db.sqlite3`
+#### `{version}.sqlite3` (v2.1.0)
 
-- **Purpose**: Versioned database snapshot
+- **Purpose**: Versioned database snapshot (flat naming)
+- **Schema**: User-defined (evolves via migrations)
+- **Location**: `{baseDir}/{version}.sqlite3`
+- **Examples**: `1.0.0.sqlite3`, `1.0.1.sqlite3`, `1.0.2.dev.sqlite3`
+- **Size**: Depends on user data (can be MB to GB)
+
+#### `{version}/db.sqlite3` (v2.0.0 legacy)
+
+- **Purpose**: Versioned database snapshot (nested structure)
 - **Schema**: User-defined (evolves via migrations)
 - **Location**: `{baseDir}/{version}/db.sqlite3`
 - **Size**: Depends on user data (can be MB to GB)
 
-#### `{version}/migration.sql`
+#### `{version}/migration.sql` (v2.0.0 legacy, removed in v2.1.0)
 
-- **Purpose**: Migration SQL for inspection and debugging
+- **Purpose**: Migration SQL for inspection and debugging (v2.0.0 only)
 - **Content**: SQL executed for this version
 - **Location**: `{baseDir}/{version}/migration.sql`
 - **Size**: Typically < 100KB
+- **v2.1.0**: SQL stored in `window.__web_sqlite.databases[name].migrationSQL` Map
 
-#### `{version}/seed.sql`
+#### `{version}/seed.sql` (v2.0.0 legacy, removed in v2.1.0)
 
-- **Purpose**: Seed SQL for inspection and debugging
+- **Purpose**: Seed SQL for inspection and debugging (v2.0.0 only)
 - **Content**: Optional seed data SQL
 - **Location**: `{baseDir}/{version}/seed.sql`
 - **Size**: Typically < 100KB (may not exist)
+- **v2.1.0**: SQL stored in `window.__web_sqlite.databases[name].seedSQL` Map
 
 ### File Creation Flow
 

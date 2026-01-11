@@ -382,9 +382,68 @@ const db = await openDB("mydb", {
 - Worker message logs
 - Release operation logs
 
+### 5.4 v2.1.0 TypeScript Compilation Notes
+
+**Global Namespace Type Changes**:
+
+v2.1.0 introduces breaking changes to the global namespace type definition. When compiling code that accesses `window.__web_sqlite.databases`, you may encounter type errors:
+
+**v2.0.0 Type**:
+
+```typescript
+readonly databases: Record<string, DBInterface>;
+```
+
+**v2.1.0 Type**:
+
+```typescript
+readonly databases: Record<string, {
+  migrationSQL: Map<string, string>;
+  seedSQL: Map<string, string>;
+  db: DBInterface;
+}>;
+```
+
+**Type Error Example**:
+
+```typescript
+// v2.0.0 code (will have type errors in v2.1.0)
+const db = window.__web_sqlite.databases["myapp.sqlite3"];
+await db.query("SELECT * FROM users"); // Error: Property 'query' does not exist on type...
+
+// v2.1.0 code (corrected)
+const dbRecord = window.__web_sqlite.databases["myapp.sqlite3"];
+await dbRecord.db.query("SELECT * FROM users"); // OK
+```
+
+**TypeScript Type Checking**:
+
+```bash
+# Run type checker to catch v2.1.0 type errors
+npm run typecheck
+
+# Expected errors if using v2.0.0 access pattern:
+# Error: Property 'query' does not exist on type '{ migrationSQL: Map<string, string>; seedSQL: Map<string, string>; db: DBInterface; }'.
+```
+
+**Migration Checklist**:
+
+- [ ] Update all `window.__web_sqlite.databases[name]` access patterns
+- [ ] Change `db.query()` to `dbRecord.db.query()`
+- [ ] Change `db.exec()` to `dbRecord.db.exec()`
+- [ ] Update type assertions if needed
+- [ ] Run `npm run typecheck` to verify no errors
+- [ ] Run `npm test` to verify runtime behavior
+
+**TypeScript Version Requirements**:
+
+- Minimum TypeScript version: 5.0+
+- `strict` mode enabled in `tsconfig.json`
+- ES2020 target required for `Map` type support
+
 ---
 
-## 6. Code Review Process
+## 7. Code Review Process
 
 ### 6.1 PR Checklist
 

@@ -774,7 +774,7 @@ await db.devTool.rollback("0.0.9");
 
 #### `window.__web_sqlite`
 
-Global namespace providing direct access to opened database instances and database change events.
+Global namespace providing direct access to opened database instances, release configs, and database change events.
 
 **Signature:**
 
@@ -783,16 +783,36 @@ declare global {
   interface Window {
     /**
      * web-sqlite-js global namespace
-     * Provides direct access to opened database instances
+     * Provides direct access to opened database instances with release configs
      */
     __web_sqlite: {
       /**
-       * Map of currently opened database instances
+       * Map of currently opened database instances with release configs
        * Key: normalized database name (e.g., "myapp.sqlite3")
-       * Value: Database interface instance
+       * Value: Database record with migration/seed SQL maps and DB instance
        * @readonly
        */
-      readonly databases: Record<string, DBInterface>;
+      readonly databases: Record<
+        string,
+        {
+          /**
+           * Migration SQL indexed by version
+           * Example: new Map([['0.0.1', 'ALTER TABLE users ADD COLUMN age INTEGER;']])
+           */
+          migrationSQL: Map<string, string>;
+
+          /**
+           * Seed SQL indexed by version (optional, may be undefined for versions without seed)
+           * Example: new Map([['0.0.1', 'UPDATE users SET age = 25 WHERE age IS NULL;']])
+           */
+          seedSQL: Map<string, string>;
+
+          /**
+           * Database interface instance
+           */
+          db: DBInterface;
+        }
+      >;
 
       /**
        * Subscribe to database open/close events
@@ -809,11 +829,15 @@ declare global {
 
 **Properties:**
 
-- `databases` (Record<string, DBInterface>): Map of opened database instances
+- `databases` (Record<string, DatabaseRecord>): Map of opened database records
   - **Keys**: Normalized database names (e.g., "myapp.sqlite3")
-  - **Values**: Actual `DBInterface` instances (direct references, no RPC)
+  - **Values**: Database record containing:
+    - `migrationSQL` (Map<string, string>): Version-indexed migration SQL
+    - `seedSQL` (Map<string, string>): Version-indexed seed SQL
+    - `db` (DBInterface): Actual database interface instance
   - **Read-only**: Externally read-only (internal updates only)
   - **Lifetime**: Cleared on page unload/refresh
+  - **v2.1.0 Change**: Type changed from `Record<string, DBInterface>` to include SQL Maps
 
 - `onDatabaseChange(callback)` (Function): Subscribe to database lifecycle events
   - **Parameter**: Callback receiving `DatabaseChangeEvent`
@@ -852,26 +876,35 @@ interface DatabaseChangeEvent {
 
 ```typescript
 // Access database from anywhere (no imports needed!)
-const db = window.__web_sqlite.databases["myapp.sqlite3"];
-const users = await db.query("SELECT * FROM users");
+const dbRecord = window.__web_sqlite.databases["myapp.sqlite3"];
+const users = await dbRecord.db.query("SELECT * FROM users");
+
+// Access release configs
+const migration = dbRecord.migrationSQL.get("0.0.1");
+console.log(migration); // "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);"
+
+const seed = dbRecord.seedSQL.get("0.0.1");
+console.log(seed); // "INSERT INTO users (name) VALUES ('Alice');"
 
 // In module A:
 await openDB("app");
 
 // In module B (completely separate file, no import):
-const db = window.__web_sqlite.databases["app.sqlite3"];
-await db.exec("INSERT INTO users (name) VALUES (?)", ["Alice"]);
+const dbRecord = window.__web_sqlite.databases["app.sqlite3"];
+await dbRecord.db.exec("INSERT INTO users (name) VALUES (?)", ["Alice"]);
 
 // In module C:
-const db2 = window.__web_sqlite.databases["app.sqlite3"];
-const users = await db2.query("SELECT * FROM users");
+const dbRecord2 = window.__web_sqlite.databases["app.sqlite3"];
+const users = await dbRecord2.db.query("SELECT * FROM users");
 
 // Subscribe to database change events
 const unsubscribe = window.__web_sqlite.onDatabaseChange((event) => {
   if (event.action === "opened") {
     console.log(`✅ Database opened: ${event.dbName}`);
     // Access the newly opened database directly
-    const db = window.__web_sqlite.databases[event.dbName];
+    const dbRecord = window.__web_sqlite.databases[event.dbName];
+    console.log("Migration SQL:", dbRecord.migrationSQL);
+    console.log("Seed SQL:", dbRecord.seedSQL);
   } else {
     console.log(`❌ Database closed: ${event.dbName}`);
   }
@@ -1246,16 +1279,36 @@ declare global {
   interface Window {
     /**
      * web-sqlite-js global namespace
-     * Provides direct access to opened database instances
+     * Provides direct access to opened database instances with release configs
      */
     __web_sqlite: {
       /**
-       * Map of currently opened database instances
+       * Map of currently opened database instances with release configs
        * Key: normalized database name (e.g., "myapp.sqlite3")
-       * Value: Database interface instance
+       * Value: Database record with migration/seed SQL maps and DB instance
        * @readonly
        */
-      readonly databases: Record<string, DBInterface>;
+      readonly databases: Record<
+        string,
+        {
+          /**
+           * Migration SQL indexed by version
+           * Example: new Map([['0.0.1', 'ALTER TABLE users ADD COLUMN age INTEGER;']])
+           */
+          migrationSQL: Map<string, string>;
+
+          /**
+           * Seed SQL indexed by version (optional, may be undefined for versions without seed)
+           * Example: new Map([['0.0.1', 'UPDATE users SET age = 25 WHERE age IS NULL;']])
+           */
+          seedSQL: Map<string, string>;
+
+          /**
+           * Database interface instance
+           */
+          db: DBInterface;
+        }
+      >;
 
       /**
        * Subscribe to database open/close events

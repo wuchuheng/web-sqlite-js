@@ -413,6 +413,61 @@ console.debug({
 - **Migration Failures**: Verify SQL syntax and constraints
 - **Performance Issues**: Enable debug mode, check query timing
 
+### v2.1.0 Migration Considerations
+
+**Upgrading from v2.0.0 to v2.1.0**:
+
+- **Automatic Migration**: OPFS structure migrates transparently on first `openDB()` call
+- **No Manual Intervention**: Migration happens automatically without user action
+- **Data Preservation**: All existing data and releases preserved during migration
+- **Rollback Supported**: Failed migrations automatically roll back to v2.0.0 structure
+
+**Pre-Deployment Checklist for v2.1.0**:
+
+- [ ] Test auto-migration with v2.0.0 databases
+- [ ] Verify in-memory SQL Maps populated correctly
+- [ ] Confirm hash validation passes after migration
+- [ ] Test dev version suffix notation (`.dev.sqlite3`)
+- [ ] Verify flat OPFS structure (`{version}.sqlite3` format)
+- [ ] Validate global namespace type changes (databases record structure)
+
+**Post-Deployment Monitoring for v2.1.0**:
+
+- [ ] Monitor for migration errors in console
+- [ ] Verify all databases open successfully
+- [ ] Check for hash validation failures
+- [ ] Confirm query performance maintained
+- [ ] Verify dev tooling (release/rollback) works with new structure
+
+**Rollback Plan for v2.1.0**:
+
+```bash
+# If critical issues found, rollback to v2.0.0
+npm uninstall web-sqlite-js
+npm install web-sqlite-js@2.0.0
+
+# Note: Databases auto-migrate back to v2.0.0 structure
+# on first open with v2.0.0 library
+```
+
+**Breaking Changes in v2.1.0**:
+
+- **Global Namespace Type**: `window.__web_sqlite.databases[name]` now returns `{migrationSQL, seedSQL, db}` instead of just `db`
+- **Migration Path**:
+
+  ```typescript
+  // v2.0.0 access pattern
+  const db = window.__web_sqlite.databases["myapp.sqlite3"];
+  await db.query("SELECT * FROM users");
+
+  // v2.1.0 access pattern
+  const dbRecord = window.__web_sqlite.databases["myapp.sqlite3"];
+  await dbRecord.db.query("SELECT * FROM users");
+
+  // Or access release configs
+  const migration = dbRecord.migrationSQL.get("0.0.1");
+  ```
+
 ---
 
 ## Navigation
