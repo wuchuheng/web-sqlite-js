@@ -25,7 +25,6 @@
 ### Phase 1: Database Registry and Lock (Foundation)
 
 - [x] **TASK-201**: [Registry] Create Database Registry Module
-
   - **Priority**: P0 (Blocker)
   - **Dependencies**: None
   - **Boundary**: `src/registry/database-registry.ts`
@@ -46,7 +45,6 @@
   - **Completed**: 2026-01-10
 
 - [x] **TASK-202**: [Registry] Implement Database Lock
-
   - **Priority**: P0 (Blocker)
   - **Dependencies**: TASK-201
   - **Boundary**: `src/registry/database-registry.ts`
@@ -95,7 +93,6 @@
 ### Phase 2: Global Namespace
 
 - [x] **TASK-204**: [Namespace] Initialize Global Namespace
-
   - **Priority**: P0
   - **Dependencies**: TASK-203
   - **Boundary**: `src/global/namespace.ts`
@@ -124,7 +121,6 @@
   - **Micro-Spec**: [draft](../08-task/active/TASK-204.md)
 
 - [x] **TASK-205**: [Namespace] Define Namespace Type Definitions
-
   - **Priority**: P0
   - **Dependencies**: TASK-204
   - **Boundary**: `src/global/namespace.ts`, `src/types/global.ts`, `src/main.ts`
@@ -169,7 +165,6 @@
 ### Phase 3: Structured Logging
 
 - [x] **TASK-207**: [Logging] Create Log Dispatcher
-
   - **Status**: ✅ COMPLETE
   - **Completed**: 2026-01-11
   - **Priority**: P0
@@ -192,7 +187,6 @@
   - **Micro-Spec**: [complete](../08-task/active/TASK-207.md)
 
 - [x] **TASK-208**: [Logging] Implement onLog API
-
   - **Status**: ✅ COMPLETE
   - **Completed**: 2026-01-11
   - **Priority**: P0
@@ -214,7 +208,6 @@
   - **Micro-Spec**: [complete](../08-task/active/TASK-208.md)
 
 - [x] **TASK-209**: [Logging] Implement Worker Log Forwarding
-
   - **Status**: ✅ COMPLETE
   - **Completed**: 2026-01-11
   - **Priority**: P0
@@ -239,7 +232,7 @@
   - **Estimated**: 4 hours
   - **Micro-Spec**: [complete](../08-task/active/TASK-209.md)
 
-- [ ] **TASK-220**: [Logging] Application-Level Logging System
+- [x] **TASK-220**: [Logging] Application-Level Logging System
   - **Priority**: P1
   - **Dependencies**: TASK-209
   - **Boundary**: `src/main.ts`, `src/release/release-manager.ts`
@@ -254,6 +247,17 @@
     - Logs dispatched to registered callbacks
     - E2E tests pass
   - **Estimated**: 2 hours
+  - **Completed**: 2026-01-11
+  - **Evidence**:
+    - ✅ Updated `src/main.ts` to emit open log after `DatabaseRegistry.register()`
+    - ✅ Updated `src/release/release-manager.ts` to emit close log in `close()` method
+    - ✅ Updated `src/release/release-manager.ts` to emit commit/rollback logs in `transaction()` method
+    - ✅ Created `tests/e2e/application-logs.e2e.test.ts` (5 tests)
+    - ✅ All 36 E2E tests passing (31 existing + 5 new)
+    - ✅ All 53 unit tests passing
+    - ✅ TypeScript compiles without errors
+  - **Micro-Spec**: [complete](../08-task/active/TASK-220.md)
+  - **Notes**: Application-level logging complete. Logs are now emitted for database open, close, transaction commit, and transaction rollback events.
 
 ### Phase 4: Database Events
 

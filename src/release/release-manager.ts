@@ -367,9 +367,23 @@ export const openReleaseDB = async ({
             _query<U>(sql, params, "active"),
         });
         await _exec("COMMIT", undefined, "active");
+
+        // Emit application log for transaction commit
+        logDispatcher.dispatch({
+          level: "info",
+          data: { action: "commit", sql: "COMMIT" },
+        });
+
         return result;
       } catch (error) {
         await _exec("ROLLBACK", undefined, "active");
+
+        // Emit application log for transaction rollback
+        logDispatcher.dispatch({
+          level: "info",
+          data: { action: "rollback", sql: "ROLLBACK" },
+        });
+
         throw error;
       }
     });
@@ -377,6 +391,12 @@ export const openReleaseDB = async ({
 
   const close = async (): Promise<void> => {
     return runMutex(async () => {
+      // Emit application log for database close
+      logDispatcher.dispatch({
+        level: "info",
+        data: { action: "close", dbName: normalizedFilename },
+      });
+
       await sendMsg(SqliteEvent.CLOSE);
       // Unregister from registry after close
       DatabaseRegistry.unregister(normalizedFilename);

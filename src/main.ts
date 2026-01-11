@@ -45,6 +45,12 @@ export const openDB = async (
   // Register after successful open
   DatabaseRegistry.register(filename, db);
 
+  // Emit application log for database open
+  logDispatcher.dispatch({
+    level: "info",
+    data: { action: "open", dbName: filename },
+  });
+
   return db;
 };
 

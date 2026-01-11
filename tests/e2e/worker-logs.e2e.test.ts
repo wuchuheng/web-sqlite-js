@@ -69,9 +69,7 @@ describe("Worker Log Forwarding (TASK-209)", () => {
 
     await db.exec("CREATE TABLE users (id INTEGER, name TEXT)");
     await db.exec("INSERT INTO users VALUES (1, 'Alice')");
-    const rows = await db.query<{ id: number; name: string }>(
-      "SELECT * FROM users",
-    );
+    await db.query<{ id: number; name: string }>("SELECT * FROM users");
 
     // Verify query generated logs
     const debugLogs = logs.filter(
