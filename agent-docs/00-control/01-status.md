@@ -471,21 +471,21 @@ gantt
 
 ### v2.0.0 Features (F-001) - Implementation In Progress
 
-| Feature                          | Status             | Tests      | Documentation | Notes                                               |
-| -------------------------------- | ------------------ | ---------- | ------------- | --------------------------------------------------- |
-| Database Registry                | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-201 Complete                                   |
-| Database Lock                    | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | Included in Registry Module                         |
-| Registry Integration with openDB | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-203 Complete                                   |
-| Global Namespace                 | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-204, TASK-205, TASK-206 Complete               |
-| Log Dispatcher                   | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-207 Complete                                   |
-| onLog API                        | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-208 Complete                                   |
-| Worker Log Forwarding            | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-209 Complete                                   |
-| Structured Logging API (`onLog`) | 🔄 IN PROGRESS     | ✅ PASSING | ✅ COMPLETE   | TASK-207 to TASK-209 Complete, TASK-210 Pending      |
-| Database Change Events           | 📋 DESIGN COMPLETE | ❌         | ✅ COMPLETE   | Implementation ready (TASK-211 to TASK-213)         |
-| Testing & Documentation          | 📋 DESIGN COMPLETE | ❌         | ✅ COMPLETE   | Implementation ready (TASK-214 to TASK-219)         |
+| Feature                          | Status             | Tests      | Documentation | Notes                                                    |
+| -------------------------------- | ------------------ | ---------- | ------------- | -------------------------------------------------------- |
+| Database Registry                | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-201 Complete                                          |
+| Database Lock                    | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | Included in Registry Module                                |
+| Registry Integration with openDB | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-203 Complete                                          |
+| Global Namespace                 | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-204, TASK-205, TASK-206 Complete                      |
+| Log Dispatcher                   | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-207 Complete                                          |
+| onLog API                        | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-208 Complete                                          |
+| Worker Log Forwarding            | ✅ COMPLETE        | ✅ PASSING | ✅ COMPLETE   | TASK-209 Complete                                          |
+| Structured Logging API (`onLog`) | 🔄 IN PROGRESS     | ✅ PASSING | ✅ COMPLETE   | TASK-207 to TASK-209 Complete, TASK-220 Pending (consolidated) |
+| Database Events System           | 📋 DESIGN COMPLETE | ❌         | ✅ COMPLETE   | Implementation ready (TASK-221 - consolidated)            |
+| Testing & Documentation          | 📋 DESIGN COMPLETE | ❌         | ✅ COMPLETE   | Implementation ready (TASK-222 - consolidated)           |
 
-**v2.0.0 Total Tasks**: 19 tasks (61 estimated hours)
-**Status**: 9/19 tasks complete (~47%), Phase 1 (Registry & Lock) complete, Phase 2 (Global Namespace) complete, Phase 3 (Structured Logging) in progress (3/4 complete)
+**v2.0.0 Total Tasks**: 12 tasks (61 estimated hours) - Consolidated from 19 tasks on 2026-01-11
+**Status**: 9/12 tasks complete (75%), Phase 1 (Registry & Lock) complete, Phase 2 (Global Namespace) complete, Phase 3 (Structured Logging) in progress (3/4 complete)
 
 ### Test Coverage
 
@@ -730,22 +730,29 @@ A task is **DONE** only if:
 ### Progress
 
 - **MVP Requirements**: 48/48 implemented (100%)
-- **v2.0.0 Features**: 9/19 implemented (~47%) - Database Registry & Lock complete, Global Namespace complete, Log Dispatcher complete, onLog API complete, Worker Log Forwarding complete
-- **v2.0.0 Tasks**: 19 tasks defined, 61 estimated hours, 9 completed
+- **v2.0.0 Features**: 9/12 implemented (75%) - Database Registry & Lock complete, Global Namespace complete, Log Dispatcher complete, onLog API complete, Worker Log Forwarding complete
+- **v2.0.0 Tasks**: 12 tasks defined (consolidated from 19), 61 estimated hours, 9 completed
 - **Success Criteria**: All met for v1.1.2
 - **Non-goals**: Respected (no scope creep)
 - **Stage Completion**: 7/7 stages documented (100%)
 
-### v2.0.0 Task Breakdown
+### v2.0.0 Task Breakdown (Consolidated)
 
-| Phase                       | Tasks  | Hours   | Status                   |
-| --------------------------- | ------ | ------- | ------------------------ |
-| Phase 1: Registry & Lock    | 3      | 10h     | ✅ Complete              |
-| Phase 2: Global Namespace   | 3      | 6h      | ✅ Complete              |
-| Phase 3: Structured Logging | 4      | 11h     | 🔄 In Progress (3/4)     |
-| Phase 4: Database Events    | 3      | 8h      | Pending                  |
-| Phase 5: Testing & Docs     | 6      | 26h     | Pending                  |
-| **Total**                   | **19** | **61h** | **9/19 Complete (~47%)** |
+> **Note**: Tasks were consolidated from 19 to 12 tasks on 2026-01-11 to reduce fragmentation
+
+| Phase                       | Tasks  | Hours   | Status                        |
+| --------------------------- | ------ | ------- | ----------------------------- |
+| Phase 1: Registry & Lock    | 3      | 10h     | ✅ Complete                    |
+| Phase 2: Global Namespace   | 3      | 6h      | ✅ Complete                    |
+| Phase 3: Structured Logging | 4      | 11h     | 🔄 In Progress (3/4)           |
+| Phase 4: Database Events    | 1      | 8h      | Pending (TASK-221)             |
+| Phase 5: Testing & Docs     | 1      | 26h     | Pending (TASK-222)             |
+| **Total**                   | **12** | **61h** | **9/12 Complete (75%)** |
+
+**Consolidation Details**:
+- TASK-210 → TASK-220 (Application-Level Logging - 2h)
+- TASK-211, 212, 213 → TASK-221 (Database Events System - 8h)
+- TASK-214, 215, 216, 217, 218, 219 → TASK-222 (Testing & Documentation - 26h)
 
 ### Risk Posture
 

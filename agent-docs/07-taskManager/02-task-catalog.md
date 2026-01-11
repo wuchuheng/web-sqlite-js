@@ -25,6 +25,7 @@
 ### Phase 1: Database Registry and Lock (Foundation)
 
 - [x] **TASK-201**: [Registry] Create Database Registry Module
+
   - **Priority**: P0 (Blocker)
   - **Dependencies**: None
   - **Boundary**: `src/registry/database-registry.ts`
@@ -45,6 +46,7 @@
   - **Completed**: 2026-01-10
 
 - [x] **TASK-202**: [Registry] Implement Database Lock
+
   - **Priority**: P0 (Blocker)
   - **Dependencies**: TASK-201
   - **Boundary**: `src/registry/database-registry.ts`
@@ -93,6 +95,7 @@
 ### Phase 2: Global Namespace
 
 - [x] **TASK-204**: [Namespace] Initialize Global Namespace
+
   - **Priority**: P0
   - **Dependencies**: TASK-203
   - **Boundary**: `src/global/namespace.ts`
@@ -121,6 +124,7 @@
   - **Micro-Spec**: [draft](../08-task/active/TASK-204.md)
 
 - [x] **TASK-205**: [Namespace] Define Namespace Type Definitions
+
   - **Priority**: P0
   - **Dependencies**: TASK-204
   - **Boundary**: `src/global/namespace.ts`, `src/types/global.ts`, `src/main.ts`
@@ -165,6 +169,7 @@
 ### Phase 3: Structured Logging
 
 - [x] **TASK-207**: [Logging] Create Log Dispatcher
+
   - **Status**: ✅ COMPLETE
   - **Completed**: 2026-01-11
   - **Priority**: P0
@@ -187,6 +192,7 @@
   - **Micro-Spec**: [complete](../08-task/active/TASK-207.md)
 
 - [x] **TASK-208**: [Logging] Implement onLog API
+
   - **Status**: ✅ COMPLETE
   - **Completed**: 2026-01-11
   - **Priority**: P0
@@ -208,6 +214,7 @@
   - **Micro-Spec**: [complete](../08-task/active/TASK-208.md)
 
 - [x] **TASK-209**: [Logging] Implement Worker Log Forwarding
+
   - **Status**: ✅ COMPLETE
   - **Completed**: 2026-01-11
   - **Priority**: P0
@@ -232,253 +239,77 @@
   - **Estimated**: 4 hours
   - **Micro-Spec**: [complete](../08-task/active/TASK-209.md)
 
-- [ ] **TASK-210**: [Logging] Add Application-Level Logs
+- [ ] **TASK-220**: [Logging] Application-Level Logging System
   - **Priority**: P1
   - **Dependencies**: TASK-209
   - **Boundary**: `src/main.ts`, `src/release/release-manager.ts`
   - **Description**: Emit log entries for application events (open, close, transactions)
   - **Implementation Details**:
-    - Emit `{level: "info", data: {action: "open", dbName}}` on open
-    - Emit `{level: "info", data: {action: "close", dbName}}` on close
+    - Emit `{level: "info", data: {action: "open", dbName}}` on database open
+    - Emit `{level: "info", data: {action: "close", dbName}}` on database close
     - Emit transaction logs (commit/rollback)
     - Use log dispatcher for application events
   - **DoD**:
-    - Application events logged
-    - Logs dispatched to callbacks
+    - Application events logged (open, close, transactions)
+    - Logs dispatched to registered callbacks
     - E2E tests pass
   - **Estimated**: 2 hours
 
 ### Phase 4: Database Events
 
-- [ ] **TASK-211**: [Events] Create Event Emitter
+- [ ] **TASK-221**: [Events] Database Events System
   - **Priority**: P0
-  - **Dependencies**: TASK-210
-  - **Boundary**: `src/events/event-emitter.ts`
-  - **Description**: Implement event emitter for database lifecycle events
+  - **Dependencies**: TASK-220
+  - **Boundary**: `src/events/event-emitter.ts`, `src/global/namespace.ts`, `src/main.ts`, `src/registry/database-registry.ts`
+  - **Description**: Complete database change events system (emitter, API, event emission)
   - **Implementation Details**:
-    - Create `EventEmitter` class
-    - Implement `subscribe(callback: EventCallback): () => void`
-    - Implement `unsubscribe(callback: EventCallback): void`
-    - Implement `emit(event: DatabaseChangeEvent): void`
+    - Create `EventEmitter` class (subscribe, unsubscribe, emit)
     - Handle subscriber errors (error isolation)
+    - Add `onDatabaseChange(callback)` to global namespace
+    - Integrate with event emitter
+    - Emit events when databases are opened or closed
+    - Get current database list from registry
   - **DoD**:
     - Multiple subscribers supported
     - Subscriber errors don't break emitting
-    - Cancel function works
-    - Unit tests pass
-  - **Estimated**: 3 hours
-
-- [ ] **TASK-212**: [Events] Implement onDatabaseChange API
-  - **Priority**: P0
-  - **Dependencies**: TASK-211
-  - **Boundary**: `src/global/namespace.ts`
-  - **Description**: Add `onDatabaseChange(callback)` to global namespace
-  - **Implementation Details**:
-    - Add `onDatabaseChange` method to namespace
-    - Integrate with event emitter
-    - Return cancel function
-    - Document in JSDoc comments
-  - **DoD**:
     - `onDatabaseChange()` accessible via `window.__web_sqlite`
     - Returns cancel function
-    - Multiple subscribers supported
-    - JSDoc documentation complete
-  - **Estimated**: 2 hours
-
-- [ ] **TASK-213**: [Events] Emit Database Change Events
-  - **Priority**: P0
-  - **Dependencies**: TASK-212
-  - **Boundary**: `src/main.ts`, `src/registry/database-registry.ts`
-  - **Description**: Emit events when databases are opened or closed
-  - **Implementation Details**:
-    - Emit `{action: "opened", dbName, databases}` on open
-    - Emit `{action: "closed", dbName, databases}` on close
-    - Get current database list from registry
-    - Forward to event emitter
-  - **DoD**:
     - Events emitted on open/close
     - Event payload correct (action, dbName, databases)
-    - Subscribers receive events
+    - Unit tests pass
     - E2E tests pass
-  - **Estimated**: 3 hours
+  - **Estimated**: 8 hours
 
 ### Phase 5: Testing and Documentation
 
-- [ ] **TASK-214**: [Test] Unit Tests for Database Registry
+- [ ] **TASK-222**: [Test/Docs] Testing & Documentation Suite
   - **Priority**: P0
-  - **Dependencies**: TASK-203
-  - **Boundary**: `src/registry/database-registry.unit.test.ts`
-  - **Description**: Comprehensive unit tests for registry module
-  - **Test Cases**:
-    - Register database and retrieve
-    - Unregister database
-    - Check if database exists
-    - List all databases
-    - Lock prevents duplicate opens
-    - Lock releases on close
-    - Normalized filenames
+  - **Dependencies**: TASK-221
+  - **Boundary**: Test files, API docs, README, examples
+  - **Description**: Complete testing suite and documentation for v2.0.0
+  - **Scope**:
+    - **Unit Tests**: Comprehensive tests for registry, log dispatcher, event emitter
+    - **E2E Tests**: End-to-end tests for all v2.0.0 features
+    - **API Documentation**: Update API contracts with v2.0.0 features
+    - **README & Examples**: Update README and create examples
+  - **Test Coverage**:
+    - Registry module (register, unregister, get, list, lock)
+    - Log dispatcher (subscribe, dispatch, error isolation)
+    - Event emitter (subscribe, emit, error isolation)
+    - E2E scenarios (registry, logging, events, multiple callbacks)
+  - **Documentation**:
+    - `onLog()` method documentation
+    - `window.__web_sqlite` namespace documentation
+    - `onDatabaseChange()` method documentation
+    - Examples for all v2.0.0 features
   - **DoD**:
-    - All test cases pass
-    - Edge cases covered
-    - 100% code coverage for registry module
-  - **Estimated**: 4 hours
-
-- [ ] **TASK-215**: [Test] Unit Tests for Log Dispatcher
-  - **Priority**: P0
-  - **Dependencies**: TASK-210
-  - **Boundary**: `src/logs/log-dispatcher.unit.test.ts`
-  - **Description**: Comprehensive unit tests for log dispatcher
-  - **Test Cases**:
-    - Register callback
-    - Unregister callback
-    - Dispatch log to single callback
-    - Dispatch log to multiple callbacks
-    - Cancel function works
-    - Callback errors don't break dispatching
-  - **DoD**:
-    - All test cases pass
-    - Edge cases covered
-    - 100% code coverage for log dispatcher
-  - **Estimated**: 3 hours
-
-- [ ] **TASK-216**: [Test] Unit Tests for Event Emitter
-  - **Priority**: P0
-  - **Dependencies**: TASK-213
-  - **Boundary**: `src/events/event-emitter.unit.test.ts`
-  - **Description**: Comprehensive unit tests for event emitter
-  - **Test Cases**:
-    - Subscribe to events
-    - Unsubscribe from events
-    - Emit event to single subscriber
-    - Emit event to multiple subscribers
-    - Cancel function works
-    - Subscriber errors don't break emitting
-  - **DoD**:
-    - All test cases pass
-    - Edge cases covered
-    - 100% code coverage for event emitter
-  - **Estimated**: 3 hours
-
-- [ ] **TASK-217**: [Test] E2E Tests for v2.0.0 Features
-  - **Priority**: P0
-  - **Dependencies**: TASK-213
-  - **Boundary**: `tests/e2e/v2-features.e2e.test.ts`
-  - **Description**: End-to-end tests for all v2.0.0 features
-  - **Test Scenarios**:
-    - Database registry (register, unregister, get, list)
-    - Database lock (prevent duplicate opens)
-    - Global namespace (access databases)
-    - Structured logging (onLog callback, cancel)
-    - Database events (onDatabaseChange callback, cancel)
-    - Multiple callbacks/subscribers
-    - Error isolation
-  - **DoD**:
-    - All test scenarios pass
-    - Real browser testing (Playwright)
-    - Coverage of all v2.0.0 features
-  - **Estimated**: 8 hours
-
-- [ ] **TASK-218**: [Docs] Update API Documentation
-  - **Priority**: P0
-  - **Dependencies**: TASK-217
-  - **Boundary**: `agent-docs/05-design/01-contracts/01-api.md`
-  - **Description**: Update API documentation with v2.0.0 features
-  - **Updates**:
-    - Add `onLog()` method documentation
-    - Add `window.__web_sqlite` namespace documentation
-    - Add `onDatabaseChange()` method documentation
-    - Update examples with new features
-    - Add migration notes (if breaking changes)
-  - **DoD**:
-    - All v2.0.0 APIs documented
-    - Examples provided
-    - JSDoc comments complete
-  - **Estimated**: 4 hours
-
-- [ ] **TASK-219**: [Docs] Update README and Examples
-  - **Priority**: P1
-  - **Dependencies**: TASK-218
-  - **Boundary**: `README.md`, `examples/`
-  - **Description**: Update README and create examples for v2.0.0 features
-  - **Updates**:
-    - Add v2.0.0 features section to README
-    - Create example for database registry
-    - Create example for structured logging
-    - Create example for database events
-    - Update usage examples
-  - **DoD**:
-    - README updated
-    - Examples working
-    - Code snippets tested
-  - **Estimated**: 4 hours
-
----
-
-## Release v2.1.0 (Backlog - Planned Q2 2025)
-
-> **Focus**: Safari/Firefox Support
-> **Dependencies**: Spike S-001 completion
-
-- [ ] **TASK-301**: [Spike] Execute Spike S-001 (Safari/Firefox OPFS)
-  - **Priority**: P0
-  - **Dependencies**: None
-  - **Boundary**: `spikes/S-001-safari-firefox-opfs/`
-  - **Description**: Investigate Safari/Firefox OPFS support and fallback mechanisms
-  - **DoD**: Spike report with GO/NO-GO recommendation
-
----
-
-## Release v2.2.0 (Backlog - Planned Q3 2025)
-
-> **Focus**: Performance Enhancements
-> **Dependencies**: Spike S-002 completion
-
-- [ ] **TASK-401**: [Spike] Execute Spike S-002 (Prepared Statements)
-  - **Priority**: P0
-  - **Dependencies**: None
-  - **Boundary**: `spikes/S-002-prepared-statements/`
-  - **Description**: Benchmark prepared statement performance vs current approach
-  - **DoD**: Spike report with performance metrics and GO/NO-GO recommendation
-
----
-
-## Release v1.1.x (Maintenance)
-
-> **Focus**: Bug fixes and documentation
-> **Status**: Active Maintenance
-
-- [ ] **TASK-101**: [Maintenance] Monitor v1.1.2 production stability
-  - **Priority**: P0 (Ongoing)
-  - **Dependencies**: None
-  - **Boundary**: Issue triage, npm comments
-  - **DoD**: Weekly review of issues, critical bugs responded to within 24 hours
-  - **Estimated**: 2 hours/week ongoing
-
-- [ ] **TASK-102**: [Documentation] Improve error message documentation
-  - **Priority**: P1
-  - **Dependencies**: None
-  - **Boundary**: `agent-docs/05-design/01-contracts/03-errors.md`
-  - **Description**: Document common error scenarios with solutions
-  - **DoD**: Common errors documented with troubleshooting steps
-  - **Estimated**: 4 hours
-
-- [ ] **TASK-103**: [Testing] Add edge case E2E tests
-  - **Priority**: P1
-  - **Dependencies**: None
-  - **Boundary**: `tests/e2e/*.e2e.test.ts`
-  - **Description**: Add E2E tests for edge cases (concurrent transactions, large datasets, OPFS quota)
-  - **DoD**: Edge case tests pass, coverage improved
-  - **Estimated**: 8 hours
-
-- [ ] **TASK-104**: [Documentation] Framework integration examples
-  - **Priority**: P2
-  - **Dependencies**: None
-  - **Boundary**: `examples/` (new directory)
-  - **Description**: Create React/Vue/Svelte integration examples
-  - **DoD**: Examples working, README with setup instructions
-  - **Estimated**: 12 hours
-
----
+    - All unit tests passing
+    - All E2E tests passing
+    - 100% coverage for new modules
+    - API documentation complete
+    - README updated with v2.0.0 features
+    - Working examples provided
+  - **Estimated**: 26 hours
 
 ## Release v1.1.2 (Completed)
 
@@ -550,31 +381,46 @@
 
 ## Summary
 
-### v2.0.0 Task Breakdown
+### v2.0.0 Task Breakdown (Consolidated)
 
-| Phase                       | Tasks  | Estimated Hours | Status                      |
-| --------------------------- | ------ | --------------- | --------------------------- |
-| Phase 1: Registry & Lock    | 3      | 10h             | 2/3 Complete (TASK-201/202) |
-| Phase 2: Global Namespace   | 3      | 6h              | Ready to Start (TASK-203)   |
-| Phase 3: Structured Logging | 4      | 11h             | Pending                     |
-| Phase 4: Database Events    | 3      | 8h              | Pending                     |
-| Phase 5: Testing & Docs     | 6      | 26h             | Pending                     |
-| **Total**                   | **19** | **61h**         | **2/19 Complete (~11%)**    |
+> **Note**: Tasks were consolidated from 19 to 12 tasks on 2026-01-11 to reduce fragmentation
+
+| Phase                       | Tasks  | Estimated Hours | Status                         |
+| --------------------------- | ------ | --------------- | ------------------------------ |
+| Phase 1: Registry & Lock    | 3      | 10h             | ✅ Complete (TASK-201/202/203) |
+| Phase 2: Global Namespace   | 3      | 6h              | ✅ Complete (TASK-204/205/206) |
+| Phase 3: Structured Logging | 4      | 11h             | 🔄 3/4 Complete (TASK-207-209) |
+| Phase 4: Database Events    | 1      | 8h              | Pending (TASK-221)             |
+| Phase 5: Testing & Docs     | 1      | 26h             | Pending (TASK-222)             |
+| **Total**                   | **12** | **61h**         | **9/12 Complete (75%)**        |
+
+**Previous State**: 19 tasks, 9 completed (~47%)
+**Current State**: 12 tasks, 9 completed (75%)
+
+### Consolidation Details
+
+| Original Tasks                    | Consolidated Into | Hours |
+| --------------------------------- | ----------------- | ----- |
+| TASK-210                          | TASK-220          | 2h    |
+| TASK-211, 212, 213                | TASK-221          | 8h    |
+| TASK-214, 215, 216, 217, 218, 219 | TASK-222          | 26h   |
 
 ### Task Priority Distribution
 
 | Priority  | v2.0.0 Done | v2.0.0 Remaining | v1.1.x | Total  |
 | --------- | ----------- | ---------------- | ------ | ------ |
-| P0        | 2           | 14               | 1      | 17     |
-| P1        | 0           | 3                | 3      | 6      |
+| P0        | 9           | 1                | 1      | 11     |
+| P1        | 0           | 1                | 3      | 4      |
 | P2        | 0           | 0                | 1      | 1      |
-| **Total** | **2**       | **17**           | **5**  | **24** |
+| **Total** | **9**       | **2**            | **5**  | **16** |
 
 ### Kanban Board View
 
 **Backlog** (Ready to start):
 
-- TASK-203 through TASK-219 (v2.0.0 implementation)
+- TASK-220 (Application-Level Logging - 2h)
+- TASK-221 (Database Events System - 8h)
+- TASK-222 (Testing & Documentation Suite - 26h)
 - TASK-301, TASK-401 (Future spikes)
 
 **In Progress**:
@@ -587,12 +433,14 @@
 
 **Done**:
 
-- TASK-201, TASK-202 (Database Registry & Lock - v2.0.0)
+- TASK-201, TASK-202, TASK-203 (Phase 1: Registry & Lock)
+- TASK-204, TASK-205, TASK-206 (Phase 2: Global Namespace)
+- TASK-207, TASK-208, TASK-209 (Phase 3: Structured Logging - 3/4 complete)
 - TASK-001 through TASK-032 (v1.1.2 completed)
 
 ---
 
-## Dependencies Graph
+## Dependencies Graph (Updated)
 
 ```mermaid
 graph TD
@@ -608,28 +456,22 @@ graph TD
     %% Phase 3
     TASK208[TASK-208: onLog API] --> TASK207[TASK-207: Dispatcher]
     TASK209[TASK-209: Worker Logs] --> TASK208
-    TASK210[TASK-210: App Logs] --> TASK209
-    TASK210 --> TASK206
+    TASK220[TASK-220: App Logs] --> TASK209
+    TASK220 --> TASK206
 
     %% Phase 4
-    TASK212[TASK-212: onDatabaseChange] --> TASK211[TASK-211: Emitter]
-    TASK213[TASK-213: Emit Events] --> TASK212
-    TASK213 --> TASK210
+    TASK221[TASK-221: Events System] --> TASK220
 
     %% Phase 5
-    TASK214[TASK-214: Registry Tests] --> TASK203
-    TASK215[TASK-215: Dispatcher Tests] --> TASK210
-    TASK216[TASK-216: Emitter Tests] --> TASK213
-    TASK217[TASK-217: E2E Tests] --> TASK213
-    TASK218[TASK-218: API Docs] --> TASK217
-    TASK219[TASK-219: README] --> TASK218
+    TASK222[TASK-222: Tests & Docs] --> TASK221
 
     style TASK201 fill:#e1f5fe
     style TASK203 fill:#e1f5fe
     style TASK206 fill:#fff3e0
-    style TASK210 fill:#fff3e0
-    style TASK213 fill:#f3e5f5
-    style TASK217 fill:#f3e5f5
+    style TASK209 fill:#a5d6a7
+    style TASK220 fill:#fff3e0
+    style TASK221 fill:#f3e5f5
+    style TASK222 fill:#e1bee7
 ```
 
 ---
