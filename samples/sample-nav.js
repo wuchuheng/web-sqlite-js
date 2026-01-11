@@ -311,11 +311,6 @@ class SampleNav extends HTMLElement {
           background: #3367d6;
         }
 
-        .refresh-btn:active {
-          transform: rotate(180deg);
-          transition: transform 0.3s;
-        }
-
         .iframe-container {
           flex: 1;
           background: #fff;
