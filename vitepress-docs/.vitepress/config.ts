@@ -93,7 +93,7 @@ export default withPwa(
           items: [
             { text: "Getting Started", link: "/getting-started" },
             { text: "Browser Compatibility", link: "/browser-compatibility" },
-            { text: "Releases", link: "/releases" },
+            { text: "Releases(Migration)", link: "/releases" },
             { text: "API", link: "/api" },
           ],
         },
@@ -108,5 +108,5 @@ export default withPwa(
         copyright: "Copyright © 2025-present wuchuheng",
       },
     },
-  }),
+  })
 );
