@@ -5,9 +5,10 @@ import type { DatabaseChangeEvent } from "../../src/types/global";
 describe("Database Change Events", () => {
   beforeEach(async () => {
     // Close any databases that might be open from previous tests
+    // v2.1.0: Access .db for DBInterface
     const dbs = window.__web_sqlite.databases;
-    for (const [, db] of Object.entries(dbs)) {
-      await db.close();
+    for (const [, record] of Object.entries(dbs)) {
+      await record.db.close();
     }
   });
 
@@ -50,12 +51,12 @@ describe("Database Change Events", () => {
     await openDB("db1");
     const db2 = await openDB("db2");
 
-    // Direct access to databases should work
+    // Direct access to databases should work (v2.1.0: DatabaseRecord)
     expect(window.__web_sqlite.databases["db1.sqlite3"]).toBeDefined();
     expect(window.__web_sqlite.databases["db2.sqlite3"]).toBeDefined();
 
     await db2.close();
-    await window.__web_sqlite.databases["db1.sqlite3"].close();
+    await window.__web_sqlite.databases["db1.sqlite3"].db.close();
   });
 
   it("should show updated databases list after close", async () => {
@@ -77,7 +78,7 @@ describe("Database Change Events", () => {
     expect(event.databases).toContain("db2-close-test.sqlite3");
 
     unsubscribe();
-    await window.__web_sqlite.databases["db2-close-test.sqlite3"].close();
+    await window.__web_sqlite.databases["db2-close-test.sqlite3"].db.close();
   });
 
   it("should support multiple subscribers", async () => {
@@ -111,7 +112,8 @@ describe("Database Change Events", () => {
     await openDB("test-cancel");
 
     expect(callback).not.toHaveBeenCalled();
-    await window.__web_sqlite.databases["test-cancel.sqlite3"].close();
+    // v2.1.0: Access .db for DBInterface
+    await window.__web_sqlite.databases["test-cancel.sqlite3"].db.close();
   });
 
   it("should handle idempotent cancel", async () => {
@@ -163,7 +165,8 @@ describe("Database Change Events", () => {
     expect(event.dbName).toBe("myapp.sqlite3");
 
     unsubscribe();
-    await window.__web_sqlite.databases["myapp.sqlite3"].close();
+    // v2.1.0: Access .db for DBInterface
+    await window.__web_sqlite.databases["myapp.sqlite3"].db.close();
   });
 
   it("should handle multiple open/close cycles", async () => {

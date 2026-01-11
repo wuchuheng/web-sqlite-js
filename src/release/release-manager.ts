@@ -10,6 +10,7 @@ import type {
   DbTarget,
   DevTool,
   LogEntry,
+  DatabaseRecord,
 } from "../types/DB";
 import {
   DEFAULT_VERSION,
@@ -43,7 +44,7 @@ import { VERSION_RE } from "./constants";
  * Open and prepare a versioned database using release metadata.
  *
  * @param deps - Dependencies required to open the DB and communicate with the worker.
- * @returns A DBInterface bound to the latest version.
+ * @returns A DatabaseRecord containing SQL Maps and DBInterface bound to the latest version.
  */
 export const openReleaseDB = async ({
   filename,
@@ -51,7 +52,7 @@ export const openReleaseDB = async ({
   sendMsg,
   runMutex,
   logDispatcher,
-}: ReleaseManagerDeps): Promise<DBInterface> => {
+}: ReleaseManagerDeps): Promise<DatabaseRecord> => {
   console.debug("[openDB] input validation start");
   if (typeof filename !== "string" || filename.trim() === "") {
     throw new Error("filename must be a non-empty string");
@@ -152,9 +153,25 @@ export const openReleaseDB = async ({
     `[openDB] latest version: ${latestRow.version}, release rows: ${releaseRows.length}`,
   );
 
+  // v2.1.0: SQL Maps for storing migration and seed SQL in memory
+  // Must be declared before configByVersion loop to populate existing releases
+  const migrationSQLMap = new Map<string, string>();
+  const seedSQLMap = new Map<string, string>();
+
   const configByVersion = new Map<string, ReleaseConfigWithHash>();
   for (const config of releaseConfigs) {
     configByVersion.set(config.version, config);
+  }
+
+  // v2.1.0: Populate SQL Maps for existing releases from releaseConfigs
+  for (const config of releaseConfigs) {
+    migrationSQLMap.set(config.version, config.migrationSQL);
+    if (config.normalizedSeedSQL) {
+      seedSQLMap.set(config.version, config.normalizedSeedSQL);
+    } else {
+      // Store empty string for versions without seed SQL
+      seedSQLMap.set(config.version, "");
+    }
   }
 
   // v2.1.0: Map version to mode for proper file naming (dev vs release)
@@ -332,6 +349,13 @@ export const openReleaseDB = async ({
     };
     // v2.1.0: Update versionToModeMap for new version
     versionToModeMap.set(config.version, mode);
+    // v2.1.0: Store SQL in memory Maps
+    migrationSQLMap.set(config.version, config.migrationSQL);
+    if (config.normalizedSeedSQL) {
+      seedSQLMap.set(config.version, config.normalizedSeedSQL);
+    } else {
+      seedSQLMap.set(config.version, "");
+    }
     console.debug(`[release] apply end ${config.version} (${mode})`);
   };
 
@@ -522,5 +546,12 @@ export const openReleaseDB = async ({
     devTool,
   };
 
-  return db;
+  // v2.1.0: Create DatabaseRecord for registry and global namespace
+  const databaseRecord: DatabaseRecord = {
+    migrationSQL: migrationSQLMap,
+    seedSQL: seedSQLMap,
+    db,
+  };
+
+  return databaseRecord;
 };

@@ -1,4 +1,4 @@
-import type { DBInterface } from "../types/DB";
+import type { DatabaseRecord } from "../types/DB";
 import { globalNamespace } from "../global/namespace";
 
 /**
@@ -42,8 +42,10 @@ export class DatabaseNotFoundError extends Error {
 /**
  * Database Registry - Singleton pattern for tracking opened database instances.
  *
+ * v2.1.0: Now stores DatabaseRecord (with SQL Maps) instead of just DBInterface.
+ *
  * Responsibilities:
- * - Track all opened database instances by normalized filename
+ * - Track all opened database records by normalized filename
  * - Prevent opening the same database name twice
  * - Provide lookup and list operations
  *
@@ -51,47 +53,52 @@ export class DatabaseNotFoundError extends Error {
  * Lock state is maintained in-memory and cleared on page unload
  *
  * @example
- * // Register a database
- * registry.register("myapp.sqlite3", dbInstance);
+ * // Register a database record
+ * registry.register("myapp.sqlite3", {
+ *   migrationSQL: new Map(),
+ *   seedSQL: new Map(),
+ *   db: dbInstance,
+ * });
  *
  * // Check if available
  * registry.checkLock("myapp.sqlite3"); // throws if already open
  *
- * // Get database instance
- * const db = registry.get("myapp.sqlite3");
+ * // Get database record
+ * const record = registry.get("myapp.sqlite3");
  *
  * // Unregister on close
  * registry.unregister("myapp.sqlite3");
  */
 class DatabaseRegistryImpl {
-  private databases: Map<string, DBInterface> = new Map();
+  // v2.1.0: Store DatabaseRecord instead of DBInterface
+  private databases: Map<string, DatabaseRecord> = new Map();
   private locks: Set<string> = new Set();
 
   /**
-   * Register a database instance.
+   * Register a database record.
    *
    * @param filename - Normalized database filename
-   * @param db - Database interface instance
+   * @param record - Database record with SQL mappings and DB interface
    * @throws {Error} If database is already registered
    */
-  register(filename: string, db: DBInterface): void {
+  register(filename: string, record: DatabaseRecord): void {
     const normalized = normalizeDatabaseName(filename);
     if (this.databases.has(normalized)) {
       throw new DatabaseAlreadyOpenError(normalized);
     }
-    this.databases.set(normalized, db);
+    this.databases.set(normalized, record);
     this.locks.add(normalized);
 
     // Sync namespace databases
-    const databasesRecord: Record<string, DBInterface> = {};
-    for (const [name, dbInstance] of this.databases) {
-      databasesRecord[name] = dbInstance;
+    const databasesRecord: Record<string, DatabaseRecord> = {};
+    for (const [name, dbRecord] of this.databases) {
+      databasesRecord[name] = dbRecord;
     }
     globalNamespace._updateDatabases(databasesRecord);
   }
 
   /**
-   * Unregister a database instance.
+   * Unregister a database record.
    *
    * @param filename - Normalized database filename
    */
@@ -101,20 +108,20 @@ class DatabaseRegistryImpl {
     this.locks.delete(normalized);
 
     // Sync namespace databases
-    const databasesRecord: Record<string, DBInterface> = {};
-    for (const [name, dbInstance] of this.databases) {
-      databasesRecord[name] = dbInstance;
+    const databasesRecord: Record<string, DatabaseRecord> = {};
+    for (const [name, dbRecord] of this.databases) {
+      databasesRecord[name] = dbRecord;
     }
     globalNamespace._updateDatabases(databasesRecord);
   }
 
   /**
-   * Get a registered database instance.
+   * Get a registered database record.
    *
    * @param filename - Normalized database filename
-   * @returns Database instance or undefined if not found
+   * @returns Database record or undefined if not found
    */
-  get(filename: string): DBInterface | undefined {
+  get(filename: string): DatabaseRecord | undefined {
     const normalized = normalizeDatabaseName(filename);
     return this.databases.get(normalized);
   }

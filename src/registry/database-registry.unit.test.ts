@@ -4,24 +4,32 @@ import {
   normalizeDatabaseName,
   DatabaseAlreadyOpenError,
 } from "./database-registry";
-import type { DBInterface } from "../types/DB";
+import type { DBInterface, DatabaseRecord } from "../types/DB";
 
 /**
- * Mock database interface for testing.
+ * Mock database record for testing (v2.1.0).
+ * Creates a DatabaseRecord with SQL Maps and a mock DBInterface.
  */
-const createMockDB = (_name: string): DBInterface => ({
-  exec: async () => ({ changes: 0, lastInsertRowid: 0 }),
-  query: async () => [],
-  transaction: async <T>() => undefined as T,
-  close: async () => undefined,
-  onLog: () => () => {
-    // Placeholder cancel function
-  },
-  devTool: {
-    release: async () => undefined,
-    rollback: async () => undefined,
-  },
-});
+const createMockDB = (_name: string): DatabaseRecord => {
+  const db: DBInterface = {
+    exec: async () => ({ changes: 0, lastInsertRowid: 0 }),
+    query: async () => [],
+    transaction: async <T>() => undefined as T,
+    close: async () => undefined,
+    onLog: () => () => {
+      // Placeholder cancel function
+    },
+    devTool: {
+      release: async () => undefined,
+      rollback: async () => undefined,
+    },
+  };
+  return {
+    migrationSQL: new Map(),
+    seedSQL: new Map(),
+    db,
+  };
+};
 
 describe("DatabaseRegistry", () => {
   beforeEach(() => {

@@ -1,22 +1,25 @@
-import type { DBInterface } from "../types/DB";
+import type { DatabaseRecord } from "../types/DB";
 import type { DatabaseChangeEvent } from "../types/global";
 
 /**
  * Global namespace for web-sqlite-js
  * Provides direct access to opened database instances and event subscription
  *
+ * v2.1.0: databases now stores DatabaseRecord with SQL Maps
+ *
  * Properties:
- * - databases: Record<string, DBInterface> - Map of opened database instances
+ * - databases: Record<string, DatabaseRecord> - Map of opened database records
  * - onDatabaseChange: (callback) => () => void - Subscribe to database lifecycle events
  */
 export interface WebSqliteNamespace {
   /**
-   * Map of currently opened database instances
+   * Map of currently opened database records
+   * v2.1.0: Contains SQL Maps and DB interface
    * Key: normalized database name (e.g., "myapp.sqlite3")
-   * Value: Database interface instance
+   * Value: Database record with SQL mappings and DB interface
    * @readonly
    */
-  readonly databases: Record<string, DBInterface>;
+  readonly databases: Record<string, DatabaseRecord>;
 
   /**
    * Subscribe to database open/close events
@@ -28,9 +31,10 @@ export interface WebSqliteNamespace {
   /**
    * Internal method to update databases from registry
    * Called by DatabaseRegistry on register/unregister
+   * v2.1.0: Now accepts DatabaseRecord
    * @internal
    */
-  _updateDatabases(databases: Record<string, DBInterface>): void;
+  _updateDatabases(databases: Record<string, DatabaseRecord>): void;
 
   /**
    * Internal method to emit database change events
@@ -85,7 +89,7 @@ function createNamespace(): WebSqliteNamespace {
       return eventEmitter.subscribe(callback);
     },
 
-    _updateDatabases(databases: Record<string, DBInterface>): void {
+    _updateDatabases(databases: Record<string, DatabaseRecord>): void {
       // Clear existing keys first
       for (const key of Object.keys(this.databases)) {
         delete this.databases[key];

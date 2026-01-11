@@ -1,4 +1,4 @@
-import type { DBInterface } from "./DB";
+import type { DatabaseRecord } from "./DB";
 
 /**
  * Event emitted when a database is opened or closed
@@ -26,8 +26,10 @@ export interface DatabaseChangeEvent {
  *
  * @example
  * ```typescript
- * // Access database directly
- * const db = window.__web_sqlite.databases["myapp.sqlite3"];
+ * // Access database directly (v2.1.0+)
+ * const record = window.__web_sqlite.databases["myapp.sqlite3"];
+ * await record.db.query("SELECT * FROM users");
+ * const migration = record.migrationSQL.get("1.0.0");
  *
  * // Subscribe to database changes
  * const unsubscribe = window.__web_sqlite.onDatabaseChange((event) => {
@@ -37,12 +39,12 @@ export interface DatabaseChangeEvent {
  */
 export interface WebSqliteNamespace {
   /**
-   * Map of currently opened database instances
+   * Map of currently opened database records
    * Key: normalized database name (e.g., "myapp.sqlite3")
-   * Value: Database interface instance
+   * Value: Database record with SQL mappings and DB interface (v2.1.0+)
    * @readonly
    */
-  readonly databases: Record<string, DBInterface>;
+  readonly databases: Record<string, DatabaseRecord>;
 
   /**
    * Subscribe to database open/close events

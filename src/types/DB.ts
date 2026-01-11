@@ -155,3 +155,43 @@ export type DevTool = {
    */
   rollback(version: string): Promise<void>;
 };
+
+/**
+ * Record containing database instance and its release SQL mappings.
+ * Used in global namespace for v2.1.0+ to provide access to migration SQL.
+ *
+ * @example
+ * ```typescript
+ * const record: DatabaseRecord = {
+ *   migrationSQL: new Map([["1.0.0", "CREATE TABLE..."]]),
+ *   seedSQL: new Map([["1.0.0", "INSERT INTO..."]]),
+ *   db: databaseInstance,
+ * };
+ *
+ * // Access database
+ * await record.db.query("SELECT * FROM users");
+ *
+ * // Access migration SQL
+ * const migration = record.migrationSQL.get("1.0.0");
+ * ```
+ */
+export interface DatabaseRecord {
+  /**
+   * Map of version → migration SQL
+   * Key: semantic version (e.g., "1.0.0")
+   * Value: migration SQL string
+   */
+  migrationSQL: Map<string, string>;
+
+  /**
+   * Map of version → seed SQL
+   * Key: semantic version (e.g., "1.0.0")
+   * Value: seed SQL string (empty string if no seed)
+   */
+  seedSQL: Map<string, string>;
+
+  /**
+   * Database interface instance
+   */
+  db: DBInterface;
+}

@@ -38,7 +38,8 @@ export const openDB = async (
   const { sendMsg } = createWorkerBridge(logDispatcher);
   const runMutex = createMutex();
 
-  const db = await openReleaseDB({
+  // v2.1.0: openReleaseDB now returns DatabaseRecord
+  const databaseRecord = await openReleaseDB({
     filename,
     options,
     sendMsg,
@@ -46,8 +47,8 @@ export const openDB = async (
     logDispatcher,
   });
 
-  // Register after successful open
-  DatabaseRegistry.register(filename, db);
+  // Register after successful open (v2.1.0: register DatabaseRecord)
+  DatabaseRegistry.register(filename, databaseRecord);
 
   // Emit database change event for open
   const normalizedDbName = normalizeDatabaseName(filename);
@@ -63,7 +64,8 @@ export const openDB = async (
     data: { action: "open", dbName: filename },
   });
 
-  return db;
+  // Return DBInterface from DatabaseRecord
+  return databaseRecord.db;
 };
 
 export default openDB;

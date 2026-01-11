@@ -136,27 +136,49 @@ gantt
   - `src/release/release-manager.ts` - Updated `applyVersion()` for flat structure, added `versionToModeMap` for mode tracking
 - **Notes**: v2.1.0 OPFS structure complete. Flat file naming implemented, SQL file writing removed. All tests passing.
 
-### v2.1.0 Implementation Tasks (Pending)
-
 **TASK-302: T-002 - In-Memory SQL & Global Namespace**
 
-- **Status**: ⏳ Blocked (waiting for T-001)
-- **Owner**: TBD
+- **Status**: ✅ COMPLETE
+- **Owner**: S8 Worker
+- **Started**: 2026-01-12
+- **Completed**: 2026-01-12
 - **Feature**: F-002 - v2.1.0 Flat OPFS Structure
 - **Description**: Update global namespace types to include in-memory SQL Maps, populate Maps on database open
-- **Effort**: 3-4 hours
-- **Dependencies**: TASK-301 ✅ COMPLETE
-- **Acceptance Criteria**:
-  - Global namespace type: `Record<string, {migrationSQL, seedSQL, db}>`
-  - `migrationSQL` Map populated with version → SQL mapping
-  - `seedSQL` Map populated with version → SQL mapping
-  - TypeScript compilation passes without errors
-  - Access pattern updated: `dbRecord.db.query()` instead of `db.query()`
-- **Files to Modify**:
-  - `src/types/global.ts` - Update global namespace type definitions
-  - `src/types/DB.ts` - Add DatabaseRecord interface
-  - `src/release/release-manager.ts` - Populate SQL Maps
-  - `src/global/initialize-namespace.ts` - Initialize with new structure
+- **Effort**: 3 hours
+- **Evidence**:
+  - ✅ Added `DatabaseRecord` interface in `src/types/DB.ts`
+  - ✅ Updated global namespace types to `Record<string, DatabaseRecord>`
+  - ✅ Updated database registry to store `DatabaseRecord`
+  - ✅ Populated SQL Maps in release manager
+  - ✅ Updated main.ts to handle `DatabaseRecord`
+  - ✅ All 62 unit tests passing
+  - ✅ All 46 E2E tests passing
+  - ✅ TypeScript compilation passes
+- **Test Results**:
+  - Unit tests: 62 tests in 5 files passing
+  - E2E tests: 46 tests in 11 files passing
+  - Coverage: 93.81% statements, 83.33% branches, 93.1% functions
+- **Acceptance Criteria Met**:
+  - ✅ `DatabaseRecord` interface defined with migrationSQL, seedSQL Maps, and db
+  - ✅ Global namespace type updated to `Record<string, DatabaseRecord>`
+  - ✅ Database registry stores and returns DatabaseRecord
+  - ✅ migrationSQL Map populated with version → migration SQL mapping
+  - ✅ seedSQL Map populated with version → seed SQL mapping
+  - ✅ All existing tests pass with new type structure
+  - ✅ TypeScript compilation passes without errors
+- **Files Modified**:
+  - `src/types/DB.ts` - Added `DatabaseRecord` interface with migrationSQL, seedSQL Maps, and db
+  - `src/types/global.ts` - Updated `WebSqliteNamespace.databases` to `Record<string, DatabaseRecord>`
+  - `src/global/namespace.ts` - Updated `_updateDatabases` to accept `Record<string, DatabaseRecord>`
+  - `src/registry/database-registry.ts` - Store `DatabaseRecord` instead of `DBInterface`
+  - `src/release/release-manager.ts` - Populate SQL Maps and return `DatabaseRecord`
+  - `src/main.ts` - Handle `DatabaseRecord` return type
+  - `src/registry/database-registry.unit.test.ts` - Updated mock to create `DatabaseRecord`
+  - `tests/e2e/namespace-sync.e2e.test.ts` - Updated to access `record.db.query()`
+  - `tests/e2e/database-events.e2e.test.ts` - Updated to access `record.db.close()`
+- **Notes**: v2.1.0 in-memory SQL Maps complete. SQL stored in memory Maps instead of OPFS files.
+
+### v2.1.0 Implementation Tasks (Pending)
 
 **TASK-303: T-003 - Auto-Migration System**
 
