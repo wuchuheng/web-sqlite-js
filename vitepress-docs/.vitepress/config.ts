@@ -108,5 +108,5 @@ export default withPwa(
         copyright: "Copyright © 2025-present wuchuheng",
       },
     },
-  })
+  }),
 );
