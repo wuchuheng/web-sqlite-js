@@ -36,11 +36,10 @@ Designed to be truly effortless, it allows you to get a high-performance relatio
 - [Quick start](#quick-start)
 - [Setup HTTP headers](#setup-http-headers)
 - [Usage](#usage)
-- [Debug mode](#debug-mode)
 - [Transactions](#transactions)
-- [Structured Logging (v2.0.0)](#structured-logging-v200)
-- [Global Database Access (v2.0.0)](#global-database-access-v200)
-- [Database Events (v2.0.0)](#database-events-v200)
+- [Schema Migrations](#schema-migrations)
+- [Debug mode](#debug-mode)
+- [Structured Logging](#structured-logging)
 
 ## Features
 
@@ -49,10 +48,8 @@ Designed to be truly effortless, it allows you to get a high-performance relatio
 - **Concurrency Safe**: Built-in mutex ensures safe, sequential execution of commands.
 - **Type-Safe**: Written in TypeScript with full type definitions.
 - **Transactions**: Supports atomic transactions with automatic rollback on error.
-- **Structured Logging** (v2.0.0): Subscribe to SQL execution logs via `onLog()`.
-- **Global Namespace** (v2.0.0): Access databases from anywhere via `window.__web_sqlite`.
-- **Database Events** (v2.0.0): Listen to database open/close events for UI synchronization.
-- **Database Registry** (v2.0.0): Prevents duplicate database opens with automatic tracking.
+- **Schema Migrations**: Built-in versioning system for database schema changes.
+- **Structured Logging**: Subscribe to SQL execution logs via `onLog()`.
 
 ## Quick start
 
@@ -286,7 +283,60 @@ await db.transaction(async (tx) => {
 });
 ```
 
-## Structured Logging (v2.0.0)
+## Schema Migrations
+
+Manage database schema changes across releases using the built-in versioning system. Define releases with migration SQL and optional seed data.
+
+### Basic Usage
+
+```typescript
+const db = await openDB("myapp", {
+  releases: [
+    {
+      version: "1.0.0",
+      migrationSQL: `
+        CREATE TABLE users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          email TEXT UNIQUE
+        );
+      `,
+      seedSQL: `
+        INSERT INTO users (name, email) VALUES
+        ('Alice', 'alice@example.com'),
+        ('Bob', 'bob@example.com');
+      `,
+    },
+    {
+      version: "1.1.0",
+      migrationSQL: `
+        ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT (datetime('now'));
+      `,
+    },
+  ],
+});
+
+// Database is now at version 1.1.0 with all migrations applied
+const users = await db.query("SELECT * FROM users");
+console.log(users);
+// Output: [{ id: 1, name: 'Alice', email: 'alice@example.com', created_at: '...' }, ...]
+```
+
+### How It Works
+
+1. **Version Tracking**: Each release has a semantic version (e.g., "1.0.0")
+2. **Automatic Migration**: When opening a database, new releases are applied in order
+3. **Hash Verification**: Migration SQL is hashed to prevent tampering
+4. **OPFS Storage**: Each version is stored as a separate file (`1.0.0.sqlite3`, `1.1.0.sqlite3`)
+
+### Best Practices
+
+- **Use Semantic Versioning**: Follow `MAJOR.MINOR.PATCH` format
+- **Idempotent Migrations**: Each migration should handle re-runs safely
+- **Test Migrations**: Always test migrations on a clean database
+- **Incremental Changes**: Keep migrations focused on single schema changes
+
+## Structured Logging
 
 Subscribe to structured log events for monitoring, debugging, and analytics. The `onLog()` API allows you to capture SQL execution details, errors, and application events.
 
@@ -329,97 +379,6 @@ const cancel2 = db.onLog((log) => {
   if (log.level === "error") sendToAlerting(log.data);
 });
 ```
-
----
-
-## Global Database Access (v2.0.0)
-
-Access opened databases from anywhere in your application without imports. The `window.__web_sqlite` global namespace provides direct references to all opened database instances.
-
-```typescript
-// Open database in module A
-const db = await openDB("app");
-
-// In module B (no import needed):
-const db = window.__web_sqlite.databases["app.sqlite3"];
-const users = await db.query("SELECT * FROM users");
-
-// List all opened databases
-console.log(Object.keys(window.__web_sqlite.databases));
-// Output: ["app.sqlite3", "users.sqlite3"]
-```
-
-**Use Cases**:
-
-- **DevTools Integration**: Access databases from browser console for debugging
-- **Cross-Module Communication**: Share database state without prop drilling
-- **Debugging**: Inspect and query databases directly from DevTools console
-
-**Browser Console Example**:
-
-```javascript
-// From browser DevTools console:
-window.__web_sqlite.databases["app.sqlite3"]
-  .query("SELECT * FROM users")
-  .then((users) => console.table(users));
-```
-
----
-
-## Database Events (v2.0.0)
-
-Subscribe to database open/close events for UI synchronization and monitoring. The `onDatabaseChange()` API notifies you when databases are opened or closed.
-
-```typescript
-// Subscribe to database changes
-const unsubscribe = window.__web_sqlite.onDatabaseChange((event) => {
-  if (event.action === "opened") {
-    console.log(`Database opened: ${event.dbName}`);
-    updateDatabaseList(event.databases);
-  } else if (event.action === "closed") {
-    console.log(`Database closed: ${event.dbName}`);
-    updateDatabaseList(event.databases);
-  }
-  console.log("Current databases:", event.databases);
-});
-
-// Open a database
-await openDB("app");
-// Output: Database opened: app.sqlite3
-// Output: Current databases: ["app.sqlite3"]
-
-// Open another database
-await openDB("users");
-// Output: Database opened: users.sqlite3
-// Output: Current databases: ["app.sqlite3", "users.sqlite3"]
-
-// Close first database
-await window.__web_sqlite.databases["app.sqlite3"].close();
-// Output: Database closed: app.sqlite3
-// Output: Current databases: ["users.sqlite3"]
-
-// Unsubscribe when done
-// unsubscribe();
-```
-
-**Event Structure**:
-
-```typescript
-interface DatabaseChangeEvent {
-  action: "opened" | "closed"; // What happened
-  dbName: string; // Which database (normalized name)
-  databases: string[]; // All currently opened database names
-}
-```
-
-**Use Cases**:
-
-- **DevTools Panels**: Show active databases in browser DevTools
-- **UI Updates**: Refresh database list when databases open/close
-- **Monitoring**: Track database lifecycle for debugging
-- **Multi-Window Sync**: Coordinate database access across browser windows
-
----
 
 ## Star History
 
