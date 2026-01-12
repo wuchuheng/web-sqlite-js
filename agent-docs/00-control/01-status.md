@@ -1,6 +1,6 @@
 # web-sqlite-js Status Board
 
-**Last Updated**: 2026-01-12
+**Last Updated**: 2026-01-13
 **Current Version**: 1.1.2
 **Target Version**: 2.1.0
 **Overall Status**: Production v1.1.2 Stable - v2.0.0 Complete - v2.1.0 Implementation In Progress
@@ -101,6 +101,26 @@ gantt
   - Test plan updated with current test counts
   - All API contracts already documented (01-api.md, 02-events.md)
 - **Notes**: v2.0.0 testing and documentation complete. All features tested, documented, and with working examples.
+
+### Completed (2026-01-13)
+
+**TASK-README-001: Add Migration Config Documentation to README**
+
+- **Status**: ✅ COMPLETE
+- **Owner**: S8 Worker
+- **Started**: 2026-01-13
+- **Completed**: 2026-01-13
+- **Description**: Add migration config documentation to README.md to help users understand how to use the release versioning system
+- **Evidence**:
+  - ✅ Updated Table of Contents with "Schema Migrations" link
+  - ✅ Updated Features list with "Schema Migrations" feature
+  - ✅ Added "Schema Migrations" section to README.md after "Transactions"
+  - ✅ Documented `releases` option with clear examples
+  - ✅ Explained how automatic migrations work
+  - ✅ Included best practices for schema versioning
+- **Files Modified**:
+  - `README.md` - Added Schema Migrations section with examples
+- **Notes**: README now includes comprehensive documentation for the release versioning system with `releases` option, migrationSQL, and seedSQL.
 
 ### Completed (2026-01-12)
 
@@ -990,8 +1010,8 @@ A task is **DONE** only if:
 
 ---
 
-**Last Modified**: 2026-01-11
-**Next Review**: After v2.0.0 Phase 3 implementation
+**Last Modified**: 2026-01-13
+**Next Review**: After v2.1.0 implementation complete
 
 ---
 
