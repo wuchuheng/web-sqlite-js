@@ -230,7 +230,7 @@
           }
           const lastDb = databases[databases.length - 1];
           logMessage(`Closing database: ${lastDb}...`);
-          await window.__web_sqlite.databases[lastDb].close();
+          await window.__web_sqlite.databases[lastDb].db.close();
         } catch (error) {
           logMessage(`Error closing database: ${error.message}`);
         }
