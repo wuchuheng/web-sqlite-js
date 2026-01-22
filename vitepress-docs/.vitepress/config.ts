@@ -63,7 +63,7 @@ export default withPwa(
           name: "configure-response-headers",
           configureServer: (server) => {
             server.middlewares.use((_req, res, next) => {
-              res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+              res.setHeader("Cross-Origin-Embedder-Policy", "credentialless");
               res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
               next();
             });
@@ -73,7 +73,7 @@ export default withPwa(
       server: {
         headers: {
           "Cross-Origin-Opener-Policy": "same-origin",
-          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Embedder-Policy": "credentialless",
         },
       },
     },

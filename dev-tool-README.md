@@ -603,6 +603,7 @@ If the library detects a v2.0.0 nested structure, it automatically migrates to v
 - **NPM Package**: [web-sqlite-js](https://www.npmjs.com/package/web-sqlite-js)
 - **Documentation**: https://web-sqlite-js.wuchuheng.com
 - **Repository**: https://github.com/wuchuheng/web-sqlite-js
+- **Chrome Web Store**: https://chromewebstore.google.com/detail/web-sqlite-devtools/gacoipdgbohogohjdofcnbflcfldidfh
 - **Internal Docs**: `agent-docs/` directory in repository
 
 ---
@@ -659,3 +660,4 @@ await db.devTool.rollback("1.0.0");
 **Maintainer**: wuchuheng <root@wuchuheng.com>
 **License**: MIT
 **Homepage**: https://web-sqlite-js.wuchuheng.com
+**Chrome Web Store**: https://chromewebstore.google.com/detail/web-sqlite-devtools/gacoipdgbohogohjdofcnbflcfldidfh
