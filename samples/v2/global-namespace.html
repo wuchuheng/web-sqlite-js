@@ -1,272 +1,270 @@
 <!doctype html>
 <html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>web-sqlite-js: Global Namespace Example (v2.0.0)</title>
-  <style>
-    body {
-      font-family:
-        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 20px;
-      background: #f5f5f5;
-    }
-
-    h1 {
-      color: #333;
-    }
-
-    .info-box {
-      background: #fff;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      border-left: 4px solid #007acc;
-    }
-
-    .database-section {
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-    }
-
-    #databases {
-      background: #f8f8f8;
-      padding: 15px;
-      border-radius: 6px;
-      font-family: "Monaco", "Menlo", monospace;
-      font-size: 14px;
-      min-height: 100px;
-    }
-
-    .db-list {
-      list-style: none;
-      padding: 0;
-    }
-
-    .db-list li {
-      background: #e3f2fd;
-      padding: 10px 15px;
-      margin: 5px 0;
-      border-radius: 4px;
-      border-left: 3px solid #2196f3;
-    }
-
-    button {
-      background: #2196f3;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      margin-right: 10px;
-      margin-bottom: 10px;
-    }
-
-    button:hover {
-      background: #1976d2;
-    }
-
-    button:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-    }
-
-    .output {
-      background: #1e1e1e;
-      color: #d4d4d4;
-      padding: 15px;
-      border-radius: 6px;
-      font-family: "Monaco", "Menlo", monospace;
-      font-size: 13px;
-      margin-top: 10px;
-      max-height: 200px;
-      overflow-y: auto;
-    }
-
-    .timestamp {
-      color: #858585;
-    }
-
-    .action {
-      color: #4ec9b0;
-    }
-
-    .result {
-      color: #dcdcaa;
-    }
-  </style>
-</head>
-
-<body>
-  <h1>Global Namespace Access Example (v2.0.0)</h1>
-
-  <div class="info-box">
-    <p>
-      This example demonstrates the <code>window.__web_sqlite</code> global
-      namespace for direct database access.
-    </p>
-    <p>
-      You can access opened databases from anywhere in your application
-      without imports.
-    </p>
-  </div>
-
-  <div class="database-section">
-    <h2>Actions</h2>
-    <button id="openAppDb">Open "app" Database</button>
-    <button id="openUsersDb">Open "users" Database</button>
-    <button id="queryDirectly">Query Directly via Namespace</button>
-    <button id="closeAll">Close All Databases</button>
-
-    <h2>Opened Databases</h2>
-    <div id="databases">
-      <p style="color: #888">No databases opened yet.</p>
-    </div>
-
-    <h2>Output</h2>
-    <div id="output" class="output"></div>
-  </div>
-
-  <script type="module">
-    import openDB from "../../dist/index.js";
-
-    const outputEl = document.getElementById("output");
-    const databasesEl = document.getElementById("databases");
-    let dbCounter = 0;
-
-    function log(message, type = "action") {
-      const timestamp = new Date().toISOString().split("T")[1].slice(0, 12);
-      const line = document.createElement("div");
-      line.innerHTML = `<span class="timestamp">[${timestamp}]</span> <span class="${type}">${message}</span>`;
-      outputEl.appendChild(line);
-      outputEl.scrollTop = outputEl.scrollHeight;
-    }
-
-    function updateDatabasesList() {
-      const dbs = Object.keys(window.__web_sqlite.databases);
-
-      if (dbs.length === 0) {
-        databasesEl.innerHTML =
-          '<p style="color: #888;">No databases opened yet.</p>';
-        return;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>web-sqlite-js: Global Namespace Example (v2.0.0)</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f5f5f5;
       }
 
-      databasesEl.innerHTML = `
+      h1 {
+        color: #333;
+      }
+
+      .info-box {
+        background: #fff;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border-left: 4px solid #007acc;
+      }
+
+      .database-section {
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+
+      #databases {
+        background: #f8f8f8;
+        padding: 15px;
+        border-radius: 6px;
+        font-family: "Monaco", "Menlo", monospace;
+        font-size: 14px;
+        min-height: 100px;
+      }
+
+      .db-list {
+        list-style: none;
+        padding: 0;
+      }
+
+      .db-list li {
+        background: #e3f2fd;
+        padding: 10px 15px;
+        margin: 5px 0;
+        border-radius: 4px;
+        border-left: 3px solid #2196f3;
+      }
+
+      button {
+        background: #2196f3;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-right: 10px;
+        margin-bottom: 10px;
+      }
+
+      button:hover {
+        background: #1976d2;
+      }
+
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .output {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 15px;
+        border-radius: 6px;
+        font-family: "Monaco", "Menlo", monospace;
+        font-size: 13px;
+        margin-top: 10px;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+
+      .timestamp {
+        color: #858585;
+      }
+
+      .action {
+        color: #4ec9b0;
+      }
+
+      .result {
+        color: #dcdcaa;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Global Namespace Access Example (v2.0.0)</h1>
+
+    <div class="info-box">
+      <p>
+        This example demonstrates the <code>window.__web_sqlite</code> global
+        namespace for direct database access.
+      </p>
+      <p>
+        You can access opened databases from anywhere in your application
+        without imports.
+      </p>
+    </div>
+
+    <div class="database-section">
+      <h2>Actions</h2>
+      <button id="openAppDb">Open "app" Database</button>
+      <button id="openUsersDb">Open "users" Database</button>
+      <button id="queryDirectly">Query Directly via Namespace</button>
+      <button id="closeAll">Close All Databases</button>
+
+      <h2>Opened Databases</h2>
+      <div id="databases">
+        <p style="color: #888">No databases opened yet.</p>
+      </div>
+
+      <h2>Output</h2>
+      <div id="output" class="output"></div>
+    </div>
+
+    <script type="module">
+      import openDB from "../../dist/index.js";
+
+      const outputEl = document.getElementById("output");
+      const databasesEl = document.getElementById("databases");
+      let dbCounter = 0;
+
+      function log(message, type = "action") {
+        const timestamp = new Date().toISOString().split("T")[1].slice(0, 12);
+        const line = document.createElement("div");
+        line.innerHTML = `<span class="timestamp">[${timestamp}]</span> <span class="${type}">${message}</span>`;
+        outputEl.appendChild(line);
+        outputEl.scrollTop = outputEl.scrollHeight;
+      }
+
+      function updateDatabasesList() {
+        const dbs = Object.keys(window.__web_sqlite.databases);
+
+        if (dbs.length === 0) {
+          databasesEl.innerHTML =
+            '<p style="color: #888;">No databases opened yet.</p>';
+          return;
+        }
+
+        databasesEl.innerHTML = `
         <p><strong>${dbs.length} database(s) opened:</strong></p>
         <ul class="db-list">
           ${dbs.map((db) => `<li>${db}</li>`).join("")}
         </ul>
       `;
-    }
+      }
 
-    // Open "app" database
-    document
-      .getElementById("openAppDb")
-      .addEventListener("click", async () => {
-        try {
-          log(`Opening "app" database...`);
-          const db = await openDB("app");
-          await db.exec(
-            "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)",
-          );
-          await db.exec(
-            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
-            ["theme", "dark"],
-          );
-          log(`Database "app" opened and initialized`);
-          updateDatabasesList();
-        } catch (error) {
-          log(`Error: ${error.message}`, "result");
-        }
-      });
-
-    // Open "users" database
-    document
-      .getElementById("openUsersDb")
-      .addEventListener("click", async () => {
-        try {
-          log(`Opening "users" database...`);
-          const db = await openDB("users");
-          await db.exec(
-            "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)",
-          );
-          await db.exec("INSERT INTO users (name) VALUES (?)", [
-            `User ${++dbCounter}`,
-          ]);
-          log(`Database "users" opened and user added`);
-          updateDatabasesList();
-        } catch (error) {
-          log(`Error: ${error.message}`, "result");
-        }
-      });
-
-    // Query directly via namespace (simulating access from another module)
-    document
-      .getElementById("queryDirectly")
-      .addEventListener("click", async () => {
-        try {
-          const dbs = Object.keys(window.__web_sqlite.databases);
-
-          if (dbs.length === 0) {
-            log(`No databases to query. Open a database first.`, "result");
-            return;
-          }
-
-          // Access database directly via global namespace (no import needed!)
-          log(`Accessing databases via window.__web_sqlite namespace...`);
-
-          for (const dbName of dbs) {
-            const record = window.__web_sqlite.databases[dbName];
-            const tables = await record.db.query(
-              "SELECT name FROM sqlite_master WHERE type='table'",
+      // Open "app" database
+      document
+        .getElementById("openAppDb")
+        .addEventListener("click", async () => {
+          try {
+            log(`Opening "app" database...`);
+            const db = await openDB("app");
+            await db.exec(
+              "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)",
             );
-            log(
-              `${dbName}: ${tables.map((t) => t.name).join(", ") || "no tables"}`,
-              "result",
+            await db.exec(
+              "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+              ["theme", "dark"],
             );
+            log(`Database "app" opened and initialized`);
+            updateDatabasesList();
+          } catch (error) {
+            log(`Error: ${error.message}`, "result");
           }
-        } catch (error) {
-          log(`Error: ${error.message}`, "result");
-        }
-      });
+        });
 
-    // Close all databases
-    document
-      .getElementById("closeAll")
-      .addEventListener("click", async () => {
-        try {
-          const dbs = Object.keys(window.__web_sqlite.databases);
-
-          if (dbs.length === 0) {
-            log(`No databases to close.`);
-            return;
+      // Open "users" database
+      document
+        .getElementById("openUsersDb")
+        .addEventListener("click", async () => {
+          try {
+            log(`Opening "users" database...`);
+            const db = await openDB("users");
+            await db.exec(
+              "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)",
+            );
+            await db.exec("INSERT INTO users (name) VALUES (?)", [
+              `User ${++dbCounter}`,
+            ]);
+            log(`Database "users" opened and user added`);
+            updateDatabasesList();
+          } catch (error) {
+            log(`Error: ${error.message}`, "result");
           }
+        });
 
-          log(`Closing ${dbs.length} database(s)...`);
+      // Query directly via namespace (simulating access from another module)
+      document
+        .getElementById("queryDirectly")
+        .addEventListener("click", async () => {
+          try {
+            const dbs = Object.keys(window.__web_sqlite.databases);
 
-          for (const dbName of dbs) {
-            const record = window.__web_sqlite.databases[dbName];
-            await record.db.close();
-            log(`Closed ${dbName}`);
+            if (dbs.length === 0) {
+              log(`No databases to query. Open a database first.`, "result");
+              return;
+            }
+
+            // Access database directly via global namespace (no import needed!)
+            log(`Accessing databases via window.__web_sqlite namespace...`);
+
+            for (const dbName of dbs) {
+              const record = window.__web_sqlite.databases[dbName];
+              const tables = await record.db.query(
+                "SELECT name FROM sqlite_master WHERE type='table'",
+              );
+              log(
+                `${dbName}: ${tables.map((t) => t.name).join(", ") || "no tables"}`,
+                "result",
+              );
+            }
+          } catch (error) {
+            log(`Error: ${error.message}`, "result");
           }
+        });
 
-          updateDatabasesList();
-        } catch (error) {
-          log(`Error: ${error.message}`, "result");
-        }
-      });
+      // Close all databases
+      document
+        .getElementById("closeAll")
+        .addEventListener("click", async () => {
+          try {
+            const dbs = Object.keys(window.__web_sqlite.databases);
 
-    // Initialize
-    log("Global Namespace Example initialized");
-    log("Open a database to see the namespace in action");
-    updateDatabasesList();
-  </script>
-</body>
+            if (dbs.length === 0) {
+              log(`No databases to close.`);
+              return;
+            }
 
+            log(`Closing ${dbs.length} database(s)...`);
+
+            for (const dbName of dbs) {
+              const record = window.__web_sqlite.databases[dbName];
+              await record.db.close();
+              log(`Closed ${dbName}`);
+            }
+
+            updateDatabasesList();
+          } catch (error) {
+            log(`Error: ${error.message}`, "result");
+          }
+        });
+
+      // Initialize
+      log("Global Namespace Example initialized");
+      log("Open a database to see the namespace in action");
+      updateDatabasesList();
+    </script>
+  </body>
 </html>

@@ -1,6 +1,6 @@
 {
   "name": "web-sqlite-js",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "web-sqlite-js is a friendly, out-of-the-box SQLite database for the web that makes persistent client-side storage simple for every developer.",
   "workspaces": [
     "vitepress-docs"
