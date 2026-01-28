@@ -14,7 +14,7 @@
     <img src="https://img.shields.io/npm/v/web-sqlite-js.svg" alt="NPM Version" />
   </a>
   <a href="https://github.com/wuchuheng/web-sqlite-js/discussions" target="_blank">
-    <img src="https://img.shields.io/badge/v2.0.0-new%20features-blue" alt="v2.0.0" />
+    <img src="https://img.shields.io/badge/v2.2.0-two--tier%20validation-brightgreen" alt="v2.2.0" />
   </a>
   <a href="https://github.com/wuchuheng/web-sqlite-js/blob/main/LICENSE" target="_blank">
     <img src="https://img.shields.io/github/license/wuchuheng/web-sqlite-js.svg" alt="License" />
@@ -49,6 +49,8 @@ Designed to be truly effortless, it allows you to get a high-performance relatio
 - **Type-Safe**: Written in TypeScript with full type definitions.
 - **Transactions**: Supports atomic transactions with automatic rollback on error.
 - **Schema Migrations**: Built-in versioning system for database schema changes.
+- **Two-Tier Validation** (v2.2.0): Distinguishes between whitespace-only changes and actual SQL changes.
+- **Enhanced Error Messages** (v2.2.0): SQL diffs and truncation for better debugging.
 - **Structured Logging**: Subscribe to SQL execution logs via `onLog()`.
 
 ## Quick start
@@ -73,7 +75,7 @@ For quick demos or plain HTML pages you can load the prebuilt module directly:
 
 ```html
 <script type="module">
-  import openDB from "https://cdn.jsdelivr.net/npm/web-sqlite-js@1.0.9/dist/index.js";
+  import openDB from "https://cdn.jsdelivr.net/npm/web-sqlite-js@2.2.0/dist/index.js";
   // ...
 </script>
 ```
@@ -322,12 +324,72 @@ console.log(users);
 // Output: [{ id: 1, name: 'Alice', email: 'alice@example.com', created_at: '...' }, ...]
 ```
 
+### Two-Tier Validation (v2.2.0)
+
+Starting with v2.2.0, web-sqlite-js uses a two-tier validation system that intelligently handles SQL formatting changes:
+
+**Tier 1: Fast Path** (< 0.1ms)
+
+- Trims whitespace and compares hashes
+- Passes immediately if SQL hasn't changed
+
+**Tier 2: Slow Path** (1-5ms, only on hash mismatch)
+
+- Normalizes SQL using SQLite prepare
+- Auto-updates hash for whitespace-only changes
+- Throws enhanced error for actual SQL changes
+
+**What this means for you:**
+
+```typescript
+// You can reformat your SQL without breaking migrations!
+const db1 = await openDB("myapp", {
+  releases: [
+    {
+      version: "1.0.0",
+      migrationSQL: "CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT);",
+    },
+  ],
+});
+await db1.close();
+
+// Reopen with reformatted SQL (whitespace-only change)
+const db2 = await openDB("myapp", {
+  releases: [
+    {
+      version: "1.0.0",
+      migrationSQL: `
+        CREATE TABLE items (
+          id INTEGER PRIMARY KEY,
+          name TEXT
+        );
+      `,
+    },
+  ],
+});
+// ✅ Works! Hash auto-updated (no error)
+```
+
+**Enhanced Error Messages:**
+
+If you accidentally change the SQL semantics, you'll get detailed error messages:
+
+```
+Hash mismatch for 1.0.0 migrationSQL:
+Expected: abc123...
+Actual: def456...
+SQL has changed:
+- Original: CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT);
++ Current:  CREATE TABLE items (id INTEGER PRIMARY KEY, email TEXT);
+```
+
 ### How It Works
 
 1. **Version Tracking**: Each release has a semantic version (e.g., "1.0.0")
 2. **Automatic Migration**: When opening a database, new releases are applied in order
 3. **Hash Verification**: Migration SQL is hashed to prevent tampering
-4. **OPFS Storage**: Each version is stored as a separate file (`1.0.0.sqlite3`, `1.1.0.sqlite3`)
+4. **Two-Tier Validation**: Distinguishes whitespace-only changes from actual SQL changes
+5. **OPFS Storage**: Each version is stored as a separate file (`1.0.0.sqlite3`, `1.1.0.sqlite3`)
 
 ### Best Practices
 

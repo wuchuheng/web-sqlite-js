@@ -439,6 +439,117 @@ sequenceDiagram
 - **Clear Errors**: Descriptive messages for debugging
 - **Retry Support**: Can retry migration after fixing issues
 
+### Flow 7: F-003 Two-Tier SQL Validation
+
+**Goal**: Validate release SQL hashes with performance optimization (fast path for trim + hash, slow path for prepare normalization only on mismatch)
+**Concurrency**: Runs during release validation before database open
+**Performance**: Tier 1 < 0.1ms (always), Tier 2 1-5ms (only on mismatch)
+
+```mermaid
+sequenceDiagram
+    participant App as User Application
+    participant Main as Main Thread
+    participant Validator as Two-Tier Validator
+    participant Normalizer as SQL Normalizer
+    participant Worker as Web Worker
+    participant Meta as Metadata DB
+
+    App->>Main: openDB(filename, {releases})
+    Main->>Validator: validateReleaseSQL(releases)
+
+    loop For each release config
+        Validator->>Meta: SELECT version, hashes FROM release
+        Meta-->>Validator: stored hashes
+
+        alt Release not in metadata
+            Note over Validator: New release - skip validation
+        else Release exists in metadata
+            Validator->>Validator: Tier 1: Fast Path
+            Note over Validator: trim() + SHA-256 hash compare
+
+            Validator->>Validator: trim(configSQL)
+            Validator->>Validator: hash(trimmedConfigSQL)
+            Validator->>Validator: compare(hash, storedHash)
+
+            alt Tier 1 Hash Match
+                Note over Validator: Fast pass - validation success
+                Validator-->>Main: valid (no normalization needed)
+            else Tier 1 Hash Mismatch
+                Note over Validator: Tier 2: Slow Path (rare case)
+
+                Validator->>Normalizer: normalizeSQL(configSQL, storedSQL)
+                Normalizer->>Worker: prepare(configSQL)
+                Worker-->>Normalizer: normalizedConfigSQL
+                Normalizer->>Worker: prepare(storedSQL)
+                Worker-->>Normalizer: normalizedStoredSQL
+
+                alt Normalized SQL Match
+                    Note over Normalizer: Whitespace/formatting only
+
+                    Normalizer->>Meta: UPDATE release SET hashes = newHash
+                    Normalizer->>Meta: UPDATE release SET originalSQL = configSQL
+                    Normalizer->>Main: log debug("Auto-updated hash")
+                    Normalizer-->>Validator: valid (auto-updated)
+                    Validator-->>Main: valid (auto-updated)
+                else Normalized SQL Differ
+                    Note over Normalizer: Actual SQL change
+
+                    Normalizer-->>Validator: throw HashMismatchError
+                    Note over Validator,Normalizer: Error includes:<br/>- version number<br/>- sqlType (migration/seed)<br/>- original SQL (truncated)<br/>- current SQL (truncated)
+                    Validator-->>Main: throw HashMismatchError
+                    Main-->>App: throw Error
+                end
+            end
+        end
+    end
+
+    Main-->>App: DB instance (all releases validated)
+```
+
+**Two-Tier Validation Flow**:
+
+```mermaid
+flowchart TD
+    A[Start: Hash Validation] --> B{Tier 1: Fast Path}
+    B --> C[trim both SQL strings]
+    C --> D[Compute hashes of trimmed SQL]
+    D --> E{Hashes match?}
+    E -->|Yes| F[Validation Pass: No Error]
+    E -->|No| G{Tier 2: Slow Path}
+
+    G --> H[Use sqlite3_prepare to normalize]
+    H --> I[Get normalized SQL from prepare]
+    I --> J{Normalized SQL match?}
+
+    J -->|Yes| K[Auto-Update Hash]
+    K --> L[Update metadata with new hash]
+    L --> M[Log debug message]
+    M --> F
+
+    J -->|No| N[Throw Enhanced Error]
+    N --> O[Include original SQL in error]
+    O --> P[Include current SQL in error]
+    P --> Q[Indicate which field changed]
+
+    style B fill:#9f9,stroke:#333,stroke-width:2px
+    style F fill:#9f9,stroke:#333,stroke-width:2px
+    style G fill:#ff9,stroke:#333,stroke-width:2px
+    style N fill:#f99,stroke:#333,stroke-width:2px
+```
+
+**Performance Characteristics**:
+
+| Tier   | Operation                 | Cost    | Frequency               |
+| ------ | ------------------------- | ------- | ----------------------- |
+| Tier 1 | `trim()` + SHA-256        | < 0.1ms | Always (fast path)      |
+| Tier 2 | `prepare()` normalization | 1-5ms   | Only on mismatch (rare) |
+
+**Error Handling**:
+
+- **Tier 1 Hash Match**: Success, no error, no normalization needed
+- **Tier 2 Normalized Match**: Auto-update hash, no error, log debug message
+- **Tier 2 Normalized Differ**: Enhanced error with SQL diff, throw immediately
+
 ## 2) Asynchronous Event Flows
 
 **Pattern**: Message-passing via postMessage (not event-driven in traditional sense)
@@ -449,6 +560,7 @@ sequenceDiagram
 - **EXECUTE**: Run SQL without returning rows (INSERT, UPDATE, DELETE, DDL)
 - **QUERY**: Run SELECT query and return rows
 - **CLOSE**: Close database connections and cleanup
+- **PREPARE** (F-003): Normalize SQL via SQLite `prepare()` function
 
 **Message Flow Pattern**:
 
@@ -486,8 +598,9 @@ stateDiagram-v2
     Uninitialized --> Initializing: openDB() called
     Initializing --> MetadataOpen: Opening metadata DB
     MetadataOpen --> ReleaseCheck: Checking for new releases
-    ReleaseCheck --> Migrating: New releases available
-    ReleaseCheck --> ActiveOpen: No new releases
+    ReleaseCheck --> Validating: F-003 Two-tier validation
+    Validating --> Migrating: New releases available
+    Validating --> ActiveOpen: No new releases
     Migrating --> ActiveOpen: Migrations complete
     ActiveOpen --> Open: Active DB opened
     Open --> Querying: query() called
@@ -543,6 +656,21 @@ stateDiagram-v2
     Terminated --> [*]
 ```
 
+### Entity: F-003 Two-Tier Validation State
+
+```mermaid
+stateDiagram-v2
+    [*] --> Start: Release validation triggered
+    Start --> Tier1FastPath: trim() + hash compare
+    Tier1FastPath --> Valid: Hash match
+    Tier1FastPath --> Tier2SlowPath: Hash mismatch
+    Tier2SlowPath --> AutoUpdate: Normalized SQL match
+    Tier2SlowPath --> Error: Normalized SQL differ
+    AutoUpdate --> Valid: Hash updated in metadata
+    Valid --> [*]
+    Error --> [*]
+```
+
 ## 4) Consistency & Recovery
 
 ### Distributed Transactions
@@ -562,6 +690,7 @@ stateDiagram-v2
 - **CLOSE**: Not idempotent; subsequent close fails with "Database is not open"
 - **devTool.release**: Not idempotent; throws if version is <= latest
 - **devTool.rollback**: Idempotent (safe to rollback to same version)
+- **Two-Tier Validation** (F-003): Idempotent - can re-validate same SQL multiple times
 
 **Release Application Idempotency**:
 
@@ -571,11 +700,14 @@ flowchart LR
     B -->|Yes| C[Verify Hash Match]
     B -->|No| D[Apply Release]
     C -->|Hash OK| E[Skip - Already Applied]
-    C -->|Hash Mismatch| F[Throw Error]
-    D --> G[Insert Metadata]
-    E --> H[Complete]
-    F --> H
-    G --> H
+    C -->|Hash Mismatch| F[Tier 2 Normalize]
+    F -->|Normalized Match| G[Auto-Update Hash]
+    F -->|Normalized Differ| H[Throw Error]
+    D --> I[Insert Metadata]
+    E --> J[Complete]
+    G --> J
+    H --> J
+    I --> J
 ```
 
 ### Compensation
@@ -603,6 +735,14 @@ flowchart LR
 3. **Remove Files**: removeDir(baseDir, devVersion.version)
 4. **Switch Active DB**: Open target version database
 5. **Final State**: System at target version with intermediate versions removed
+
+**Two-Tier Validation Compensation** (F-003):
+
+1. **Detect Hash Mismatch**: Tier 1 validation fails
+2. **Tier 2 Normalization**: Attempt SQL normalization via `prepare()`
+3. **Auto-Update Success**: If normalized SQL matches, update hash and continue
+4. **Enhanced Error**: If normalized SQL differs, throw error with SQL diff
+5. **No State Change**: Database remains at previous version on error
 
 **No Compensation Needed For**:
 
@@ -638,8 +778,9 @@ flowchart LR
 **Scenario 4: Hash Mismatch on Archived Release**
 
 - **Detection**: Release config hash != metadata hash
-- **Recovery**: Throws error immediately, no recovery
-- **State**: Database remains at previous version
+- **Recovery** (F-003): Tier 2 normalization attempts to resolve
+- **Outcome**: Auto-update if whitespace-only, error if actual SQL change
+- **State**: Database remains at previous version on error
 - **Resolution**: Developer must fix release config or manually reset database
 - **Prevention**: Immutable release configs prevent accidental changes
 

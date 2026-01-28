@@ -3,6 +3,8 @@ import sqlite3InitModule, { Sqlite3, Sqlite3DB } from "./jswasm/sqlite3";
 import { ExecParams } from "./types/DB";
 import {
   OpenDBArgs,
+  PrepareRequest,
+  PrepareResponse,
   SqliteEvent,
   type SqliteReqMsg,
   type SqliteResMsg,
@@ -18,6 +20,35 @@ let isDebug = false;
 
 // Log collection for structured logging
 let workerLogs: WorkerLogEntry[] = [];
+
+/**
+ * Normalize SQL string by removing extra whitespace and comments.
+ * This is a simple normalization that handles common SQL formatting differences.
+ *
+ * @param sql - The SQL string to normalize
+ * @returns Normalized SQL string
+ */
+const normalizeSQLString = (sql: string): string => {
+  // Remove single-line comments (-- style)
+  let normalized = sql.replace(/--[^\n]*/g, "");
+
+  // Remove multi-line comments (/* */ style)
+  normalized = normalized.replace(/\/\*[\s\S]*?\*\//g, "");
+
+  // Collapse multiple whitespace to single space
+  normalized = normalized.replace(/\s+/g, " ");
+
+  // Remove spaces around parentheses and operators
+  normalized = normalized.replace(/\s*\(\s*/g, "(");
+  normalized = normalized.replace(/\s*\)\s*/g, ")");
+  normalized = normalized.replace(/\s*,\s*/g, ",");
+  normalized = normalized.replace(/\s*;\s*/g, ";");
+
+  // Trim leading/trailing whitespace
+  normalized = normalized.trim();
+
+  return normalized;
+};
 
 /**
  * Add a log entry to be sent with the next response
@@ -119,7 +150,7 @@ const handleExecute = (payload: unknown) => {
 };
 
 const handleQuery = (payload: ExecParams) => {
-  // 1. Handle input.
+  // 1. Input validation.
   const { sql, bind, target } = payload;
 
   // 2. Handle query.
@@ -152,6 +183,37 @@ const handleQuery = (payload: ExecParams) => {
   }
 
   return rows;
+};
+
+/**
+ * Handles PREPARE event (F-003).
+ * Normalizes SQL using custom normalization for two-tier validation.
+ *
+ * Note: SQLite WASM build doesn't expose sqlite3_normalized_sql or sqlite3_expanded_sql,
+ * so we implement our own SQL normalization.
+ *
+ * @example
+ * ```typescript
+ * const result = handlePrepare({ sql: "CREATE  TABLE  test ( id  INTEGER );" });
+ * // Returns: { normalizedSQL: "CREATE TABLE test(id INTEGER);" }
+ * ```
+ *
+ * @param payload - The prepare request payload containing SQL string.
+ * @returns Normalized SQL string.
+ * @throws {Error} If SQL is not a string.
+ */
+const handlePrepare = (payload: unknown): PrepareResponse => {
+  // 1. Input validation.
+  const { sql } = payload as PrepareRequest;
+  if (typeof sql !== "string") {
+    throw new Error("Invalid payload for PREPARE event: expected sql string");
+  }
+
+  // 2. Normalize SQL using custom function
+  const normalizedSQL = normalizeSQLString(sql);
+
+  // 3. Output: Return normalized SQL.
+  return { normalizedSQL };
 };
 
 const handleClose = () => {
@@ -194,6 +256,10 @@ self.onmessage = async (msg: MessageEvent<SqliteReqMsg<unknown>>) => {
 
       case SqliteEvent.CLOSE:
         handleClose();
+        break;
+
+      case SqliteEvent.PREPARE:
+        result = handlePrepare(payload);
         break;
 
       default:

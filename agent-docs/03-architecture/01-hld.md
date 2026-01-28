@@ -20,6 +20,7 @@ TEMPLATE SOURCE
   - **Developer experience**: Simple async/await API abstracting worker communication complexity
   - **Global accessibility** (v2.0.0): Direct database access via `window.__web_sqlite` namespace
   - **Enhanced observability** (v2.0.0): Structured logging API and database change events
+  - **SQL validation optimization** (F-003): Two-tier validation with fast trim-based comparison and prepare normalization fallback
 
 ## 2) System Boundary (C4 Context)
 
@@ -47,6 +48,7 @@ C4Context
 - **Deployment Constraints**: Requires COOP/COEP headers for SharedArrayBuffer availability
 - **Build Integration**: Library bundled via Vite, consumed by user applications via npm
 - **Global Access** (v2.0.0): `window.__web_sqlite` namespace provides direct database access from anywhere in the application
+- **SQL Validation** (F-003): Two-tier validation system ensures release integrity while allowing whitespace-only formatting changes
 
 ## 3) Containers & Tech Stack (C4 Container)
 
@@ -56,7 +58,7 @@ C4Context
 - **Worker Bridge**: TypeScript/JavaScript (Reason: Message passing abstraction, promise management, log forwarding)
 - **Web Worker**: SQLite WASM + JavaScript (Reason: Off-main-thread execution, SQLite engine)
 - **OPFS Storage**: Browser API (Reason: Persistent file-backed storage, survives browser restarts)
-- **Metadata Database**: SQLite (Reason: Version tracking, release history)
+- **Metadata Database**: SQLite (Reason: Version tracking, release history, original SQL storage)
 
 ### 3.2 v2.0.0 New Components
 
@@ -70,19 +72,25 @@ C4Context
 - **Migration Detector**: TypeScript (Reason: Detect v2.0.0 vs v2.1.0 OPFS structure)
 - **Auto-Migrator**: TypeScript (Reason: Convert v2.0.0 nested structure to v2.1.0 flat structure)
 
+### 3.4 F-003 New Components
+
+- **SQL Normalizer**: TypeScript + SQLite WASM (Reason: Normalize SQL via SQLite `prepare()` for semantic comparison)
+- **Two-Tier Hash Validator**: TypeScript (Reason: Fast trim-based validation with prepare normalization fallback)
+
 ```mermaid
 C4Container
-  title Container Diagram (v2.1.0)
+  title Container Diagram (v2.1.0 + F-003)
   Container(main, "Main Thread", "TypeScript", "User API & Coordination")
   Container(registry, "Database Registry", "TypeScript Singleton", "Track Opened DBs")
   Container(logger, "Log Dispatcher", "TypeScript", "Structured Logging")
   Container(events, "Event Emitter", "TypeScript", "Database Change Events")
   Container(global_ns, "Global Namespace", "window.__web_sqlite", "Direct DB Access")
   Container(migration, "Auto-Migrator", "TypeScript", "v2.0.0 to v2.1.0 Migration")
+  Container(normalizer, "SQL Normalizer", "TypeScript + SQLite", "Two-Tier SQL Validation")
   Container(bridge, "Worker Bridge", "TypeScript", "Message Protocol")
-  Container(worker, "Web Worker", "SQLite WASM", "Database Engine")
+  Container(worker, "Web Worker", "SQLite WASM", "Database Engine + prepare()")
   ContainerDb(opfs, "OPFS Storage", "Origin Private File System", "Persistent File Storage")
-  ContainerDb(meta, "Metadata DB", "SQLite", "Version Tracking")
+  ContainerDb(meta, "Metadata DB", "SQLite", "Version Tracking + Original SQL")
 
   Rel(main, registry, "Registers on open")
   Rel(main, logger, "Dispatches logs")
@@ -95,6 +103,9 @@ C4Container
   Rel(main, migration, "Triggers on openDB")
   Rel(migration, opfs, "Detects & Converts Structure")
   Rel(migration, meta, "Updates Metadata")
+  Rel(main, normalizer, "Validates Release SQL")
+  Rel(normalizer, worker, "Calls prepare() for Normalization")
+  Rel(normalizer, meta, "Stores Original SQL")
   Rel(main, bridge, "Promise-based API")
   Rel(bridge, worker, "postMessage (Structured Clone)")
   Rel(worker, opfs, "Synchronous File I/O")
@@ -113,6 +124,8 @@ C4Container
 - **Log Dispatcher** (v2.0.0): Observer pattern enables multiple independent log listeners
 - **Event Emitter** (v2.0.0): Pub-sub pattern for database lifecycle events
 - **Global Namespace** (v2.0.0): Browser window object provides cross-module database access
+- **SQL Normalizer** (F-003): Leverages SQLite's `sqlite3_prepare()` for semantic SQL normalization
+- **Two-Tier Validation** (F-003): Fast path (trim + hash) for common cases, slow path (prepare) only on mismatch
 
 ## 4) Data Architecture Strategy
 
@@ -121,15 +134,18 @@ C4Container
   - **Metadata Database**: Release versioning history, owned by library internals
   - **Versioned Databases**: Isolated snapshots per release, owned by release manager
   - **Database Registry** (v2.0.0): Track opened database instances, owned by library internals
+  - **Original SQL Storage** (F-003): Original SQL for error reporting, owned by metadata database
 - **Caching**:
   - **Worker State**: Active SQLite connections maintained in worker memory
   - **No External Cache**: All data persisted directly to OPFS
   - **Registry Cache** (v2.0.0): In-memory registry tracks opened databases (cleared on page unload)
+  - **Normalization Cache** (F-003): Original SQL stored in metadata to prevent re-normalization
 - **Consistency**:
   - **Strong Consistency**: ACID transactions within single database operations
   - **Sequential Execution**: Mutex queue ensures no concurrent writes to same database
   - **Release Isolation**: Each version has isolated database file, preventing cross-version contamination
   - **Registry Consistency** (v2.0.0): Database name lock prevents duplicate opens
+  - **SQL Validation Consistency** (F-003): Two-tier validation ensures release integrity while allowing whitespace changes
 
 **Data Flow Strategy**:
 
@@ -138,9 +154,11 @@ User Application (Main Thread)
     ↓ (async/await API calls)
 Database Registry (Lock Check)
     ↓ (pass)
+Two-Tier Hash Validator (Tier 1: trim + hash, Tier 2: prepare)
+    ↓ (hash mismatch or normalization needed)
 Worker Bridge (Message Protocol)
     ↓ (postMessage with structured clone)
-Web Worker (SQLite WASM)
+Web Worker (SQLite WASM + prepare())
     ↓ (synchronous file operations)
 OPFS Storage (Persistent File System)
 
@@ -174,6 +192,7 @@ Registered Callbacks (User Code)
   - **Query Timing**: `performance.now()` measurements for each SQL execution
   - **Changes Tracking**: `db.changes()` returns affected row count
   - **Last Insert ID**: `last_insert_rowid()` for auto-increment tracking
+  - **Validation Performance** (F-003): Tier 1 (< 0.1ms), Tier 2 (1-5ms)
 - **Events** (v2.0.0):
   - **Database Change Events**: `window.__web_sqlite.onDatabaseChange(callback)`
   - **Event Types**: `'opened' | 'closed'`
@@ -183,6 +202,7 @@ Registered Callbacks (User Code)
   - **Direct Access**: `window.__web_sqlite.databases[dbName]`
   - **Read-Only**: Registry is externally read-only (internal updates only)
   - **DevTools Integration**: Enables browser DevTools to inspect active databases
+  - **Original SQL Access** (F-003): `originalMigrationSQL` and `originalSeedSQL` Maps for debugging
 - **Tracing**: Not implemented (client-side library, no distributed tracing)
 
 ### 5.3 Error Handling
@@ -191,16 +211,17 @@ Registered Callbacks (User Code)
   - **Typed Errors**: Error objects with `name`, `message`, `stack` preserved across worker boundary
   - **Promise Rejection**: All errors propagated as rejected promises to main thread
   - **Transaction Rollback**: Automatic ROLLBACK on transaction errors
-  - **Release Validation**: Hash mismatch errors for release integrity violations
+  - **Release Validation**: Enhanced hash mismatch errors with SQL diff (F-003)
   - **Database Lock Errors** (v2.0.0): Throws when opening already-opened database
 - **Error Types**:
   - **Initialization Errors**: SharedArrayBuffer unavailable, invalid filename
   - **SQL Execution Errors**: Syntax errors, constraint violations, table not found
-  - **Release Errors**: Hash mismatches, version conflicts, rollback failures
+  - **Release Errors** (F-003): Enhanced hash mismatch errors with original/current SQL comparison
   - **OPFS Errors**: File not found, quota exceeded, permission denied
   - **Registry Errors** (v2.0.0): Database already open, invalid database name
 - **Stack Trace Preservation**: Worker errors reconstructed in main thread with original stack traces
 - **Callback Error Isolation** (v2.0.0): `onLog` callback errors don't break database operations
+- **Enhanced Error Messages** (F-003): Hash mismatch errors include SQL diff with truncation for long queries
 
 ### 5.4 Concurrency Control
 
@@ -212,11 +233,16 @@ Registered Callbacks (User Code)
   - **Multiple DBs Allowed**: Different database names can be opened simultaneously
 - **Worker Isolation**: All SQLite operations run in single worker thread
 
-### 5.5 Global Namespace (v2.0.0)
+### 5.5 Global Namespace (v2.0.0 + F-003)
 
 - **Namespace**: `window.__web_sqlite`
 - **Properties**:
-  - `databases`: `Record<string, DBInterface>` - Direct database instance access
+  - `databases`: `Record<string, DatabaseRecord>` - Direct database record access
+    - `migrationSQL`: `Map<string, string>` - Current migration SQL (v2.1.0)
+    - `seedSQL`: `Map<string, string>` - Current seed SQL (v2.1.0)
+    - `originalMigrationSQL`: `Map<string, string>` - Original migration SQL (F-003)
+    - `originalSeedSQL`: `Map<string, string>` - Original seed SQL (F-003)
+    - `db`: `DBInterface` - Database instance
   - `onDatabaseChange(callback)`: Subscribe to open/close events
 - **Non-enumerable**: Namespace property doesn't appear in `Object.keys(window)`
 - **Initialization**: Created on library load (IIFE)
@@ -231,7 +257,19 @@ Registered Callbacks (User Code)
   /src
     /jswasm               # Vendored SQLite WASM module
     /release              # Release versioning system
+      /constants.ts       # SQL constants, version regex
+      /types.ts           # Release domain types
+      /opfs-utils.ts      # OPFS file operations (adapter)
+      /hash-utils.ts      # Release validation (domain)
+      /hash-utils-two-tier.ts  # [F-003] Two-tier hash validation
+      /lock-utils.ts      # Metadata locking (domain)
+      /version-utils.ts   # Version comparison (domain)
+      /sql-normalizer.ts  # [F-003] SQL normalization via prepare()
+      /release-manager.ts # Release orchestration (application)
     /types                # TypeScript type definitions
+      /DB.ts              # DBInterface, ReleaseConfig, DatabaseRecord (F-003)
+      /message.ts         # Worker protocol types
+      /global.ts          # Global namespace declarations
     /utils                # Utilities (mutex, logger, validation)
     /registry             # [v2.0.0] Database registry singleton
     /logs                 # [v2.0.0] Log dispatcher
@@ -240,7 +278,7 @@ Registered Callbacks (User Code)
     /migration            # [v2.1.0] Auto-migration utilities
     main.ts               # Public API entry point (openDB)
     worker-bridge.ts      # Worker communication layer
-    worker.ts             # Worker entry point (SQLite operations)
+    worker.ts             # Worker entry point (SQLite operations + prepare)
   /tests
     /e2e                  # End-to-end browser tests
   /specs                  # Feature specifications
@@ -259,8 +297,10 @@ Registered Callbacks (User Code)
     /types.ts             # Release domain types
     /opfs-utils.ts        # OPFS file operations (adapter)
     /hash-utils.ts        # Release validation (domain)
+    /hash-utils-two-tier.ts  # [F-003] Two-tier validation (trim + normalize)
     /lock-utils.ts        # Metadata locking (domain)
     /version-utils.ts     # Version comparison (domain)
+    /sql-normalizer.ts    # [F-003] SQL normalization via SQLite prepare
     /release-manager.ts   # Release orchestration (application)
 
   /registry               # [v2.0.0] Domain: Database instance tracking
@@ -280,8 +320,9 @@ Registered Callbacks (User Code)
     /auto-migrator.ts         # Convert v2.0.0 to v2.1.0 structure (application)
 
   /types                  # Interface: Public API contracts
-    /DB.ts                # DBInterface, ReleaseConfig, types
+    /DB.ts                # DBInterface, ReleaseConfig, DatabaseRecord (F-003)
     /message.ts           # Worker protocol types
+    /global.ts            # Global namespace types
 
   /utils                  # Infrastructure: Cross-cutting utilities
     /mutex                # Concurrency control
@@ -291,7 +332,7 @@ Registered Callbacks (User Code)
 
   main.ts                 # Interface: Public API
   worker-bridge.ts        # Infrastructure: Worker protocol
-  worker.ts               # Infrastructure: Worker implementation
+  worker.ts               # Infrastructure: Worker implementation + prepare()
 ```
 
 **Architectural Layers**:
@@ -312,8 +353,10 @@ Registered Callbacks (User Code)
 - **Event Emitter** (v2.0.0): Pub-sub pattern for database lifecycle events across all databases
 - **Global Namespace** (v2.0.0): IIFE initialization on library load creates `window.__web_sqlite`
 - **Auto-Migration** (v2.1.0): Automatic detection and conversion from v2.0.0 nested structure to v2.1.0 flat structure with rollback capability
+- **Two-Tier SQL Validation** (F-003): Performance-optimized validation with fast path (trim + hash < 0.1ms) and slow path (prepare normalization 1-5ms) only on mismatch
+- **Original SQL Storage** (F-003): Metadata database stores original SQL for enhanced error reporting and debugging
 
-## 7) Component Diagram (v2.0.0 Architecture)
+## 7) Component Diagram (v2.1.0 + F-003 Architecture)
 
 ```mermaid
 graph TB
@@ -324,22 +367,29 @@ graph TB
         LogDisp[Log Dispatcher]
         EventEmitter[Event Emitter]
         MainAPI[openDB/close API]
+        SQLNorm[SQL Normalizer]
+        TwoTier[Two-Tier Validator]
     end
 
     subgraph "Worker Thread"
         Bridge[Worker Bridge]
         Mutex[Mutex Queue]
-        Worker[SQLite WASM]
+        Worker[SQLite WASM + prepare]
     end
 
     subgraph "Storage"
         OPFS[OPFS File System]
-        MetaDB[Metadata DB]
+        MetaDB[Metadata DB<br/>+ original SQL columns]
     end
 
     App -->|openDB| MainAPI
     MainAPI -->|check lock| Registry
     MainAPI -->|register| Registry
+    MainAPI -->|validate releases| TwoTier
+    TwoTier -->|Tier 1: Fast Path| SQLNorm
+    TwoTier -->|Tier 2: Slow Path| SQLNorm
+    SQLNorm -->|normalize via prepare| Worker
+    SQLNorm -->|store original SQL| MetaDB
     MainAPI -->|create DB| Bridge
     MainAPI -->|emit event| EventEmitter
     MainAPI -->|update| GlobalNS
@@ -361,9 +411,11 @@ graph TB
     style Registry fill:#9f9,stroke:#333,stroke-width:2px
     style LogDisp fill:#9f9,stroke:#333,stroke-width:2px
     style EventEmitter fill:#9f9,stroke:#333,stroke-width:2px
+    style SQLNorm fill:#ff9,stroke:#333,stroke-width:2px
+    style TwoTier fill:#ff9,stroke:#333,stroke-width:2px
 ```
 
-## 8) v2.0.0 Feature Interaction Sequence
+## 8) v2.0.0 + v2.1.0 + F-003 Feature Interaction Sequence
 
 ```mermaid
 sequenceDiagram
@@ -371,23 +423,47 @@ sequenceDiagram
     participant API as openDB API
     participant Reg as Database Registry
     participant NS as window.__web_sqlite
+    participant Validator as Two-Tier Validator
+    participant Normalizer as SQL Normalizer
     participant Worker as SQLite Worker
     participant Log as Log Dispatcher
     participant Event as Event Emitter
+    participant Meta as Metadata DB
 
-    App->>API: openDB("myapp")
+    App->>API: openDB("myapp", releases)
     API->>Reg: checkLock("myapp.sqlite3")
     Reg-->>API: available (true)
+
+    API->>Validator: validate releases
+    Validator->>Validator: Tier 1: trim + hash compare
+
+    alt Tier 1 Hash Match
+        Validator-->>API: validation pass
+    else Tier 1 Hash Mismatch
+        Validator->>Normalizer: normalize SQL via prepare()
+        Normalizer->>Worker: call prepare(sql1, sql2)
+        Worker-->>Normalizer: normalized SQL
+
+        alt Normalized SQL Match
+            Normalizer->>Meta: auto-update hash
+            Normalizer-->>API: validation pass (auto-updated)
+        else Normalized SQL Differ
+            Normalizer-->>API: throw HashMismatchError
+            Note over API,Normalizer: Error includes original SQL<br/>and current SQL diff
+        end
+    end
+
     API->>Worker: create database
     Worker-->>API: DB instance
-    API->>Reg: register("myapp.sqlite3", db)
+    API->>Reg: register("myapp.sqlite3", record)
+    Note over Reg,NS: Record includes original SQL Maps
     Reg->>NS: update databases
     API->>Event: emit({action: "opened", dbName: "myapp.sqlite3"})
     Event->>NS: notify subscribers
     API-->>App: db instance
 
-    App->>NS: onDatabaseChange(callback)
-    NS-->>App: unsubscribe function
+    App->>NS: access databases["myapp.sqlite3"]
+    NS-->>App: {migrationSQL, seedSQL, originalMigrationSQL, originalSeedSQL, db}
 
     App->>db: onLog(callback)
     db->>Log: register(callback)
@@ -423,5 +499,7 @@ sequenceDiagram
 **Related Feature Documents**:
 
 - [F-001: v2.0.0 Enhanced Logging](../01-discovery/features/F-001-v2-logging-direct-access.md) - Feature specification
+- [F-002: v2.1.0 Flat OPFS Structure](../01-discovery/features/F-002-v2.1.0-flat-opfs-structure.md) - Feature specification
+- [F-003: SQL Normalization and Enhanced Validation](../01-discovery/features/F-003-sql-normalization-validation.md) - Feature specification
 
 **Continue to**: [Stage 4: ADR Index](../04-adr/) - Architecture decision records

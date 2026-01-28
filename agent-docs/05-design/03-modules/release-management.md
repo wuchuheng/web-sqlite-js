@@ -2,7 +2,7 @@
 
 ## 1) Assets
 
-**Purpose**: Manage database versioning with release isolation, migration application, and rollback capability.
+**Purpose**: Manage database versioning with release isolation, migration application, rollback capability, and two-tier SQL validation (F-003).
 
 **Links to Contracts**:
 
@@ -15,14 +15,28 @@
 - Database: `agent-docs/05-design/02-schema/01-database.md#module-release-metadata-database`
 - Migrations: `agent-docs/05-design/02-schema/02-migrations.md`
 
+**File Tree (Design + Code)**:
+
+```
+agent-docs/05-design/03-modules/release-management.md  (this file)
+src/modules/release-management/                                (intended code root)
+├── release-manager.ts        # Main orchestrator
+├── hash-utils-two-tier.ts    # F-003: Two-tier validation
+├── opfs-utils.ts             # OPFS operations
+├── lock-utils.ts             # Metadata lock management
+├── version-utils.ts          # Version comparison
+├── types.ts                  # Type definitions
+└── constants.ts              # Constants
+```
+
 ---
 
 ## 2) Module Responsibilities
 
 ### Primary Responsibilities
 
-1. **Release Validation**: Compute SHA-256 hashes and validate release configs
-2. **Metadata Management**: Create and query metadata database
+1. **Release Validation**: Two-tier hash validation with auto-update for whitespace changes (F-003)
+2. **Metadata Management**: Create and query metadata database with original SQL storage
 3. **Version Application**: Apply new releases with migration and seed SQL
 4. **Dev Tooling**: Create dev versions and rollback to previous versions
 5. **Lock Management**: Serialize release operations to prevent conflicts
@@ -32,8 +46,9 @@
 
 - **Atomicity**: All version operations in transactions
 - **Isolation**: Metadata lock prevents concurrent modifications
-- **Consistency**: Hash validation ensures release integrity
+- **Consistency**: Two-tier hash validation ensures release integrity (F-003)
 - **Durability**: OPFS provides persistent storage
+- **Developer Experience**: Auto-update hashes for whitespace changes, enhanced errors for structure changes (F-003)
 
 ---
 
@@ -41,7 +56,7 @@
 
 ### Function: `openReleaseDB(deps): Promise<DBInterface>`
 
-**Purpose**: Open and prepare a versioned database using release metadata.
+**Purpose**: Open and prepare a versioned database using release metadata with two-tier validation (F-003).
 
 **File**: `src/release/release-manager.ts`
 
@@ -58,7 +73,7 @@ type ReleaseManagerDeps = {
 
 **Returns**: `Promise<DBInterface>` - Database interface for latest version
 
-**Flow**:
+**Flow (F-003 Enhanced)**:
 
 ```mermaid
 flowchart TD
@@ -72,10 +87,17 @@ flowchart TD
     H -->|Yes| I[Acquire lock]
     I --> J[Apply new releases]
     J --> K[Release lock]
-    H -->|No| L[Skip migrations]
+    H -->|No| L[Validate archived releases]
     K --> L
-    L --> M[Open latest version]
-    M --> N[Return DBInterface]
+    L --> M{F-003: Two-tier validation}
+    M -->|Tier 1: Hash match| N[Success: Fast path]
+    M -->|Tier 1: Mismatch| O[Tier 2: Normalize SQL]
+    O --> P{Normalized SQL match?}
+    P -->|Yes| Q[Auto-update hash]
+    P -->|No| R[Enhanced error with SQL diff]
+    Q --> N
+    N --> S[Open latest version]
+    S --> T[Return DBInterface]
 ```
 
 **Key Operations**:
@@ -84,12 +106,13 @@ flowchart TD
 2. Compute SHA-256 hashes for migration and seed SQL
 3. Create OPFS directories and default database
 4. Open metadata database (`release.sqlite3`)
-5. Ensure metadata tables exist
+5. Ensure metadata tables exist (including original SQL columns for F-003)
 6. Query latest version from metadata
-7. Validate release configs against archived versions
+7. **F-003**: Validate release configs against archived versions using two-tier validation
 8. Apply new releases if available
 9. Open latest version as active database
 10. Create DBInterface with exec, query, transaction, close, devTool
+11. Populate global namespace with SQL Maps (including original SQL Maps for F-003)
 
 ---
 
@@ -97,7 +120,7 @@ flowchart TD
 
 **Purpose**: Validate release configs and compute SHA-256 hashes.
 
-**File**: `src/release/hash-utils.ts`
+**File**: `src/release/hash-utils-two-tier.ts` (F-003)
 
 **Parameters**:
 
@@ -109,7 +132,7 @@ type ReleaseConfig = {
 };
 ```
 
-**Returns**: `Promise<ReleaseConfigWithHash[]>` - Release configs with computed hashes
+**Returns**: `Promise<ReleaseConfigWithHash[]>` - Release configs with computed hashes and original SQL
 
 **Validation Rules**:
 
@@ -122,7 +145,7 @@ type ReleaseConfig = {
 
 ```typescript
 async function hashSQL(value: string): Promise<string> {
-  const data = new TextEncoder().encode(value);
+  const data = new TextEncoder().encode(value.trim());
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -132,6 +155,20 @@ const normalizedSeedSQL =
   seedSQL === undefined || seedSQL === null || seedSQL === "" ? null : seedSQL;
 const migrationSQLHash = await hashSQL(migrationSQL);
 const seedSQLHash = normalizedSeedSQL ? await hashSQL(normalizedSeedSQL) : null;
+```
+
+**F-003 Enhancement**: Store original SQL for two-tier validation
+
+```typescript
+type ReleaseConfigWithHash = {
+  version: string;
+  migrationSQL: string;
+  normalizedSeedSQL: string | null;
+  migrationSQLHash: string;
+  seedSQLHash: string | null;
+  originalMigrationSQL: string; // F-003: Original SQL at release time
+  originalSeedSQL: string | null; // F-003: Original seed SQL at release time
+};
 ```
 
 **Flow**:
@@ -150,10 +187,156 @@ flowchart TD
     I -->|Yes| K[Normalize seedSQL]
     K --> L[Compute migrationSQLHash]
     L --> M[Compute seedSQLHash]
-    M --> N[Store config with hashes]
-    N --> O{More releases?}
-    O -->|Yes| D
-    O -->|No| P[Return configs]
+    M --> N[Store originalMigrationSQL F-003]
+    N --> O[Store originalSeedSQL F-003]
+    O --> P{More releases?}
+    P -->|Yes| D
+    P -->|No| Q[Return configs with hashes and original SQL]
+```
+
+---
+
+### Function: `validateHashWithTwoTier(sql, storedHash, version, sqlType): Promise<void>` (F-003)
+
+**Purpose**: Two-tier hash validation with auto-update for whitespace changes and enhanced errors for structure changes.
+
+**File**: `src/release/hash-utils-two-tier.ts` (F-003)
+
+**Parameters**:
+
+```typescript
+type ValidateHashParams = {
+  sql: string; // Current SQL from config
+  storedHash: string; // Archived hash from metadata
+  version: string; // Release version
+  sqlType: "migrationSQL" | "seedSQL";
+  originalSQL: string | null; // Original SQL from metadata (F-003)
+  sendMsg: <TRes, TReq>(event: SqliteEvent, payload?: TReq) => Promise<TRes>;
+};
+```
+
+**Returns**: `Promise<void>` - Resolves on success, throws on structure mismatch
+
+**Two-Tier Validation Logic**:
+
+**Tier 1 (Fast)**: `trim()` + hash compare (< 0.1ms)
+
+```typescript
+// Fast path: trim and hash
+const currentHash = await hashSQL(sql.trim());
+if (currentHash === storedHash) {
+  return; // Success (fast path)
+}
+```
+
+**Tier 2 (Slow)**: SQLite `prepare()` normalization (1-5ms)
+
+```typescript
+// Slow path: normalize via prepare()
+const normalizedCurrent = await normalizeSQL(sql);
+const normalizedStored = await normalizeSQL(originalSQL);
+
+if (normalizedCurrent === normalizedStored) {
+  // Auto-update hash (whitespace-only change)
+  await updateHash(version, currentHash, sqlType);
+} else {
+  // Throw enhanced error with SQL diff
+  throw new HashMismatchError(version, sql, originalSQL, sqlType);
+}
+```
+
+**Flow**:
+
+```mermaid
+flowchart TD
+    A[validateHashWithTwoTier] --> B[Tier 1: Compute current hash]
+    B --> C{Hashes match?}
+    C -->|Yes| D[Success: Fast path < 0.1ms]
+    C -->|No| E[Tier 2: Normalize current SQL]
+    E --> F[Tier 2: Normalize stored SQL]
+    F --> G{Normalized SQL match?}
+    G -->|Yes| H[Auto-update hash < 0.1ms]
+    H --> I[Success: Whitespace-only change]
+    G -->|No| J[Generate enhanced error 1-5ms]
+    J --> K[Throw error with SQL diff]
+```
+
+**Enhanced Error Generation**:
+
+```typescript
+function generateHashMismatchError(
+  version: string,
+  currentSQL: string,
+  storedSQL: string,
+  sqlType: "migrationSQL" | "seedSQL",
+): Error {
+  const truncate = (sql: string) =>
+    sql.length > 200 ? sql.substring(0, 200) + "..." : sql;
+
+  const message = `
+${sqlType} hash mismatch for ${version}
+
+The ${sqlType} has been modified from the original release.
+
+Original SQL (first 200 chars):
+${truncate(storedSQL)}
+
+Current SQL (first 200 chars):
+${truncate(currentSQL)}
+
+The SQL structure has changed. Please either:
+1. Revert to the original SQL, or
+2. Create a new version with this migration
+  `.trim();
+
+  return new Error(message);
+}
+```
+
+**Code**:
+
+```typescript
+export const validateHashWithTwoTier = async ({
+  sql,
+  storedHash,
+  version,
+  sqlType,
+  originalSQL,
+  sendMsg,
+}: ValidateHashParams): Promise<void> => {
+  // Tier 1: Fast hash compare
+  const currentHash = await hashSQL(sql.trim());
+  if (currentHash === storedHash) {
+    return; // Success (fast path)
+  }
+
+  // Tier 2: Normalize via prepare()
+  if (!originalSQL) {
+    // Original SQL not available (legacy release)
+    throw new Error(
+      `${sqlType} hash mismatch for ${version} (original SQL not available)`,
+    );
+  }
+
+  const normalizedCurrent = await normalizeSQL(sql, sendMsg);
+  const normalizedStored = await normalizeSQL(originalSQL, sendMsg);
+
+  if (normalizedCurrent === normalizedStored) {
+    // Auto-update hash (whitespace-only change)
+    await updateHash(version, currentHash, sqlType, sendMsg);
+  } else {
+    // Throw enhanced error with SQL diff
+    throw generateHashMismatchError(version, sql, originalSQL, sqlType);
+  }
+};
+
+async function normalizeSQL(
+  sql: string,
+  sendMsg: SendMsgFunction,
+): Promise<string> {
+  const result = await sendMsg<PrepareResult>("prepare", { sql });
+  return result.normalizedSQL;
+}
 ```
 
 ---
@@ -170,13 +353,15 @@ flowchart TD
 type ReleaseConfigWithHash = {
   version: string;
   migrationSQL: string;
-  normalizedSeedSQL: string;
+  normalizedSeedSQL: string | null;
   migrationSQLHash: string;
-  seedSQLHash: string;
+  seedSQLHash: string | null;
+  originalMigrationSQL: string; // F-003
+  originalSeedSQL: string | null; // F-003
 };
 ```
 
-**Flow**:
+**Flow (F-003 Enhanced)**:
 
 ```mermaid
 flowchart TD
@@ -186,24 +371,26 @@ flowchart TD
     C --> D[Store migrationSQL in Map]
     D --> E[Store seedSQL in Map]
     Note over D,E: v2.1.0: SQL stored in memory, not files
-    E --> F[Open new database in worker]
-    F --> G[BEGIN transaction]
-    G --> H[Execute migrationSQL]
-    H --> I{Success?}
-    I -->|No| J[ROLLBACK]
-    J --> K[Remove version file]
-    K --> L[Switch back to previous version]
-    L --> M[Throw error]
-    I -->|Yes| N{seedSQL exists?}
-    N -->|Yes| O[Execute seedSQL]
-    N -->|No| Q[Skip seedSQL]
-    O --> R{Success?}
-    R -->|No| J
-    R -->|Yes| S[COMMIT]
-    Q --> S
-    S --> T[Insert metadata row]
-    T --> U[Update latest version]
-    U --> V[Return void]
+    E --> F[Store originalMigrationSQL in Map F-003]
+    F --> G[Store originalSeedSQL in Map F-003]
+    G --> H[Open new database in worker]
+    H --> I[BEGIN transaction]
+    I --> J[Execute migrationSQL]
+    J --> K{Success?}
+    K -->|No| L[ROLLBACK]
+    L --> M[Remove version file]
+    M --> N[Switch back to previous version]
+    N --> O[Throw error]
+    K -->|Yes| P{seedSQL exists?}
+    P -->|Yes| Q[Execute seedSQL]
+    P -->|No| R[Skip seedSQL]
+    Q --> S{Success?}
+    S -->|No| L
+    S -->|Yes| T[COMMIT]
+    R --> T
+    T --> U[Insert metadata row with original SQL F-003]
+    U --> V[Update latest version]
+    V --> W[Return void]
 ```
 
 **Error Handling**:
@@ -212,7 +399,7 @@ flowchart TD
 - OPFS error: Cleanup partial files, rethrow error
 - Metadata error: Transaction rollback, rethrow error
 
-**Code**:
+**Code (F-003 Enhanced)**:
 
 ```typescript
 const applyVersion = async (
@@ -231,6 +418,12 @@ const applyVersion = async (
   migrationSQLMap.set(config.version, config.migrationSQL);
   if (config.normalizedSeedSQL) {
     seedSQLMap.set(config.version, config.normalizedSeedSQL);
+  }
+
+  // F-003: Store original SQL in memory Maps
+  originalMigrationSQLMap.set(config.version, config.originalMigrationSQL);
+  if (config.originalSeedSQL) {
+    originalSeedSQLMap.set(config.version, config.originalSeedSQL);
   }
 
   await openActiveDb(
@@ -255,12 +448,15 @@ const applyVersion = async (
     throw error;
   }
 
+  // F-003: Insert metadata row with original SQL
   await metaExec(
-    "INSERT INTO release (version, migrationSQLHash, seedSQLHash, mode, createdAt) VALUES (?, ?, ?, ?, ?)",
+    "INSERT INTO release (version, migrationSQLHash, seedSQLHash, originalMigrationSQL, originalSeedSQL, mode, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
     [
       config.version,
       config.migrationSQLHash,
       config.seedSQLHash,
+      config.originalMigrationSQL, // F-003
+      config.originalSeedSQL, // F-003
       mode,
       new Date().toISOString(),
     ],
@@ -357,7 +553,7 @@ const withReleaseLock = async <T>(fn: () => Promise<T>): Promise<T> => {
 
 **Location**: `src/release/release-manager.ts` (in `openReleaseDB`)
 
-**Tables Created**:
+**Tables Created (F-003 Enhanced)**:
 
 ```sql
 CREATE TABLE release (
@@ -365,6 +561,8 @@ CREATE TABLE release (
   version TEXT NOT NULL,
   migrationSQLHash TEXT,
   seedSQLHash TEXT,
+  originalMigrationSQL TEXT,      -- F-003: Original migration SQL
+  originalSeedSQL TEXT,            -- F-003: Original seed SQL
   mode TEXT NOT NULL CHECK (mode IN ('release', 'dev')),
   createdAt TEXT NOT NULL
 );
@@ -386,6 +584,17 @@ VALUES ('default', NULL, NULL, 'release', '<timestamp>');
 
 **Note**: The 'default' version is an internal version representing the initial empty database file (`default.sqlite3`). User-provided versions must be semver `x.y.z` (no leading zeros); `default` is reserved.
 
+**F-003 Migration Path**:
+
+```sql
+-- v2.1.0: Add original SQL columns
+ALTER TABLE release ADD COLUMN originalMigrationSQL TEXT;
+ALTER TABLE release ADD COLUMN originalSeedSQL TEXT;
+
+-- Backfill existing rows with current SQL (if available)
+-- New rows will have original SQL populated automatically
+```
+
 **Code**:
 
 ```typescript
@@ -393,6 +602,17 @@ const ensureMetadata = async (): Promise<void> => {
   await metaExec(RELEASE_TABLE_SQL);
   await metaExec(RELEASE_INDEX_SQL);
   await metaExec(RELEASE_LOCK_TABLE_SQL);
+
+  // F-003: Check if original SQL columns exist, add if not
+  const columns = await metaQuery<{ sql: string }>(
+    "SELECT sql FROM sqlite_master WHERE type='table' AND name='release'",
+  );
+  const hasOriginalColumns = columns[0]?.sql.includes("originalMigrationSQL");
+
+  if (!hasOriginalColumns) {
+    await metaExec("ALTER TABLE release ADD COLUMN originalMigrationSQL TEXT");
+    await metaExec("ALTER TABLE release ADD COLUMN originalSeedSQL TEXT");
+  }
 
   const defaults = await metaQuery<{ id: number }>(
     "SELECT id FROM release WHERE version = ? LIMIT 1",
@@ -571,9 +791,98 @@ try {
 
 ---
 
+### Operation: F-003 Two-Tier Validation
+
+**Purpose**: Validate SQL hashes with two-tier approach for better developer experience.
+
+**Location**: `src/release/hash-utils-two-tier.ts`
+
+**Functions**:
+
+#### `hashSQL(sql: string): Promise<string>`
+
+Compute SHA-256 hash of trimmed SQL string.
+
+```typescript
+async function hashSQL(sql: string): Promise<string> {
+  const data = new TextEncoder().encode(sql.trim());
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+```
+
+#### `normalizeSQL(sql: string, sendMsg): Promise<string>`
+
+Normalize SQL using SQLite's prepare function.
+
+```typescript
+async function normalizeSQL(
+  sql: string,
+  sendMsg: SendMsgFunction,
+): Promise<string> {
+  const result = await sendMsg<PrepareResult>("prepare", { sql });
+  return result.normalizedSQL;
+}
+```
+
+#### `updateHash(version, newHash, sqlType, sendMsg): Promise<void>`
+
+Update hash in metadata database after successful Tier 2 validation.
+
+```typescript
+async function updateHash(
+  version: string,
+  newHash: string,
+  sqlType: "migrationSQL" | "seedSQL",
+  sendMsg: SendMsgFunction,
+): Promise<void> {
+  await metaExec(`UPDATE release SET ${sqlType}Hash = ? WHERE version = ?`, [
+    newHash,
+    version,
+  ]);
+}
+```
+
+#### `generateHashMismatchError(version, currentSQL, storedSQL, sqlType): Error`
+
+Generate enhanced error message with SQL diff.
+
+```typescript
+function generateHashMismatchError(
+  version: string,
+  currentSQL: string,
+  storedSQL: string,
+  sqlType: "migrationSQL" | "seedSQL",
+): Error {
+  const truncate = (sql: string) =>
+    sql.length > 200 ? sql.substring(0, 200) + "..." : sql;
+
+  const message = `
+${sqlType} hash mismatch for ${version}
+
+The ${sqlType} has been modified from the original release.
+
+Original SQL (first 200 chars):
+${truncate(storedSQL)}
+
+Current SQL (first 200 chars):
+${truncate(currentSQL)}
+
+The SQL structure has changed. Please either:
+1. Revert to the original SQL, or
+2. Create a new version with this migration
+  `.trim();
+
+  return new Error(message);
+}
+```
+
+---
+
 ## 5) Data Flow
 
-### Release Application Flow
+### Release Application Flow (F-003 Enhanced)
 
 ```mermaid
 sequenceDiagram
@@ -583,7 +892,7 @@ sequenceDiagram
     participant Worker as Worker
 
     App->>Meta: Query latest version
-    Meta-->>App: latestRow
+    Meta-->>App: latestRow with original SQL
 
     App->>App: Compare versions
 
@@ -592,12 +901,16 @@ sequenceDiagram
         App->>Meta: INSERT release_lock
 
         loop For each new release
-            App->>OPFS: getDirectoryHandle(version, create: true)
-            App->>OPFS: copyFileHandle(latestDb, versionDb)
-            App->>OPFS: writeTextFile(migration.sql)
-            App->>OPFS: writeTextFile(seed.sql)
+            App->>OPFS: Create version file
+            App->>OPFS: Copy latest database
 
-            App->>Worker: OPEN version/db.sqlite3
+            Note over App: Store SQL in memory Maps
+            App->>App: migrationSQLMap.set(version, sql)
+            App->>App: seedSQLMap.set(version, seedSql)
+            App->>App: originalMigrationSQLMap.set F-003
+            App->>App: originalSeedSQLMap.set F-003
+
+            App->>Worker: OPEN version.sqlite3
             App->>Worker: EXECUTE BEGIN
             App->>Worker: EXECUTE migrationSQL
             App->>Worker: EXECUTE seedSQL
@@ -606,14 +919,32 @@ sequenceDiagram
             alt Migration error
                 Worker-->>App: Error
                 App->>Worker: EXECUTE ROLLBACK
-                App->>OPFS: removeDir(version)
+                App->>OPFS: Remove version file
                 App-->>App: Throw error
             end
 
-            App->>Meta: INSERT INTO release
+            App->>Meta: INSERT INTO release with original SQL
         end
 
         App->>Meta: COMMIT
+    end
+
+    App->>App: F-003 Validate archived releases
+
+    alt Tier 1: Hash match
+        App->>App: Success (fast path)
+    else Tier 1: Mismatch
+        App->>Worker: PREPARE original SQL
+        Worker-->>App: Normalized SQL
+        App->>Worker: PREPARE current SQL
+        Worker-->>App: Normalized SQL
+
+        alt Normalized match
+            App->>Meta: UPDATE hash
+            App->>App: Success (auto-update)
+        else Normalized differ
+            App-->>App: Throw enhanced error
+        end
     end
 
     App->>Worker: OPEN latest version
@@ -625,31 +956,35 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant App as devTool.release()
-    participant Hash as Hash Utils
+    participant Hash as Hash Utils (F-003)
     participant Meta as Metadata DB
     participant OPFS as OPFS
     participant Worker as Worker
 
     App->>Hash: validateAndHashReleases([input])
-    Hash-->>App: config with hashes
+    Hash-->>App: config with hashes and original SQL
 
     App->>App: Validate version > latest
 
     App->>Meta: BEGIN IMMEDIATE
     App->>Meta: INSERT release_lock
 
-    App->>OPFS: Create version directory
+    App->>OPFS: Create version file
     App->>OPFS: Copy latest database
-    App->>OPFS: Write migration.sql
-    App->>OPFS: Write seed.sql
 
-    App->>Worker: OPEN version/db.sqlite3
+    Note over App: Store SQL in memory Maps
+    App->>App: migrationSQLMap.set
+    App->>App: seedSQLMap.set
+    App->>App: originalMigrationSQLMap.set F-003
+    App->>App: originalSeedSQLMap.set F-003
+
+    App->>Worker: OPEN version.sqlite3
     App->>Worker: EXECUTE BEGIN
     App->>Worker: EXECUTE migrationSQL
     App->>Worker: EXECUTE seedSQL
     App->>Worker: EXECUTE COMMIT
 
-    App->>Meta: INSERT INTO release (mode='dev')
+    App->>Meta: INSERT INTO release with original SQL
     App->>Meta: COMMIT
 
     App-->>App: Return void
@@ -676,7 +1011,9 @@ sequenceDiagram
     App->>App: Identify dev versions to remove
 
     loop For each dev version above target
-        App->>OPFS: removeDir(version)
+        App->>OPFS: Remove version file
+        App->>App: Remove from SQL Maps
+        App->>App: Remove from original SQL Maps (F-003)
         App->>Meta: DELETE FROM release WHERE id = ?
     end
 
@@ -692,13 +1029,13 @@ sequenceDiagram
 
 ### Error Categories
 
-1. **Hash Mismatch**: Release config SQL differs from archived SQL
+1. **Hash Mismatch (F-003 Enhanced)**: Two-tier validation with auto-update or enhanced error
 2. **Version Conflict**: Version not greater than latest
 3. **Lock Contention**: Concurrent release operation in progress
 4. **Migration Failure**: SQL execution error during version application
 5. **OPFS Errors**: File not found, quota exceeded, permission denied
 
-### Error Recovery
+### F-003 Error Recovery
 
 **Migration Failure**:
 
@@ -728,43 +1065,89 @@ try {
 }
 ```
 
+**F-003 Two-Tier Validation**:
+
+```typescript
+try {
+  await validateHashWithTwoTier({
+    sql: currentSQL,
+    storedHash: metadataHash,
+    version,
+    sqlType: "migrationSQL",
+    originalSQL: metadataOriginalSQL,
+    sendMsg,
+  });
+} catch (error) {
+  // Enhanced error with SQL diff
+  throw error;
+}
+```
+
 ---
 
 ## 7) Performance Characteristics
 
 ### Operation Timing
 
-| Operation                  | Typical Latency     | Notes                    |
-| -------------------------- | ------------------- | ------------------------ |
-| Hash computation           | <1ms per SQL string | SHA-256 via Web Crypto   |
-| Metadata table creation    | 5-10ms              | One-time on first open   |
-| Release validation         | 1-5ms               | Depends on release count |
-| Version directory creation | 5-10ms              | OPFS file operations     |
-| Database copy (50MB)       | 10-20ms             | OPFS file copy           |
-| Migration application      | 1-5ms               | Typical migration SQL    |
-| Seed application           | 5-10ms              | 1000 rows typical        |
-| Rollback (per version)     | 10-20ms             | Directory removal        |
+| Operation                       | Typical Latency | Notes                    |
+| ------------------------------- | --------------- | ------------------------ |
+| Hash computation (Tier 1)       | < 0.1ms         | SHA-256 via Web Crypto   |
+| SQL normalization (Tier 2)      | 1-5ms           | SQLite prepare()         |
+| Auto-update hash (after Tier 2) | < 0.1ms         | Metadata UPDATE          |
+| Enhanced error generation       | < 1ms           | SQL truncation to 200    |
+| Metadata table creation         | 5-10ms          | One-time on first open   |
+| Release validation              | 1-5ms           | Depends on release count |
+| Version directory creation      | 5-10ms          | OPFS file operations     |
+| Database copy (50MB)            | 10-20ms         | OPFS file copy           |
+| Migration application           | 1-5ms           | Typical migration SQL    |
+| Seed application                | 5-10ms          | 1000 rows typical        |
+| Rollback (per version)          | 10-20ms         | Directory removal        |
+
+### F-003 Performance Impact
+
+**Best Case (Tier 1 Success)**:
+
+- No additional overhead
+- Fast path < 0.1ms per version
+- Most common scenario (whitespace unchanged)
+
+**Typical Case (Tier 2 Auto-Update)**:
+
+- 1-5ms for SQL normalization
+- < 0.1ms for hash update
+- Occurs when whitespace changes
+- No error thrown, hash auto-updated
+
+**Worst Case (Tier 2 Error)**:
+
+- 1-5ms for SQL normalization
+- < 1ms for error generation
+- Occurs when SQL structure changes
+- Enhanced error thrown with SQL diff
 
 ### Storage Usage
 
 **Per Version Overhead**:
 
 - Database file: Same as latest database size
-- migration.sql: Typically < 100KB
-- seed.sql: Typically < 100KB (if present)
-- Metadata row: < 1KB
+- Metadata row: < 1KB (including original SQL)
+- Memory Maps:
+  - migrationSQL: Typically < 100KB
+  - seedSQL: Typically < 100KB (if present)
+  - originalMigrationSQL (F-003): Typically < 100KB
+  - originalSeedSQL (F-003): Typically < 100KB (if present)
 
 **Total Storage Estimation**:
 
 ```
-Total = (Database Size × Version Count) + (SQL Files × Version Count)
+Total = (Database Size × Version Count) + (Metadata Size)
 ```
 
-Example: 50MB database, 15 versions
+Example: 50MB database, 15 versions, 1MB metadata
 
 - Database storage: 50MB × 15 = 750MB
-- SQL files: 50KB × 15 = 750KB
-- Total: ~750MB
+- Metadata: 1MB (including original SQL)
+- Total: ~751MB
 
 ---
 
@@ -777,7 +1160,7 @@ src/release/release-manager.ts
 ├── src/release/constants.ts
 ├── src/release/types.ts
 ├── src/release/opfs-utils.ts
-├── src/release/hash-utils.ts
+├── src/release/hash-utils-two-tier.ts  # F-003
 ├── src/release/lock-utils.ts
 └── src/release/version-utils.ts
 ```
@@ -785,7 +1168,7 @@ src/release/release-manager.ts
 ### External Dependencies
 
 - **Browser APIs**: OPFS, Web Crypto
-- **Worker Protocol**: SqliteEvent, sendMsg
+- **Worker Protocol**: SqliteEvent, sendMsg (including PREPARE for F-003)
 - **Mutex**: runMutex for serialization
 
 ---
@@ -796,12 +1179,13 @@ src/release/release-manager.ts
 
 - No dedicated unit tests for release hashing/versioning yet.
 - Coverage is exercised via E2E release tests (hash mismatch, release apply, rollback).
+- **F-003**: Need tests for two-tier validation scenarios
 
 ### E2E Tests
 
 - **Release Application**: `tests/e2e/release.e2e.test.ts`
   - Migration application
-  - Hash validation
+  - Hash validation (Tier 1)
   - Metadata row creation
   - Version directory creation
 
@@ -810,19 +1194,106 @@ src/release/release-manager.ts
   - devTool.rollback() behavior
   - Rollback constraints
 
+- **F-003 Two-Tier Validation**: `tests/e2e/f-003-validation.e2e.test.ts` (new)
+  - Tier 1 success (fast path)
+  - Tier 2 auto-update (whitespace changes)
+  - Tier 2 enhanced error (structure changes)
+  - SQL truncation to 200 chars
+  - Original SQL storage and retrieval
+
+### F-003 Test Scenarios
+
+**Scenario 1: Tier 1 Success**
+
+```typescript
+test("Tier 1: Hash match - fast path", async () => {
+  const db = await openDB("test", {
+    releases: [
+      {
+        version: "1.0.0",
+        migrationSQL: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
+      },
+    ],
+  });
+
+  // Re-open with same SQL
+  await openDB("test", {
+    releases: [
+      {
+        version: "1.0.0",
+        migrationSQL: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
+      },
+    ],
+  });
+
+  // Should succeed without Tier 2 validation
+});
+```
+
+**Scenario 2: Tier 2 Auto-Update**
+
+```typescript
+test("Tier 2: Whitespace change - auto-update hash", async () => {
+  // Original: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);"
+  // Current:  "CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT );"
+
+  const db = await openDB("test", {
+    releases: [
+      {
+        version: "1.0.0",
+        migrationSQL:
+          "CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT );", // Different whitespace
+      },
+    ],
+  });
+
+  // Should succeed with auto-updated hash
+});
+```
+
+**Scenario 3: Tier 2 Enhanced Error**
+
+```typescript
+test("Tier 2: Structure change - enhanced error", async () => {
+  // Original: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);"
+  // Current:  "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT);"
+
+  await expect(
+    openDB("test", {
+      releases: [
+        {
+          version: "1.0.0",
+          migrationSQL:
+            "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT);",
+        },
+      ],
+    }),
+  ).rejects.toThrow("migrationSQL hash mismatch for 1.0.0");
+
+  // Error should include SQL diff
+});
+```
+
 ---
 
 ## 10) Security Considerations
 
-### Hash Validation
+### Hash Validation (F-003 Enhanced)
 
-**Purpose**: Detect unauthorized modifications to release SQL
+**Purpose**: Detect unauthorized modifications to release SQL with better developer experience
 
 **Algorithm**: SHA-256 (cryptographically secure)
 
+**Two-Tier Validation**:
+
+- Tier 1: Fast hash compare (< 0.1ms)
+- Tier 2: SQLite prepare() normalization (1-5ms)
+- Auto-update: Hashes updated for whitespace changes
+- Enhanced errors: SQL diff for structure changes
+
 **Validation**: On every `openDB()` call, compare config hashes with metadata hashes
 
-**Failure**: Throws error, prevents database open
+**Failure**: Throws enhanced error with SQL diff, prevents database open
 
 ### Release Immutability
 
@@ -831,7 +1302,9 @@ src/release/release-manager.ts
 **Enforcement**:
 
 - Release configs validated against metadata on every open
-- Hash mismatch throws error
+- Hash mismatch triggers two-tier validation
+- Whitespace changes: Auto-update hashes
+- Structure changes: Enhanced error thrown
 - Cannot modify released SQL (only add new versions)
 
 ### Metadata Lock
@@ -866,5 +1339,6 @@ src/release/release-manager.ts
 
 - [ADR-0004: Release Versioning](../../04-adr/0004-release-versioning-system.md) - Versioning system
 - [ADR-0003: Mutex Queue](../../04-adr/0003-mutex-queue-concurrency.md) - Metadata lock
+- [Feature F-003: SQL Normalization](../../01-discovery/03-scope.md#f-003-sql-normalization) - Two-tier validation
 
 **Back to**: [Spec Index](../../00-control/00-spec.md)

@@ -4,7 +4,7 @@
 
 ### Database: `release.sqlite3`
 
-**Purpose**: Track all database versions with migration and seed SQL hashes.
+**Purpose**: Track all database versions with migration and seed SQL hashes, and original SQL for enhanced validation (F-003).
 
 **Location**: `{baseDir}/release.sqlite3` in OPFS
 
@@ -16,7 +16,7 @@
 
 ### Table: `release`
 
-**Purpose**: Store version history with SQL hashes for integrity validation.
+**Purpose**: Store version history with SQL hashes and original SQL for integrity validation.
 
 **Schema**:
 
@@ -26,6 +26,8 @@ CREATE TABLE release (
   version TEXT NOT NULL,
   migrationSQLHash TEXT,
   seedSQLHash TEXT,
+  originalMigrationSQL TEXT,      -- F-003: Original migration SQL at release time
+  originalSeedSQL TEXT,            -- F-003: Original seed SQL at release time
   mode TEXT NOT NULL CHECK (mode IN ('release', 'dev')),
   createdAt TEXT NOT NULL
 );
@@ -35,14 +37,28 @@ CREATE UNIQUE INDEX idx_release_version ON release(version);
 
 **Column Descriptions**:
 
-| Column             | Type    | Constraints               | Description                                             |
-| ------------------ | ------- | ------------------------- | ------------------------------------------------------- |
-| `id`               | INTEGER | PRIMARY KEY AUTOINCREMENT | Auto-incrementing unique identifier                     |
-| `version`          | TEXT    | NOT NULL, UNIQUE          | Semantic version string (e.g., "1.0.0", "1.0.1")        |
-| `migrationSQLHash` | TEXT    | NULL                      | SHA-256 hash of migration SQL (NULL only for `default`) |
-| `seedSQLHash`      | TEXT    | NULL                      | SHA-256 hash of seed SQL (NULL if no seed SQL)          |
-| `mode`             | TEXT    | NOT NULL, CHECK           | Version mode: "release" (immutable) or "dev" (mutable)  |
-| `createdAt`        | TEXT    | NOT NULL                  | ISO 8601 timestamp of version creation                  |
+| Column                 | Type    | Constraints               | Description                                             |
+| ---------------------- | ------- | ------------------------- | ------------------------------------------------------- |
+| `id`                   | INTEGER | PRIMARY KEY AUTOINCREMENT | Auto-incrementing unique identifier                     |
+| `version`              | TEXT    | NOT NULL, UNIQUE          | Semantic version string (e.g., "1.0.0", "1.0.1")        |
+| `migrationSQLHash`     | TEXT    | NULL                      | SHA-256 hash of migration SQL (NULL only for `default`) |
+| `seedSQLHash`          | TEXT    | NULL                      | SHA-256 hash of seed SQL (NULL if no seed SQL)          |
+| `originalMigrationSQL` | TEXT    | NULL                      | **F-003**: Original migration SQL at release time       |
+| `originalSeedSQL`      | TEXT    | NULL                      | **F-003**: Original seed SQL at release time            |
+| `mode`                 | TEXT    | NOT NULL, CHECK           | Version mode: "release" (immutable) or "dev" (mutable)  |
+| `createdAt`            | TEXT    | NOT NULL                  | ISO 8601 timestamp of version creation                  |
+
+**F-003 New Columns**:
+
+- `originalMigrationSQL` (TEXT): Stores the original migration SQL at release time
+  - Used for two-tier validation: trim+hash (fast) vs prepare() normalize (slow)
+  - Enables auto-update of hashes when only whitespace changes
+  - Enables enhanced error messages with SQL diff when structure changes
+  - NULL if no migration SQL
+
+- `originalSeedSQL` (TEXT): Stores the original seed SQL at release time
+  - Same purpose as originalMigrationSQL
+  - NULL if no seed SQL
 
 **Indexes**:
 
@@ -66,25 +82,37 @@ VALUES ('default', NULL, NULL, 'release', '<timestamp>');
 
 ```sql
 -- Version 0.0.0 (first user-provided release)
-INSERT INTO release (version, migrationSQLHash, seedSQLHash, mode, createdAt)
-VALUES ('0.0.0', 'abc123def456...', NULL, 'release', '2025-01-09T00:00:00.000Z');
+INSERT INTO release (version, migrationSQLHash, seedSQLHash, originalMigrationSQL, originalSeedSQL, mode, createdAt)
+VALUES (
+  '0.0.0',
+  'abc123def456...',  -- SHA-256 hash of migration.sql
+  NULL,              -- No seed SQL
+  'CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);',  -- F-003: Original migration SQL
+  NULL,              -- F-003: No seed SQL
+  'release',
+  '2025-01-09T00:00:00.000Z'
+);
 
 -- Version 1.0.0 (first release)
-INSERT INTO release (version, migrationSQLHash, seedSQLHash, mode, createdAt)
+INSERT INTO release (version, migrationSQLHash, seedSQLHash, originalMigrationSQL, originalSeedSQL, mode, createdAt)
 VALUES (
   '1.0.0',
   'abc123def456...',  -- SHA-256 hash of migration.sql
   'fed654cba321...',  -- SHA-256 hash of seed.sql
+  'CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT NOT NULL );',  -- F-003: Original migration SQL
+  'INSERT INTO users (name) VALUES ('Alice');',  -- F-003: Original seed SQL
   'release',
   '2025-01-09T01:00:00.000Z'
 );
 
 -- Version 1.0.1 (dev version)
-INSERT INTO release (version, migrationSQLHash, seedSQLHash, mode, createdAt)
+INSERT INTO release (version, migrationSQLHash, seedSQLHash, originalMigrationSQL, originalSeedSQL, mode, createdAt)
 VALUES (
   '1.0.1',
-  '789xyz012abc...',
-  NULL,  -- No seed SQL for this version
+  '789xyz012abc...',  -- SHA-256 hash of migration.sql
+  NULL,  -- No seed SQL
+  'ALTER TABLE users ADD COLUMN email TEXT;',  -- F-003: Original migration SQL
+  NULL,  -- F-003: No seed SQL
   'dev',
   '2025-01-09T02:00:00.000Z'
 );
@@ -99,6 +127,8 @@ erDiagram
         TEXT version UK
         TEXT migrationSQLHash
         TEXT seedSQLHash
+        TEXT originalMigrationSQL "F-003"
+        TEXT originalSeedSQL "F-003"
         TEXT mode
         TEXT createdAt
     }
@@ -106,8 +136,19 @@ erDiagram
 
 **Relationships**:
 
-- One-to-many with versioned databases: Each `release` row corresponds to one OPFS directory with database file
+- One-to-many with versioned databases: Each `release` row corresponds to one OPFS file (v2.1.0) or directory (v2.0.0)
 - Self-referential ordering: Versions ordered by `id` for linear version history
+
+**F-003 Migration Path**:
+
+```sql
+-- v2.1.0: Add original SQL columns
+ALTER TABLE release ADD COLUMN originalMigrationSQL TEXT;
+ALTER TABLE release ADD COLUMN originalSeedSQL TEXT;
+
+-- Backfill existing rows with current SQL (if available)
+-- New rows will have original SQL populated automatically
+```
 
 ---
 
@@ -178,6 +219,8 @@ erDiagram
         TEXT version UK
         TEXT migrationSQLHash
         TEXT seedSQLHash
+        TEXT originalMigrationSQL "F-003"
+        TEXT originalSeedSQL "F-003"
         TEXT mode
         TEXT createdAt
     }
@@ -194,11 +237,14 @@ erDiagram
 
 ## 2) Module: User Application Databases
 
-### Database: `{baseDir}/{version}/db.sqlite3`
+### Database: `{baseDir}/{version}.sqlite3` (v2.1.0) or `{baseDir}/{version}/db.sqlite3` (v2.0.0)
 
 **Purpose**: Store user application data.
 
-**Location**: `{baseDir}/{version}/db.sqlite3` in OPFS
+**Location**:
+
+- v2.1.0: `{baseDir}/{version}.sqlite3` in OPFS (flat structure)
+- v2.0.0: `{baseDir}/{version}/db.sqlite3` in OPFS (nested structure)
 
 **Technology**: SQLite (same as metadata database)
 
@@ -294,6 +340,7 @@ OPFS Root
 - **SQL in Memory**: Migration/seed SQL stored in `window.__web_sqlite.databases[name]` as `Map<string, string>`
 - **Version Suffix**: Dev versions use `.dev.sqlite3` suffix (e.g., `1.0.2.dev.sqlite3`)
 - **Auto-Migration**: Automatic conversion from v2.0.0 to v2.1.0 on first `openDB()`
+- **F-003**: Original SQL stored in `originalMigrationSQL` and `originalSeedSQL` columns in metadata
 
 ### File Descriptions
 
@@ -303,6 +350,7 @@ OPFS Root
 - **Schema**: `release` and `release_lock` tables
 - **Location**: `{baseDir}/release.sqlite3`
 - **Size**: Typically < 1MB (depends on version count)
+- **F-003**: Now includes `originalMigrationSQL` and `originalSeedSQL` columns
 
 #### `default.sqlite3`
 
@@ -333,6 +381,7 @@ OPFS Root
 - **Location**: `{baseDir}/{version}/migration.sql`
 - **Size**: Typically < 100KB
 - **v2.1.0**: SQL stored in `window.__web_sqlite.databases[name].migrationSQL` Map
+- **F-003**: Original SQL stored in `originalMigrationSQL` column in metadata
 
 #### `{version}/seed.sql` (v2.0.0 legacy, removed in v2.1.0)
 
@@ -341,6 +390,7 @@ OPFS Root
 - **Location**: `{baseDir}/{version}/seed.sql`
 - **Size**: Typically < 100KB (may not exist)
 - **v2.1.0**: SQL stored in `window.__web_sqlite.databases[name].seedSQL` Map
+- **F-003**: Original SQL stored in `originalSeedSQL` column in metadata
 
 ### File Creation Flow
 
@@ -367,18 +417,19 @@ sequenceDiagram
     App->>Meta: Insert default row (version "default")
 
     loop For each new version
-        App->>OPFS: getDirectoryHandle(version, create: true)
-        OPFS-->>App: versionDir handle
-
         App->>OPFS: copyFileHandle(latestDb, versionDb)
-        App->>OPFS: writeTextFile(versionDir, "migration.sql", sql)
-        App->>OPFS: writeTextFile(versionDir, "seed.sql", seedSql)
 
-        App->>Worker: OPEN {baseDir}/{version}/db.sqlite3
+        Note over App: v2.1.0: Store SQL in Maps and metadata
+        App->>App: Populate migrationSQL Map
+        App->>App: Populate seedSQL Map
+        App->>App: Populate originalMigrationSQL Map (F-003)
+        App->>App: Populate originalSeedSQL Map (F-003)
+
+        App->>Worker: OPEN {baseDir}/{version}.sqlite3
         App->>Worker: EXECUTE migration.sql
         App->>Worker: EXECUTE seed.sql
 
-        App->>Meta: INSERT INTO release (version, ...)
+        App->>Meta: INSERT INTO release (version, hashes, originalSQL, mode, ...)
     end
 ```
 
@@ -393,15 +444,17 @@ The active database is the versioned database currently in use by the applicatio
 **Representation**:
 
 - In-memory reference in worker: `activeDb` global variable
-- File path: `{baseDir}/{latestVersion}/db.sqlite3`
-- Metadata row: `release` table row with highest `id`
+- File path: `{baseDir}/{latestVersion}.sqlite3` (v2.1.0) or `{baseDir}/{latestVersion}/db.sqlite3` (v2.0.0)
+- Metadata row: `release` table row with highest `id` where `mode = 'release'`
 
 **Switching Active Database**:
 
 ```typescript
 // In worker
 await sendMsg(OPEN, {
-  filename: `${baseDir}/${version}/db.sqlite3`,
+  filename: `${baseDir}/${version}.sqlite3`, // v2.1.0
+  // or
+  filename: `${baseDir}/${version}/db.sqlite3`, // v2.0.0
   target: "active",
   replace: true, // Close existing connection first
 });
@@ -433,18 +486,18 @@ Versions are stored in linear order by `id` in the `release` table.
 
 ```sql
 -- All versions (ordered)
-SELECT id, version, migrationSQLHash, seedSQLHash, mode, createdAt
+SELECT id, version, migrationSQLHash, seedSQLHash, originalMigrationSQL, originalSeedSQL, mode, createdAt
 FROM release
 ORDER BY id ASC;
 
 -- Latest version
-SELECT id, version, migrationSQLHash, seedSQLHash, mode, createdAt
+SELECT id, version, migrationSQLHash, seedSQLHash, originalMigrationSQL, originalSeedSQL, mode, createdAt
 FROM release
 ORDER BY id DESC
 LIMIT 1;
 
 -- Latest release version (excluding dev)
-SELECT id, version, migrationSQLHash, seedSQLHash, mode, createdAt
+SELECT id, version, migrationSQLHash, seedSQLHash, originalMigrationSQL, originalSeedSQL, mode, createdAt
 FROM release
 WHERE mode = 'release' AND version != 'default'
 ORDER BY id DESC
@@ -520,7 +573,7 @@ if (compareVersions(targetVersion, latestReleaseVersion) < 0) {
 
 ---
 
-## 6) Module: SQL Hash Storage
+## 6) Module: SQL Hash Storage and Validation (F-003 Enhanced)
 
 ### Hash Computation
 
@@ -533,7 +586,7 @@ if (compareVersions(targetVersion, latestReleaseVersion) < 0) {
 ```typescript
 async function computeHash(sql: string): Promise<string> {
   const encoder = new TextEncoder();
-  const data = encoder.encode(sql);
+  const data = encoder.encode(sql.trim());
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -549,38 +602,97 @@ function normalizeSQL(sql: string | undefined | null): string {
 }
 ```
 
+### Two-Tier Validation (F-003)
+
+**Purpose**: Validate SQL hashes with two-tier approach for better developer experience:
+
+1. **Tier 1 (Fast)**: `trim()` + hash compare (< 0.1ms)
+2. **Tier 2 (Slow)**: SQLite `prepare()` normalization (1-5ms) on mismatch
+
+**Benefits**:
+
+- Fast path for most cases (whitespace hasn't changed)
+- Auto-update hash for whitespace-only changes
+- Enhanced error messages with SQL diff for actual structure changes
+
+**Validation Flow**:
+
+```mermaid
+flowchart TD
+    A[openDB with release config] --> B[Query metadata release table]
+    B --> C{Tier 1: Hash Compare}
+    C -->|Hashes match| D[Success: Fast path]
+    C -->|Hashes differ| E[Tier 2: Normalize via prepare]
+
+    E --> F{Normalized SQL match?}
+    F -->|Yes| G[Auto-update hash]
+    F -->|No| H[Generate enhanced error]
+
+    G --> I[Update metadata hashes]
+    I --> D
+
+    H --> J[Throw error with SQL diff]
+```
+
+**Code Flow**:
+
+```typescript
+// 1. Query metadata for existing version
+const row = await metaQuery("SELECT * FROM release WHERE version = ?", [
+  version,
+]);
+
+// 2. Tier 1: Fast hash compare
+if (row.migrationSQLHash === computedHash) {
+  return; // Success (fast path)
+}
+
+// 3. Tier 2: Normalize via prepare()
+const normalizedStored = await normalizeSQL(row.originalMigrationSQL);
+const normalizedCurrent = await normalizeSQL(currentSQL);
+
+if (normalizedStored === normalizedCurrent) {
+  // Auto-update hash (whitespace-only change)
+  await metaExec("UPDATE release SET migrationSQLHash = ? WHERE version = ?", [
+    computedHash,
+    version,
+  ]);
+} else {
+  // Throw enhanced error with SQL diff
+  throw new HashMismatchError(version, currentSQL, row.originalMigrationSQL);
+}
+```
+
+**Normalization via prepare()**:
+
+```typescript
+async function normalizeSQL(sql: string): Promise<string> {
+  // Use SQLite's prepare() to normalize SQL
+  const stmt = sqlite3_prepare_v2(sql);
+  const normalized = sqlite3_expanded_sql(stmt);
+  sqlite3_finalize(stmt);
+  return normalized;
+}
+```
+
 ### Hash Storage
 
 **In Metadata Table**:
 
 ```sql
-INSERT INTO release (version, migrationSQLHash, seedSQLHash, mode, createdAt)
+INSERT INTO release (version, migrationSQLHash, seedSQLHash, originalMigrationSQL, originalSeedSQL, mode, createdAt)
 VALUES (
   '1.0.0',
   'abc123def456...',  -- SHA-256 hash of normalized migration.sql
   'fed654cba321...',  -- SHA-256 hash of normalized seed.sql
+  'CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT NOT NULL );',  -- F-003: Original migration SQL
+  'INSERT INTO users (name) VALUES ('Alice');',  -- F-003: Original seed SQL
   'release',
   '2025-01-09T00:00:00.000Z'
 );
 ```
 
-### Hash Validation
-
-**On Database Open**:
-
-```typescript
-for (const row of releaseRows) {
-  const config = configByVersion.get(row.version);
-  if (config.migrationSQLHash !== row.migrationSQLHash) {
-    throw new Error(`migrationSQL hash mismatch for ${row.version}`);
-  }
-  if (config.seedSQLHash !== row.seedSQLHash) {
-    throw new Error(`seedSQL hash mismatch for ${row.version}`);
-  }
-}
-```
-
-**Purpose**: Detect accidental or malicious modification of release SQL.
+**Purpose**: Detect accidental or malicious modification of release SQL, with enhanced validation to allow whitespace changes.
 
 ---
 
@@ -622,7 +734,9 @@ stateDiagram-v2
 ```typescript
 // Switch to new version database
 await sendMsg(OPEN, {
-  filename: `${baseDir}/${newVersion}/db.sqlite3`,
+  filename: `${baseDir}/${newVersion}.sqlite3`, // v2.1.0
+  // or
+  filename: `${baseDir}/${newVersion}/db.sqlite3`, // v2.0.0
   target: "active",
   replace: true, // Close existing connection first
 });
@@ -713,6 +827,14 @@ const withReleaseLock = async <T>(fn: () => Promise<T>): Promise<T> => {
 - INSERT/UPDATE: 0.2-0.5ms
 - Transaction: 0.5-2ms (depends on operations)
 
+**F-003 Two-Tier Validation Performance**:
+
+| Operation                   | Latency | Notes                              |
+| --------------------------- | ------- | ---------------------------------- |
+| Tier 1: trim + hash         | < 0.1ms | Fast path for most cases           |
+| Tier 2: prepare() normalize | 1-5ms   | Slow path, only on hash mismatch   |
+| Auto-update hash            | < 0.1ms | After successful Tier 2 validation |
+
 **Factors**:
 
 - Table size (row count)
@@ -734,19 +856,20 @@ const withReleaseLock = async <T>(fn: () => Promise<T>): Promise<T> => {
 - Each version: full database copy
 - Migration SQL: typically < 100KB per version
 - Seed SQL: typically < 100KB per version
+- Original SQL: stored in metadata, minimal overhead (F-003)
 
 **Storage Estimation**:
 
 ```
-Total Storage = (Database Size × Version Count) + (SQL Files × Version Count)
+Total Storage = (Database Size × Version Count) + (Metadata Size)
 ```
 
 Example:
 
 - Database: 50MB
 - Versions: 10 releases + 5 dev versions
-- SQL files: 50KB × 15 = 750KB
-- Total: 50MB × 15 + 750KB ≈ 750MB
+- Metadata: 1MB (includes original SQL)
+- Total: 50MB × 15 + 1MB ≈ 751MB
 
 ---
 
@@ -760,7 +883,9 @@ Example:
 // Get database file handle from OPFS
 const root = await navigator.storage.getDirectory();
 const dir = await root.getDirectoryHandle("myapp");
-const file = await dir.getFileHandle("1.0.0/db.sqlite3");
+const file = await dir.getFileHandle("1.0.0.sqlite3"); // v2.1.0
+// or
+const file = await dir.getFileHandle("1.0.0/db.sqlite3"); // v2.0.0
 const blob = await file.getFile();
 
 // Download to user's computer
@@ -933,5 +1058,6 @@ if (result[0].integrity_check !== "ok") {
 
 - [ADR-0002: OPFS Storage](../../04-adr/0002-opfs-persistent-storage.md) - OPFS architecture
 - [ADR-0004: Release Versioning](../../04-adr/0004-release-versioning-system.md) - Versioning system
+- [ADR-0008: Auto-Migration](../../04-adr/0008-auto-migration-strategy.md) - v2.1.0 auto-migration
 
 **Back to**: [Spec Index](../../00-control/00-spec.md)

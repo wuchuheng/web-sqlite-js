@@ -11,7 +11,7 @@ All worker messages follow this structure:
 ```typescript
 type SqliteReqMsg<T> = {
   id: number; // Unique message ID for correlation
-  event: string; // Event type: "open", "execute", "query", "close"
+  event: string; // Event type: "open", "execute", "query", "close", "prepare" (F-003)
   payload?: T; // Optional event-specific payload
 };
 ```
@@ -456,6 +456,158 @@ type CloseResponse = undefined;
 
 ---
 
+### Event: PREPARE (F-003)
+
+**Description**: Normalize SQL using SQLite's prepare function for two-tier hash validation. Used for Tier 2 validation when Tier 1 (trim + hash) fails.
+
+**Direction**: Main Thread → Worker
+
+**Usage Note**: This is an internal event used by the two-tier validation system. Users do not call this directly.
+
+**Purpose**:
+
+- Normalize SQL via SQLite `prepare()` to detect whitespace-only changes
+- Enable auto-update of hashes when only whitespace differs
+- Enable enhanced error messages when SQL structure actually changes
+
+**Payload Schema**:
+
+```typescript
+type PreparePayload = {
+  sql: string; // SQL string to normalize
+};
+```
+
+**Response Schema**:
+
+```typescript
+type PrepareResult = {
+  normalizedSQL: string; // Normalized SQL from sqlite3_prepare
+};
+```
+
+**Error Conditions**:
+
+- SQL syntax errors (same as QUERY/EXECUTE)
+- Database not open
+
+**State Changes**:
+
+- No state changes (read-only operation)
+
+**Performance**:
+
+- Typical execution time: 1-5ms (slower than trim + hash)
+- Only called when Tier 1 hash validation fails
+- Uses SQLite's `prepare()` and `expanded_sql()` functions
+
+**F-003 Two-Tier Validation Context**:
+
+```mermaid
+flowchart TD
+    A[Hash mismatch detected] --> B[Send PREPARE event]
+    B --> C[SQLite prepare sql]
+    C --> D[Get normalized SQL]
+    D --> E{Normalized SQL match?}
+    E -->|Yes| F[Auto-update hash, no error]
+    E -->|No| G[Generate enhanced error with SQL diff]
+```
+
+**Example**:
+
+```typescript
+// Request (Tier 2 validation)
+{
+  id: 6,
+  event: "prepare",
+  payload: {
+    sql: "CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT NOT NULL );"
+  }
+}
+
+// Response (success)
+{
+  id: 6,
+  success: true,
+  payload: {
+    normalizedSQL: "CREATE TABLE users(id INTEGER PRIMARY KEY,name TEXT NOT NULL);"
+  }
+}
+
+// Response (error - invalid SQL)
+{
+  id: 6,
+  success: false,
+  error: {
+    name: "Error",
+    message: "near \"CREAT\": syntax error",
+    stack: "..."
+  }
+}
+```
+
+**Worker Implementation**:
+
+```typescript
+// In worker
+if (event === "prepare") {
+  try {
+    const stmt = sqlite3_prepare_v2(payload.sql);
+    const normalized = sqlite3_expanded_sql(stmt);
+    sqlite3_finalize(stmt);
+
+    postMessage({
+      id,
+      success: true,
+      payload: { normalizedSQL: normalized },
+    });
+  } catch (error) {
+    postMessage({
+      id,
+      success: false,
+      error: serializeError(error),
+    });
+  }
+}
+```
+
+**Main Thread Usage**:
+
+```typescript
+// In release manager (two-tier validation)
+async function validateHashWithTwoTier(
+  sql: string,
+  storedHash: string,
+  version: string,
+  sqlType: "migrationSQL" | "seedSQL",
+) {
+  // Tier 1: Fast hash compare
+  const currentHash = await computeHash(sql.trim());
+  if (currentHash === storedHash) {
+    return; // Success (fast path)
+  }
+
+  // Tier 2: Normalize via prepare()
+  const normalizedCurrent = await normalizeSQL(sql);
+  const normalizedStored = await normalizeSQL(storedSQL);
+
+  if (normalizedCurrent === normalizedStored) {
+    // Auto-update hash (whitespace-only change)
+    await updateHash(version, currentHash, sqlType);
+  } else {
+    // Throw enhanced error with SQL diff
+    throw new HashMismatchError(version, sql, storedSQL);
+  }
+}
+
+async function normalizeSQL(sql: string): Promise<string> {
+  const result = await sendMsg<PrepareResult>("prepare", { sql });
+  return result.normalizedSQL;
+}
+```
+
+---
+
 ## 2) Internal Application Events
 
 ### Event: Release Lock Acquisition
@@ -541,9 +693,9 @@ type VersionApplication = {
 
 **Behavior**:
 
-1. Create version directory in OPFS
+1. Create version directory in OPFS (v2.0.0) or copy version file (v2.1.0)
 2. Copy latest database to new version
-3. Write migration.sql and seed.sql files
+3. Write migration.sql and seed.sql files (v2.0.0 only)
 4. Open new database in worker
 5. Execute BEGIN transaction
 6. Execute migration SQL
@@ -1069,6 +1221,50 @@ sequenceDiagram
 
 ---
 
+### Flow: F-003 Two-Tier Validation
+
+```mermaid
+sequenceDiagram
+    participant App as openDB()
+    participant Main as Main Thread
+    participant Worker as Worker
+    participant SQLite as SQLite Engine
+    participant Meta as Metadata DB
+
+    App->>Meta: SELECT release row
+    Meta-->>App: version with hashes and original SQL
+
+    App->>App: Tier 1: Compute hash
+    App->>App: Tier 1: Compare hashes
+
+    alt Hashes match
+        App-->>App: Success (fast path)
+    else Hashes differ
+        App->>Worker: PREPARE original SQL
+        Worker->>SQLite: sqlite3_prepare_v2
+        SQLite-->>Worker: statement
+        Worker->>Worker: sqlite3_expanded_sql
+        Worker-->>Main: normalized SQL
+
+        App->>Worker: PREPARE current SQL
+        Worker->>SQLite: sqlite3_prepare_v2
+        SQLite-->>Worker: statement
+        Worker->>Worker: sqlite3_expanded_sql
+        Worker-->>Main: normalized SQL
+
+        App->>App: Tier 2: Compare normalized SQL
+
+        else Normalized match
+            App->>Meta: UPDATE hash
+            App-->>App: Success (auto-update)
+        else Normalized differ
+            App-->>App: Throw enhanced error
+        end
+    end
+```
+
+---
+
 ### Flow: Error Propagation
 
 ```mermaid
@@ -1190,13 +1386,14 @@ sequenceDiagram
 
 ### Message Latency Breakdown
 
-| Operation                   | Latency        | Notes                     |
-| --------------------------- | -------------- | ------------------------- |
-| postMessage (Main → Worker) | ~0.02ms        | Structured clone overhead |
-| Worker processing           | 0.2-0.5ms      | SQLite execution time     |
-| postMessage (Worker → Main) | ~0.02ms        | Structured clone overhead |
-| Promise resolution          | ~0.01ms        | Map lookup and cleanup    |
-| **Total Round-trip**        | **~0.3-0.6ms** | End-to-end latency        |
+| Operation                             | Latency        | Notes                             |
+| ------------------------------------- | -------------- | --------------------------------- |
+| postMessage (Main → Worker)           | ~0.02ms        | Structured clone overhead         |
+| Worker processing                     | 0.2-0.5ms      | SQLite execution time             |
+| postMessage (Worker → Main)           | ~0.02ms        | Structured clone overhead         |
+| Promise resolution                    | ~0.01ms        | Map lookup and cleanup            |
+| **Total Round-trip**                  | **~0.3-0.6ms** | End-to-end latency                |
+| **F-003 PREPARE (Tier 2 validation)** | **1-5ms**      | SQLite prepare() + expanded_sql() |
 
 ### High-Volume Events
 
@@ -1209,6 +1406,7 @@ sequenceDiagram
 - **Database Open**: 10-100ms (includes WASM initialization, migrations)
 - **Release Application**: 50-100ms per version
 - **Rollback**: 10-50ms (directory removal + metadata cleanup)
+- **F-003 Tier 2 Validation**: 1-5ms per SQL (only on hash mismatch)
 
 ### v2.0.0 Event Performance
 
@@ -1357,6 +1555,11 @@ const db = await openDB("myapp", {
 [devTool.release] end 1.2.0
 [devTool.rollback] start 1.0.0
 [devTool.rollback] end 1.0.0
+
+// F-003 two-tier validation
+[validation] Tier 1: Hash mismatch for version 1.0.0
+[validation] Tier 2: Normalizing SQL via prepare()
+[validation] Normalized SQL match - auto-updating hash
 ```
 
 ### v2.0.0 Structured Logging Output
@@ -1364,7 +1567,7 @@ const db = await openDB("myapp", {
 ```typescript
 // Log callback receives structured entries
 db.onLog((log) => {
-    console.log(`[${log.level}]`, log.data);
+  console.log(`[${log.level}]`, log.data);
 });
 
 // Output examples:

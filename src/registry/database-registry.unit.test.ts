@@ -27,6 +27,8 @@ const createMockDB = (_name: string): DatabaseRecord => {
   return {
     migrationSQL: new Map(),
     seedSQL: new Map(),
+    originalMigrationSQL: new Map(),
+    originalSeedSQL: new Map(),
     db,
   };
 };

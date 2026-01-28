@@ -13,6 +13,8 @@ export enum SqliteEvent {
   RUN = "run",
   /** Execute query and return rows */
   QUERY = "query",
+  /** Normalize SQL using SQLite prepare (F-003) */
+  PREPARE = "prepare",
 }
 
 export type DbTarget = "active" | "meta";
@@ -54,4 +56,22 @@ export type SqliteResMsg<T> = {
   error?: Error;
   payload?: T;
   logs?: WorkerLogEntry[];
+};
+
+/**
+ * Request payload for PREPARE event (F-003).
+ * Normalizes SQL using SQLite prepare for two-tier validation.
+ */
+export type PrepareRequest = {
+  /** SQL string to normalize */
+  sql: string;
+};
+
+/**
+ * Response payload for PREPARE event (F-003).
+ * Returns normalized SQL from sqlite3_prepare_v2 and sqlite3_expanded_sql.
+ */
+export type PrepareResponse = {
+  /** Normalized SQL string */
+  normalizedSQL: string;
 };

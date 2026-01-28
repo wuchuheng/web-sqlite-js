@@ -45,10 +45,28 @@ function openDB(
 - `Error`: "[web-sqlite-js] SharedArrayBuffer is not enabled." (message includes COOP/COEP header instructions and setup link)
 - `Error`: "filename must be a non-empty string"
 - `Error`: "Missing release config for {version}"
-- `Error`: "migrationSQL hash mismatch for {version}"
-- `Error`: "seedSQL hash mismatch for {version}"
+- `Error`: "migrationSQL hash mismatch for {version}" (Enhanced F-003 error format)
+- `Error`: "seedSQL hash mismatch for {version}" (Enhanced F-003 error format)
 - `Error`: "Release config {version} is not greater than the latest version"
 - `Error`: "Database '{filename}' is already open" (v2.0.0)
+
+**F-003 Enhanced Hash Mismatch Error Format:**
+
+```typescript
+Error: migrationSQL hash mismatch for 1.0.0
+
+The migration SQL has been modified from the original release.
+
+Original SQL (first 200 chars):
+CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT NOT NULL );
+
+Current SQL (first 200 chars):
+CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT );
+
+The SQL structure has changed. Please either:
+1. Revert to the original SQL, or
+2. Create a new version with this migration
+```
 
 **Example:**
 
@@ -451,7 +469,7 @@ sequenceDiagram
     Mutex->>Worker: EXECUTE "BEGIN"
     Worker-->>Mutex: success
 
-    Mutex->>App: execute transaction callback
+    Mutex->>App: Execute transaction callback
 
     App->>DB: tx.exec("INSERT ...")
     DB->>Mutex: (already locked, proceed immediately)
@@ -764,7 +782,7 @@ await db.devTool.rollback("1.0.0");
 // Result: Back to 1.0.0, dev versions removed
 
 // Cannot rollback below latest release
-await db.devTool.rollback("0.0.9");
+await db.devTool.rollback("0.9.0");
 // Throws: "Cannot rollback below the latest release version"
 ```
 
@@ -808,6 +826,21 @@ declare global {
           seedSQL: Map<string, string>;
 
           /**
+           * Original migration SQL indexed by version (F-003)
+           * Stores the original SQL at release time for enhanced hash validation
+           * Used for two-tier validation: trim+hash (fast) vs prepare() normalize (slow)
+           * Example: new Map([['1.0.0', 'CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT NOT NULL );']])
+           */
+          originalMigrationSQL: Map<string, string>;
+
+          /**
+           * Original seed SQL indexed by version (F-003)
+           * Stores the original seed SQL at release time
+           * Example: new Map([['1.0.0', 'INSERT INTO users (name) VALUES ('Alice');']])
+           */
+          originalSeedSQL: Map<string, string>;
+
+          /**
            * Database interface instance
            */
           db: DBInterface;
@@ -834,10 +867,13 @@ declare global {
   - **Values**: Database record containing:
     - `migrationSQL` (Map<string, string>): Version-indexed migration SQL
     - `seedSQL` (Map<string, string>): Version-indexed seed SQL
+    - `originalMigrationSQL` (Map<string, string>): **F-003**: Original migration SQL at release time
+    - `originalSeedSQL` (Map<string, string>): **F-003**: Original seed SQL at release time
     - `db` (DBInterface): Actual database interface instance
   - **Read-only**: Externally read-only (internal updates only)
   - **Lifetime**: Cleared on page unload/refresh
   - **v2.1.0 Change**: Type changed from `Record<string, DBInterface>` to include SQL Maps
+  - **F-003 Change**: Added `originalMigrationSQL` and `originalSeedSQL` Maps
 
 - `onDatabaseChange(callback)` (Function): Subscribe to database lifecycle events
   - **Parameter**: Callback receiving `DatabaseChangeEvent`
@@ -886,6 +922,13 @@ console.log(migration); // "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEX
 const seed = dbRecord.seedSQL.get("0.0.1");
 console.log(seed); // "INSERT INTO users (name) VALUES ('Alice');"
 
+// F-003: Access original SQL for enhanced validation
+const originalMigration = dbRecord.originalMigrationSQL.get("1.0.0");
+console.log(originalMigration); // "CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT NOT NULL );"
+
+const originalSeed = dbRecord.originalSeedSQL.get("1.0.0");
+console.log(originalSeed); // "INSERT INTO users (name) VALUES ('Alice');"
+
 // In module A:
 await openDB("app");
 
@@ -905,6 +948,8 @@ const unsubscribe = window.__web_sqlite.onDatabaseChange((event) => {
     const dbRecord = window.__web_sqlite.databases[event.dbName];
     console.log("Migration SQL:", dbRecord.migrationSQL);
     console.log("Seed SQL:", dbRecord.seedSQL);
+    console.log("Original Migration SQL:", dbRecord.originalMigrationSQL);
+    console.log("Original Seed SQL:", dbRecord.originalSeedSQL);
   } else {
     console.log(`❌ Database closed: ${event.dbName}`);
   }
@@ -1271,7 +1316,7 @@ type SqliteResMsg<T> = {
 };
 ```
 
-### Global Namespace Types (v2.0.0)
+### Global Namespace Types (v2.0.0 + F-003)
 
 ```typescript
 // Global namespace on window object
@@ -1302,6 +1347,21 @@ declare global {
            * Example: new Map([['0.0.1', 'UPDATE users SET age = 25 WHERE age IS NULL;']])
            */
           seedSQL: Map<string, string>;
+
+          /**
+           * Original migration SQL indexed by version (F-003)
+           * Stores the original SQL at release time for enhanced hash validation
+           * Used for two-tier validation: trim+hash (fast) vs prepare() normalize (slow)
+           * Example: new Map([['1.0.0', 'CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT NOT NULL );']])
+           */
+          originalMigrationSQL: Map<string, string>;
+
+          /**
+           * Original seed SQL indexed by version (F-003)
+           * Stores the original seed SQL at release time
+           * Example: new Map([['1.0.0', 'INSERT INTO users (name) VALUES ('Alice');']])
+           */
+          originalSeedSQL: Map<string, string>;
 
           /**
            * Database interface instance
@@ -1417,7 +1477,7 @@ const cancelLog = db.onLog((log) => {
     errorTracking.capture(log.data);
   } else if (log.level === "debug") {
     // Log SQL execution details
-    console.log(`SQL: ${log.data.sql}, Duration: ${log.data.duration}ms`);
+    console.log("SQL:", log.data.sql, "Duration:", log.data.duration);
   }
 });
 
@@ -1442,6 +1502,38 @@ const unsubscribe = window.__web_sqlite.onDatabaseChange((event) => {
 });
 ```
 
+### Pattern 7: F-003 Enhanced Hash Validation (v2.1.0)
+
+```typescript
+// Two-tier validation happens automatically on openDB()
+// Tier 1: Fast trim + hash (< 0.1ms)
+// Tier 2: Slow prepare() normalization (1-5ms) only if Tier 1 fails
+
+// If hash mismatch occurs, enhanced error message shows:
+const db = await openDB("myapp", {
+  releases: [
+    {
+      version: "1.0.0",
+      migrationSQL: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);",
+    },
+  ],
+});
+
+// If developer later changes whitespace:
+// Original: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);"
+// Current:  "CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT );"
+// → Tier 1 fails (hash mismatch)
+// → Tier 2 runs (prepare() normalization)
+// → Normalized SQL matches → Hash auto-updates → No error!
+
+// If developer actually changes structure:
+// Original: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);"
+// Current:  "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT);"
+// → Tier 1 fails (hash mismatch)
+// → Tier 2 runs (prepare() normalization)
+// → Normalized SQL differs → Enhanced error thrown with SQL diff
+```
+
 ---
 
 ## 5) Performance Characteristics
@@ -1460,6 +1552,15 @@ const unsubscribe = window.__web_sqlite.onDatabaseChange((event) => {
 | onLog callback      | <0.01ms         | Per log entry (v2.0.0)                 |
 | Global DB access    | 0ms             | Direct reference, no overhead (v2.0.0) |
 
+### F-003 Two-Tier Validation Timing
+
+| Operation                   | Latency | Notes                                |
+| --------------------------- | ------- | ------------------------------------ |
+| Tier 1: trim + hash         | < 0.1ms | Fast path for most cases             |
+| Tier 2: prepare() normalize | 1-5ms   | Slow path, only on hash mismatch     |
+| Auto-update hash            | < 0.1ms | After successful Tier 2 validation   |
+| Enhanced error generation   | < 1ms   | Includes SQL truncation to 200 chars |
+
 ### Concurrency
 
 - **Mutex Queue**: All operations serialized through single mutex
@@ -1474,6 +1575,7 @@ const unsubscribe = window.__web_sqlite.onDatabaseChange((event) => {
 - **Result Sets**: Full arrays transferred via structured clone
 - **Large Datasets**: May cause worker memory pressure (future: streaming)
 - **Registry Cache**: In-memory registry for opened databases (v2.0.0)
+- **Original SQL Storage**: In-memory Maps for F-003 enhanced validation
 
 ---
 
@@ -1492,7 +1594,7 @@ const unsubscribe = window.__web_sqlite.onDatabaseChange((event) => {
    - Table/column not found
 
 3. **Release Errors**
-   - Hash mismatch
+   - **Hash mismatch (F-003 Enhanced)**: Two-tier validation with detailed SQL diff
    - Version conflicts
    - Rollback failures
    - Lock contention

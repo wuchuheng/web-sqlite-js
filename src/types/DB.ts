@@ -99,54 +99,123 @@ export interface DBInterface {
   /**
    * Execute a SQL script (one or more statements) without returning rows.
    * Intended for migrations, schema setup, or bulk SQL execution.
+   *
    * @param sql - SQL string to execute.
    * @param params - Optional bind parameters for the statement.
+   * @returns Result metadata (changes, lastInsertRowid).
+   *
+   * @example
+   * ```ts
+   * await db.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)");
+   * await db.exec("INSERT INTO users (name) VALUES (?)", ["Alice"]);
+   * ```
    */
   exec(sql: string, params?: SQLParams): Promise<ExecResult>;
 
   /**
    * Execute a query and return all result rows as an array of objects.
+   *
    * @param sql - SELECT SQL to execute.
    * @param params - Optional bind parameters for the query.
+   * @returns Array of result rows.
+   *
+   * @example
+   * ```ts
+   * const users = await db.query<{ id: number; name: string }>(
+   *   "SELECT id, name FROM users WHERE id = ?",
+   *   [1]
+   * );
+   * ```
    */
   query<T = unknown>(sql: string, params?: SQLParams): Promise<T[]>;
 
   /**
-   * Run a callback inside a transaction. The implementation should BEGIN before calling `fn`
-   * and COMMIT on success or ROLLBACK on error.
-   * @param fn - Callback that receives a DBInterface and performs transactional work.
+   * Execute a transaction with automatic rollback on error.
+   *
+   * @param fn - Transaction callback receiving transaction interface.
+   * @returns Result of the transaction callback.
+   *
+   * @example
+   * ```ts
+   * await db.transaction(async (tx) => {
+   *   await tx.exec("INSERT INTO users (name) VALUES (?)", ["Bob"]);
+   *   await tx.exec("INSERT INTO posts (title) VALUES (?)", ["Hello"]);
+   * });
+   * ```
    */
   transaction<T>(fn: transactionCallback<T>): Promise<T>;
 
-  /** Close the database and release resources. */
+  /**
+   * Close the database and release worker resources.
+   *
+   * @example
+   * ```ts
+   * await db.close();
+   * ```
+   */
   close(): Promise<void>;
 
   /**
-   * Subscribe to log events
-   * Logs include SQL execution, timing, errors, and application events
+   * Register a callback for database logs (worker SQL execution logs).
    *
-   * @param callback - Called for each log entry
-   * @returns Unsubscribe function
+   * @param callback - Function to receive log entries.
+   * @returns Unregister function.
    *
    * @example
-   * const unsubscribe = db.onLog((log) => {
-   *     console.log(`[${log.level}]`, log.data);
+   * ```ts
+   * const unregister = db.onLog((log) => {
+   *   console.log(`[${log.level}]`, log.data);
    * });
-   * // Later: unsubscribe();
+   * // Later: unregister();
+   * ```
    */
   onLog(callback: (log: LogEntry) => void): () => void;
 
-  /** Dev tooling APIs for release testing. */
+  /**
+   * Dev tooling for creating and managing dev versions.
+   */
   devTool: DevTool;
 }
 
-export type transactionCallback<T> = (
-  db: Pick<DBInterface, "exec" | "query">,
-) => Promise<T>;
+/**
+ * Transaction callback interface.
+ * Provides exec and query methods scoped to the transaction.
+ */
+export type transactionCallback<T> = (tx: Transaction) => Promise<T>;
 
+/**
+ * Transaction interface passed to transaction callbacks.
+ * All operations execute within the same transaction.
+ */
+export interface Transaction {
+  /**
+   * Execute a SQL statement within the transaction.
+   */
+  exec(sql: string, params?: SQLParams): Promise<ExecResult>;
+
+  /**
+   * Execute a query within the transaction.
+   */
+  query<T = unknown>(sql: string, params?: SQLParams): Promise<T[]>;
+}
+
+/**
+ * Dev tooling interface for creating and rolling back dev versions.
+ */
 export type DevTool = {
   /**
-   * Create a new dev version using migration and seed SQL.
+   * Create a new dev version with migration and seed SQL.
+   *
+   * @param input - Release config with version, migration SQL, and optional seed SQL.
+   *
+   * @example
+   * ```ts
+   * await db.devTool.release({
+   *   version: "1.0.1",
+   *   migrationSQL: "ALTER TABLE users ADD COLUMN email TEXT",
+   *   seedSQL: "UPDATE users SET email = 'test@example.com' WHERE email IS NULL",
+   * });
+   * ```
    */
   release(input: ReleaseConfig): Promise<void>;
 
@@ -165,6 +234,8 @@ export type DevTool = {
  * const record: DatabaseRecord = {
  *   migrationSQL: new Map([["1.0.0", "CREATE TABLE..."]]),
  *   seedSQL: new Map([["1.0.0", "INSERT INTO..."]]),
+ *   originalMigrationSQL: new Map([["1.0.0", "CREATE TABLE..."]]), // F-003
+ *   originalSeedSQL: new Map([["1.0.0", "INSERT INTO..."]]), // F-003
  *   db: databaseInstance,
  * };
  *
@@ -173,6 +244,9 @@ export type DevTool = {
  *
  * // Access migration SQL
  * const migration = record.migrationSQL.get("1.0.0");
+ *
+ * // Access original SQL (F-003)
+ * const originalMigration = record.originalMigrationSQL.get("1.0.0");
  * ```
  */
 export interface DatabaseRecord {
@@ -189,6 +263,22 @@ export interface DatabaseRecord {
    * Value: seed SQL string (empty string if no seed)
    */
   seedSQL: Map<string, string>;
+
+  /**
+   * Map of version → original migration SQL (F-003)
+   * Key: semantic version (e.g., "1.0.0")
+   * Value: original migration SQL string at release time
+   * Used for two-tier validation (Tier 2: prepare normalization)
+   */
+  originalMigrationSQL: Map<string, string>;
+
+  /**
+   * Map of version → original seed SQL (F-003)
+   * Key: semantic version (e.g., "1.0.0")
+   * Value: original seed SQL string at release time (null if no seed)
+   * Used for two-tier validation (Tier 2: prepare normalization)
+   */
+  originalSeedSQL: Map<string, string | null>;
 
   /**
    * Database interface instance

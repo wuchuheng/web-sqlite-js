@@ -1,501 +1,276 @@
-# 02 Task Catalog (Release Grouped)
-
-**Project**: web-sqlite-js
-**Current Version**: 1.1.2 (Production)
-**Target Version**: 2.0.0 (In Development)
-**Last Updated**: 2026-01-11
-**Status**: v1.1.2 Stable - v2.0.0 Implementation In Progress (11/12 tasks complete)
-
----
-
-## Status Legend
-
-- `[ ]` **Pending**: Ready to be picked up
-- `[-]` **In Progress**: Currently being executed
-- `[x]` **Completed**: Tested, verified, and merged
-
----
-
-## Release v2.0.0 (Active Development)
-
-> **Focus**: Enhanced Logging and Direct Database Access
-> **Target Date**: Q1 2026
-> **Status**: Implementation In Progress (11/12 tasks complete)
-
-### Phase 1: Database Registry and Lock (Foundation)
-
-- [x] **TASK-201**: [Registry] Create Database Registry Module
+- [x] **TASK-401**: [Schema] Add Original SQL Columns to Release Table (Spec: [v1](../08-task/archive/TASK-401-Add-Original-SQL-Columns-to-Release-Table/v1-impl.md))
   - **Priority**: P0 (Blocker)
   - **Dependencies**: None
-  - **Boundary**: `src/registry/database-registry.ts`
-  - **Description**: Implement singleton registry for tracking opened database instances
+  - **Boundary**: `src/release/release-manager.ts`, `agent-docs/05-design/02-schema/01-database.md`
+  - **Description**: Add `originalMigrationSQL` and `originalSeedSQL` columns to metadata database
   - **Implementation Details**:
-    - Create `DatabaseRegistry` class with singleton pattern
-    - Implement `register(filename: string, db: DBInterface): void`
-    - Implement `unregister(filename: string): void`
-    - Implement `get(filename: string): DBInterface | undefined`
-    - Implement `list(): string[]` (returns all registered database names)
-    - Implement `has(filename: string): boolean`
+    - Add `originalMigrationSQL TEXT` column to release table
+    - Add `originalSeedSQL TEXT` column to release table
+    - Create ALTER TABLE migration script for existing databases
+    - Update database schema documentation
   - **DoD**:
-    - Registry singleton pattern implemented
-    - All CRUD operations working
-    - Thread-safe operations (if needed)
-    - Unit tests pass (`src/registry/database-registry.unit.test.ts`)
+    - [x] ALTER TABLE statements created and tested
+    - [x] Existing databases migrate successfully
+    - [x] Schema documentation updated
+    - [x] Migration tests pass
+  - **Estimated**: 3 hours
+  - **Completed**: 2026-01-26
+
+- [x] **TASK-402**: [Release Manager] Update Release Manager to Populate Original SQL Columns (Spec: [v1](../08-task/archive/TASK-402-Update-Release-Manager-to-Populate-Original-SQL-Columns/v1-impl.md))
+  - **Priority**: P0 (Blocker)
+  - **Dependencies**: TASK-401 (Schema columns added)
+  - **Boundary**: `src/release/release-manager.ts`, `src/release/types.ts`, `src/release/hash-utils.ts`, `src/types/DB.ts`
+  - **Description**: Store original SQL when creating releases and populate in-memory Maps for two-tier validation
+  - **Implementation Details**:
+    - Updated `validateAndHashReleases()` to store original SQL in `ReleaseConfigWithHash`
+    - Updated `applyVersion()` to insert original SQL into metadata database
+    - Created `originalMigrationSQLMap` and `originalSeedSQLMap` in-memory Maps
+    - Populated Maps when loading existing releases from metadata
+    - Updated `DatabaseRecord` type to include original SQL Maps
+    - Added `originalMigrationSQL` and `originalSeedSQL` fields to `ReleaseRow` type
+  - **DoD**:
+    - [x] Original SQL stored in metadata database on release creation
+    - [x] Original SQL Maps populated in memory
+    - [x] DatabaseRecord type includes original SQL Maps
+    - [x] Type definitions updated consistently
   - **Estimated**: 4 hours
-  - **Completed**: 2026-01-10
+  - **Completed**: 2026-01-26
 
-- [x] **TASK-202**: [Registry] Implement Database Lock
+- [x] **TASK-403**: [Worker Protocol] Add PREPARE Message Type (Spec: [v1](../08-task/archive/TASK-403-Add-PREPARE-Message-Type-Worker-Protocol-Extension/v1-impl.md))
   - **Priority**: P0 (Blocker)
-  - **Dependencies**: TASK-201
-  - **Boundary**: `src/registry/database-registry.ts`
-  - **Description**: Add lock mechanism to prevent duplicate database opens
-  - **Implementation Details**:
-    - Implement `checkLock(filename: string): void` (throws if locked)
-    - Implement `acquireLock(filename: string): void`
-    - Implement `releaseLock(filename: string): void`
-    - Lock state stored in registry
-    - Error message: "Database '{filename}' is already open"
-  - **DoD**:
-    - Lock prevents duplicate opens
-    - Lock releases on database close
-    - Proper error messages
-    - Unit tests pass (lock scenarios)
-  - **Estimated**: 3 hours
-  - **Completed**: 2026-01-10 (Included in TASK-201 implementation)
-  - **Notes**: Lock mechanism was implemented as part of TASK-201. Registry includes checkLock, acquireLock, releaseLock methods with comprehensive test coverage.
-
-- [x] **TASK-203**: [Registry] Integrate Registry with openDB
-  - **Priority**: P0 (Blocker)
-  - **Dependencies**: TASK-201 (Lock mechanism available)
-  - **Boundary**: `src/main.ts` (openDB function)
-  - **Description**: Update openDB to use registry for lock checking and registration
-  - **Implementation Details**:
-    - Call `registry.checkLock()` before opening database
-    - Call `registry.register()` after successful open
-    - Call `registry.unregister()` in close() method
-    - Normalize filenames consistently
-  - **DoD**:
-    - Opening same database twice throws error
-    - Database registered after successful open
-    - Database unregistered after close
-    - E2E tests pass
-  - **Estimated**: 3 hours
-  - **Completed**: 2026-01-11
-  - **Evidence**:
-    - ✅ Updated `src/main.ts` with checkLock() and register()
-    - ✅ Updated `src/release/release-manager.ts` with unregister()
-    - ✅ Created `tests/e2e/registry-integration.e2e.test.ts` (6 tests)
-    - ✅ Updated `tests/e2e/query.e2e.test.ts` for new behavior
-    - ✅ All 21 E2E tests passing
-  - **Notes**: Database registry fully integrated. Opening same database twice now throws `DatabaseAlreadyOpenError`. Database is automatically unregistered on close.
-  - **Micro-Spec**: [draft](../08-task/active/TASK-203.md)
-
-### Phase 2: Global Namespace
-
-- [x] **TASK-204**: [Namespace] Initialize Global Namespace
-  - **Priority**: P0
-  - **Dependencies**: TASK-203
-  - **Boundary**: `src/global/namespace.ts`
-  - **Description**: Create and initialize `window.__web_sqlite` namespace object
-  - **Implementation Details**:
-    - Create `initializeNamespace()` function
-    - Define non-enumerable property on `window` object
-    - Initialize `databases` property as empty object
-    - Initialize `onDatabaseChange` property
-    - Call initialization on library load (IIFE)
-  - **DoD**:
-    - Namespace accessible via `window.__web_sqlite`
-    - Namespace not enumerable in `Object.keys(window)`
-    - `databases` property exists (empty initially)
-    - `onDatabaseChange` function exists
-  - **Estimated**: 2 hours
-  - **Completed**: 2026-01-11
-  - **Evidence**:
-    - ✅ Created `src/global/namespace.ts` with namespace implementation
-    - ✅ Created `src/types/global.ts` with type definitions
-    - ✅ Updated `src/main.ts` to import namespace (initializes on load)
-    - ✅ Created `src/global/namespace.unit.test.ts` (10 tests)
-    - ✅ Created `vitest.unit.setup.ts` for test environment setup
-    - ✅ All 10 unit tests passing
-    - ✅ All 21 E2E tests passing
-  - **Micro-Spec**: [draft](../08-task/active/TASK-204.md)
-
-- [x] **TASK-205**: [Namespace] Define Namespace Type Definitions
-  - **Priority**: P0
-  - **Dependencies**: TASK-204
-  - **Boundary**: `src/global/namespace.ts`, `src/types/global.ts`, `src/main.ts`
-  - **Description**: Add TypeScript type definitions for global namespace
-  - **Implementation Details**:
-    - Extend `Window` interface with `__web_sqlite` property
-    - Define `WebSqliteNamespace` interface
-    - Define `DatabaseChangeEvent` type
-    - Export types for consumers
-  - **DoD**:
-    - ✅ TypeScript types compile without errors
-    - ✅ IntelliSense shows namespace properties
-    - ✅ Type definitions included in build output (`dist/index.d.ts`)
-    - ✅ Type test file created for compile-time verification
-    - ✅ All 44 unit tests passing
-    - ✅ All 21 E2E tests passing
-  - **Estimated**: 2 hours
-  - **Micro-Spec**: [draft](../08-task/active/TASK-205.md)
-
-- [x] **TASK-206**: [Namespace] Sync Namespace with Registry
-  - **Priority**: P0
-  - **Dependencies**: TASK-205
-  - **Boundary**: `src/registry/database-registry.ts`
-  - **Description**: Update namespace `databases` property when registry changes
-  - **Implementation Details**:
-    - Update `register()` to add to `window.__web_sqlite.databases`
-    - Update `unregister()` to remove from `window.__web_sqlite.databases`
-    - Make `databases` property readonly externally
-  - **DoD**:
-    - Namespace `databases` reflects current registry state
-    - Direct access to database instances works
-    - Readonly enforced externally
-  - **Estimated**: 2 hours
-  - **Completed**: 2026-01-11
-  - **Evidence**:
-    - ✅ Updated `src/registry/database-registry.ts` with namespace sync
-    - ✅ Fixed `src/global/namespace.ts` `_updateDatabases()` to properly clear old keys
-    - ✅ Created `tests/e2e/namespace-sync.e2e.test.ts` (5 tests)
-    - ✅ All 26 E2E tests passing
-  - **Micro-Spec**: [draft](../08-task/active/TASK-206.md)
-
-### Phase 3: Structured Logging
-
-- [x] **TASK-207**: [Logging] Create Log Dispatcher
-  - **Status**: ✅ COMPLETE
-  - **Completed**: 2026-01-11
-  - **Priority**: P0
-  - **Dependencies**: TASK-206
-  - **Boundary**: `src/logs/log-dispatcher.ts`
-  - **Description**: Implement log dispatcher for callback management
-  - **Implementation Details**:
-    - Created `createLogDispatcher()` factory function (functional programming)
-    - Implemented `register(callback: LogCallback): () => void` (returns cancel function)
-    - Implemented `dispatch(log: LogEntry): void`
-    - Handle callback errors (error isolation)
-  - **Evidence**:
-    - ✅ Created `src/logs/log-dispatcher.ts` with `createLogDispatcher()` factory function
-    - ✅ Created `src/logs/log-dispatcher.unit.test.ts` (9 tests)
-    - ✅ Added `LogEntry` type to `src/types/DB.ts`
-    - ✅ Added `onLog()` method to `DBInterface`
-    - ✅ All 53 unit tests passing
-    - ✅ TypeScript compiles without errors
-  - **Estimated**: 3 hours
-  - **Micro-Spec**: [complete](../08-task/active/TASK-207.md)
-
-- [x] **TASK-208**: [Logging] Implement onLog API
-  - **Status**: ✅ COMPLETE
-  - **Completed**: 2026-01-11
-  - **Priority**: P0
-  - **Dependencies**: TASK-207
-  - **Boundary**: `src/release/release-manager.ts` (DBInterface)
-  - **Description**: Add `onLog(callback)` method to DBInterface
-  - **Implementation Details**:
-    - Added `createLogDispatcher` import
-    - Created `logDispatcher` instance per database
-    - Implemented `onLog(callback: LogCallback): () => void`
-    - Removed placeholder implementation
-  - **Evidence**:
-    - ✅ Imported `createLogDispatcher` from `../logs/log-dispatcher`
-    - ✅ Created `logDispatcher` instance in `openReleaseDB()`
-    - ✅ Implemented `onLog()` to call `logDispatcher.register()`
-    - ✅ All 53 unit tests passing
-    - ✅ TypeScript compiles without errors
-  - **Estimated**: 2 hours
-  - **Micro-Spec**: [complete](../08-task/active/TASK-208.md)
-
-- [x] **TASK-209**: [Logging] Implement Worker Log Forwarding
-  - **Status**: ✅ COMPLETE
-  - **Completed**: 2026-01-11
-  - **Priority**: P0
-  - **Dependencies**: TASK-208
+  - **Dependencies**: TASK-402 (Original SQL storage working)
   - **Boundary**: `src/types/message.ts`, `src/worker.ts`, `src/worker-bridge.ts`
-  - **Description**: Generate logs in worker and forward to main thread for dispatching
+  - **Description**: Add PREPARE message type to worker protocol for SQL normalization using `sqlite3_prepare_v2()` and `sqlite3_expanded_sql()`
   - **Implementation Details**:
-    - Added `WorkerLogEntry` type to `src/types/message.ts`
-    - Updated `SqliteResMsg` to include `logs` array
-    - Worker generates logs for SQL execution (debug level)
-    - Worker generates logs for errors (error level)
-    - Worker bridge extracts logs and dispatches them
-    - Release manager passes log dispatcher to worker bridge
-  - **Evidence**:
-    - ✅ Added `WorkerLogEntry` type
-    - ✅ Worker collects logs via `addLog()` helper
-    - ✅ Worker includes logs in response messages
-    - ✅ Worker bridge dispatches logs via `logDispatcher.dispatch()`
-    - ✅ Created `tests/e2e/worker-logs.e2e.test.ts` (5 tests)
-    - ✅ All 31 E2E tests passing
-    - ✅ TypeScript compiles without errors
-  - **Estimated**: 4 hours
-  - **Micro-Spec**: [complete](../08-task/active/TASK-209.md)
-
-- [x] **TASK-220**: [Logging] Application-Level Logging System
-  - **Priority**: P1
-  - **Dependencies**: TASK-209
-  - **Boundary**: `src/main.ts`, `src/release/release-manager.ts`
-  - **Description**: Emit log entries for application events (open, close, transactions)
-  - **Implementation Details**:
-    - Emit `{level: "info", data: {action: "open", dbName}}` on database open
-    - Emit `{level: "info", data: {action: "close", dbName}}` on database close
-    - Emit transaction logs (commit/rollback)
-    - Use log dispatcher for application events
+    - Added `PREPARE` to `SqliteEvent` enum in `src/types/message.ts`
+    - Added `PrepareRequest` and `PrepareResponse` types
+    - Implemented `handlePrepare()` in `src/worker.ts` with three-phase pattern
+    - Added `sendPrepareMsg()` function in `src/worker-bridge.ts`
+    - Updated `WorkerBridge` type to include `sendPrepareMsg()` method
   - **DoD**:
-    - Application events logged (open, close, transactions)
-    - Logs dispatched to registered callbacks
-    - E2E tests pass
+    - [x] PREPARE message type added to worker protocol
+    - [x] Worker handler implemented using SQLite prepare API
+    - [x] Worker bridge function added for public API
+    - [x] Returns normalized SQL string
+    - [x] Error handling for invalid SQL
+    - [x] Type checking passes
+  - **Estimated**: 3 hours
+  - **Completed**: 2026-01-26
+
+- [x] **TASK-404**: [Worker Bridge] Expose normalizeSQL via Worker Bridge (Spec: [v1](../08-task/archive/TASK-404-Expose-normalizeSQL-via-Worker-Bridge/v1-impl.md))
+  - **Priority**: P0 (Blocker)
+  - **Dependencies**: TASK-403 (PREPARE message type available)
+  - **Boundary**: `src/worker-bridge.ts`
+  - **Description**: Export `normalizeSQL()` function from worker-bridge.ts for public API access to SQL normalization
+  - **Implementation Details**:
+    - Exported `normalizeSQL()` function that wraps `sendPrepareMsg()`
+    - Function takes SQL string and workerBridge, returns normalized SQL string
+    - Added TSDoc documentation with F-003 usage examples
+    - Complete three-phase pattern (Input / Core / Output)
+  - **DoD**:
+    - [x] `normalizeSQL()` function exported from worker-bridge.ts
+    - [x] Function wraps `sendPrepareMsg()` for public API
+    - [x] Returns normalized SQL string
+    - [x] TSDoc comments with F-003 examples
+    - [x] Type checking passes
+    - [x] Three-phase pattern applied
+    - [x] Function 12 lines (<=30), 2 params (<=4), 1 nesting level (<=3)
   - **Estimated**: 2 hours
-  - **Completed**: 2026-01-11
-  - **Evidence**:
-    - ✅ Updated `src/main.ts` to emit open log after `DatabaseRegistry.register()`
-    - ✅ Updated `src/release/release-manager.ts` to emit close log in `close()` method
-    - ✅ Updated `src/release/release-manager.ts` to emit commit/rollback logs in `transaction()` method
-    - ✅ Created `tests/e2e/application-logs.e2e.test.ts` (5 tests)
-    - ✅ All 36 E2E tests passing (31 existing + 5 new)
-    - ✅ All 53 unit tests passing
-    - ✅ TypeScript compiles without errors
-  - **Micro-Spec**: [complete](../08-task/active/TASK-220.md)
-  - **Notes**: Application-level logging complete. Logs are now emitted for database open, close, transaction commit, and transaction rollback events.
+  - **Completed**: 2026-01-26
 
-### Phase 4: Database Events
-
-- [x] **TASK-221**: [Events] Database Events System
-  - **Priority**: P0
-  - **Dependencies**: TASK-220
-  - **Boundary**: `src/events/event-emitter.ts`, `src/global/namespace.ts`, `src/main.ts`, `src/registry/database-registry.ts`
-  - **Description**: Complete database change events system (emitter, API, event emission)
-  - **Micro-Spec**: [active/TASK-221.md](../08-task/active/TASK-221.md)
-  - **Estimated**: 8 hours
-  - **Completed**: 2026-01-11
-  - **Evidence**:
-    - ✅ Updated `src/main.ts` to emit "opened" event after `DatabaseRegistry.register()`
-    - ✅ Updated `src/release/release-manager.ts` to emit "closed" event after `DatabaseRegistry.unregister()`
-    - ✅ Created `src/events/event-emitter.unit.test.ts` (9 tests)
-    - ✅ Created `tests/e2e/database-events.e2e.test.ts` (10 tests)
-    - ✅ All 62 unit tests passing (9 new + 53 existing)
-    - ✅ All 41 E2E tests passing (10 new + 31 existing)
-    - ✅ TypeScript compiles without errors
-  - **Notes**: Database events system complete. Event emitter was already implemented in namespace module. Integrated event emission with database open/close flow.
+- [x] **TASK-405**: [SQL Normalizer] Create SQL Normalizer Module (Spec: [v1](../08-task/archive/TASK-405-Create-SQL-Normalizer-Module/v1-impl.md))
+  - **Priority**: P0 (Blocker)
+  - **Dependencies**: TASK-404 (normalizeSQL() exported from worker-bridge.ts)
+  - **Boundary**: `src/release/sql-normalizer.ts`
+  - **Description**: Create SQL normalizer module that uses worker bridge's `normalizeSQL()` function for F-003 two-tier validation
   - **Implementation Details**:
-    - Create `EventEmitter` class (subscribe, unsubscribe, emit)
-    - Handle subscriber errors (error isolation)
-    - Add `onDatabaseChange(callback)` to global namespace
-    - Integrate with event emitter
-    - Emit events when databases are opened or closed
-    - Get current database list from registry
+    - Created `src/release/sql-normalizer.ts` module
+    - Exported `normalizeSQLViaPrepare()` function that wraps `normalizeSQL()` from worker-bridge
+    - Added TSDoc documentation with F-003 usage examples
+    - Handled edge cases (empty SQL, comments, whitespace)
+    - Added unit tests (10 test cases)
   - **DoD**:
-    - Multiple subscribers supported
-    - Subscriber errors don't break emitting
-    - `onDatabaseChange()` accessible via `window.__web_sqlite`
-    - Returns cancel function
-    - Events emitted on open/close
-    - Event payload correct (action, dbName, databases)
-    - Unit tests pass
-    - E2E tests pass
-  - **Estimated**: 8 hours
+    - [x] `src/release/sql-normalizer.ts` module created
+    - [x] `normalizeSQLViaPrepare()` function exported
+    - [x] TSDoc comments with F-003 examples
+    - [x] Edge case handling (empty SQL, comments, whitespace)
+    - [x] Unit tests created (10 test cases)
+    - [x] Type checking passes
+  - **Estimated**: 2 hours
+  - **Completed**: 2026-01-26
 
-### Phase 5: Testing and Documentation
-
-- [x] **TASK-222**: [Test/Docs] Testing & Documentation Suite
-  - **Priority**: P0
-  - **Dependencies**: TASK-221 (Complete)
-  - **Boundary**: Test files, API docs, README, examples
-  - **Description**: Complete testing suite and documentation for v2.0.0
-  - **Micro-Spec**: [active/TASK-222.md](../08-task/active/TASK-222.md)
-  - **Status**: ✅ Complete (2026-01-11)
-  - **Scope**:
-    - **Unit Tests**: Comprehensive tests for registry, log dispatcher, event emitter
-    - **E2E Tests**: End-to-end tests for all v2.0.0 features
-    - **API Documentation**: Update API contracts with v2.0.0 features
-    - **README & Examples**: Update README and create examples
-  - **Test Coverage**:
-    - Registry module (register, unregister, get, list, lock)
-    - Log dispatcher (subscribe, dispatch, error isolation)
-    - Event emitter (subscribe, emit, error isolation)
-    - E2E scenarios (registry, logging, events, multiple callbacks)
-  - **Documentation**:
-    - `onLog()` method documentation
-    - `window.__web_sqlite` namespace documentation
-    - `onDatabaseChange()` method documentation
-    - Examples for all v2.0.0 features
+- [x] **TASK-406**: [Hash Validation] Implement Tier 1 Fast Path Validation (Spec: [v1](../08-task/archive/TASK-406-Implement-Tier-1-Fast-Path-Validation/v1-impl.md))
+  - **Priority**: P0 (Blocker)
+  - **Dependencies**: TASK-405 (sql-normalizer.ts created)
+  - **Boundary**: `src/release/hash-utils-two-tier.ts`
+  - **Description**: Create two-tier hash validation module with Tier 1 fast path (trim + hash compare) for F-003
+  - **Implementation Details**:
+    - Created `src/release/hash-utils-two-tier.ts` module
+    - Implemented `validateHashTier1()` function with trim() + hash compare
+    - Returns validation result object: `{ valid: boolean, needsTier2: boolean, currentHash?: string }`
+    - Performance target: < 0.1ms for fast path
+    - Added unit tests (15 test cases)
   - **DoD**:
-    - All unit tests passing
-    - All E2E tests passing
-    - 100% coverage for new modules
-    - API documentation complete
-    - README updated with v2.0.0 features
-    - Working examples provided
-  - **Estimated**: 26 hours
+    - [x] `src/release/hash-utils-two-tier.ts` module created
+    - [x] `validateHashTier1()` function implemented
+    - [x] Returns validation result with `valid` and `needsTier2` flags
+    - [x] Trim + hash compare logic working
+    - [x] Performance < 0.1ms for fast path
+    - [x] Unit tests created (15 test cases)
+    - [x] Type checking passes
+  - **Estimated**: 3 hours
+  - **Completed**: 2026-01-26
 
-## Release v1.1.2 (Completed)
+- [x] **TASK-407**: [Hash Validation] Implement Tier 2 Slow Path Validation (Spec: [v1](../08-task/archive/TASK-407-Implement-Tier-2-Slow-Path-Validation/v1-impl.md))
+  - **Priority**: P0 (Blocker)
+  - **Dependencies**: TASK-406 (Tier 1 fast path implemented)
+  - **Boundary**: `src/release/hash-utils-two-tier.ts`
+  - **Description**: Add Tier 2 slow path validation using normalizeSQLViaPrepare() for F-003
+  - **Implementation Details**:
+    - Added `validateHashTier2()` function to hash-utils-two-tier.ts
+    - Uses `normalizeSQLViaPrepare()` to normalize both original and current SQL
+    - Auto-updates hash if normalized SQL matches (whitespace-only difference)
+    - Throws enhanced error if normalized SQL differs (actual SQL change)
+  - **DoD**:
+    - [x] `validateHashTier2()` function implemented
+    - [x] Uses normalizeSQLViaPrepare() for normalization
+    - [x] Auto-updates hash on whitespace-only differences
+    - [x] Throws enhanced error on actual SQL changes
+    - [x] Type checking passes
+  - **Estimated**: 3 hours
+  - **Completed**: 2026-01-26
 
-> **Status**: ✅ Production Release
-> **Completed**: 2025-01-09
+- [x] **TASK-408**: [Error Handling] Create Enhanced Hash Mismatch Error (Spec: [v1](../08-task/archive/TASK-408-Create-Enhanced-Hash-Mismatch-Error/v1-impl.md))
+  - **Priority**: P0 (Blocker)
+  - **Dependencies**: TASK-407 (Tier 2 validation implemented)
+  - **Boundary**: `src/release/errors.ts`
+  - **Description**: Create enhanced HashMismatchError class with SQL truncation and diff formatting for F-003
+  - **Implementation Details**:
+    - Created `src/release/errors.ts` module
+    - Implemented `HashMismatchError` class extending Error
+    - SQL truncation (200 chars) for error message
+    - Diff formatting to show SQL differences
+    - Version and sqlType context included in error
+  - **DoD**:
+    - [x] `src/release/errors.ts` module created
+    - [x] `HashMismatchError` class implemented
+    - [x] SQL truncation (200 chars) working
+    - [x] Diff formatting showing SQL differences
+    - [x] Version and sqlType context included
+    - [x] Type checking passes
+  - **Estimated**: 2 hours
+  - **Completed**: 2026-01-26
 
-### Core Database Implementation
+- [x] **TASK-409**: [Release Manager] Update Release Manager with Two-Tier Validation (Spec: [v1](../08-task/archive/TASK-409-Update-Release-Manager-with-Two-Tier-Validation/v1-impl.md))
+  - **Priority**: P0 (Blocker)
+  - **Dependencies**: TASK-408 (HashMismatchError class implemented)
+  - **Boundary**: `src/release/release-manager.ts`
+  - **Description**: Replace existing hash validation in `openReleaseDB()` with two-tier approach (F-003)
+  - **Implementation Details**:
+    - Imported `validateHashTier1()` and `validateHashTier2()` from `hash-utils-two-tier.ts`
+    - Replaced simple hash comparison at lines 255-268 with two-tier validation
+    - Used originalMigrationSQLMap and originalSeedSQLMap for Tier 2 validation
+    - Handled auto-update case: Update metadata with new hash when normalized SQL matches
+    - Handled error case: Throw HashMismatchError when normalized SQL differs
+    - Backward compatibility: Fall back to simple hash comparison for old databases
+  - **DoD**:
+    - [x] Two-tier validation integrated in openReleaseDB()
+    - [x] Auto-update working for whitespace-only SQL changes
+    - [x] Enhanced errors thrown for actual SQL changes
+    - [x] Metadata updated with new hashes
+    - [x] Backward compatibility maintained for old databases
+  - **Estimated**: 4 hours
+  - **Completed**: 2026-01-26
 
-- [x] **TASK-001**: [Core] Implement openDB API
-- [x] **TASK-002**: [Core] Implement exec API
-- [x] **TASK-003**: [Core] Implement query API
-- [x] **TASK-004**: [Core] Implement transaction API
-- [x] **TASK-005**: [Core] Implement close API
+- [x] **TASK-410**: [Release Manager] Populate Original SQL Maps from Metadata (Spec: [v1](../08-task/archive/TASK-410-Populate-Original-SQL-Maps-from-Metadata/v1-impl.md))
+  - **Priority**: P0 (Blocker)
+  - **Dependencies**: TASK-409 (Two-tier validation integrated)
+  - **Boundary**: `src/release/release-manager.ts`
+  - **Description**: Populate originalMigrationSQLMap and originalSeedSQLMap when loading existing releases from metadata database
+  - **Implementation Details**:
+    - Updated metadata query in `openReleaseDB()` to load original SQL columns
+    - Populated originalMigrationSQLMap from releaseRows (for existing releases)
+    - Populated originalSeedSQLMap from releaseRows (handle null values)
+    - Ensured Maps are populated for both release and dev versions
+    - Handled migration case (original SQL may be null for old databases)
+    - releaseConfigs takes precedence over metadata for testing flexibility
+  - **DoD**:
+    - [x] originalMigrationSQLMap populated from metadata database
+    - [x] originalSeedSQLMap populated from metadata database
+    - [x] Null values handled correctly for old databases
+    - [x] Maps available for two-tier validation
+    - [x] Existing tests pass
+  - **Estimated**: 2 hours
+  - **Completed**: 2026-01-26
 
-### Web Worker Architecture
+- [x] **TASK-411**: [DatabaseRecord] Update DatabaseRecord with Original SQL Maps (Spec: [v1](../08-task/archive/TASK-411-Update-DatabaseRecord-with-Original-SQL-Maps/v1-impl.md))
+  - **Priority**: P0 (Blocker)
+  - **Dependencies**: None
+  - **Boundary**: `src/types/DB.ts`
+  - **Description**: Verify DatabaseRecord includes originalMigrationSQL and originalSeedSQL Maps (already done in TASK-402)
+  - **Implementation Details**:
+    - Verify DatabaseRecord type includes original SQL Maps
+    - Verify TSDoc comments are complete
+    - Verify type definitions are consistent
+  - **DoD**:
+    - [x] DatabaseRecord type verified to include original SQL Maps
+    - [x] TSDoc comments complete
+    - [x] Type checking passes
+  - **Estimated**: 0.5 hours
+  - **Completed**: 2026-01-26
 
-- [x] **TASK-006**: [Worker] Create Web Worker implementation
-- [x] **TASK-007**: [Worker] Implement worker bridge
-- [x] **TASK-008**: [Worker] Implement mutex queue
+- [x] **TASK-412**: [Release Manager] Populate Original SQL Maps on Database Open (Spec: [v1](../08-task/archive/TASK-412-Populate-Original-SQL-Maps-on-Database-Open/v1-impl.md))
+  - **Priority**: P0 (Blocker)
+  - **Dependencies**: TASK-411 (DatabaseRecord includes original SQL Maps)
+  - **Boundary**: `src/release/release-manager.ts`
+  - **Description**: Verify openReleaseDB() populates original SQL Maps (already done in TASK-402 and TASK-410)
+  - **Implementation Details**:
+    - Verify Maps are created at start of openReleaseDB()
+    - Verify Maps are populated from release configs
+    - Verify Maps are populated from metadata
+    - Verify Maps are returned in DatabaseRecord
+  - **DoD**:
+    - [x] originalMigrationSQLMap populated from both sources
+    - [x] originalSeedSQLMap populated from both sources
+    - [x] Maps included in returned DatabaseRecord
+    - [x] Existing tests pass
+  - **Estimated**: 1 hour
+  - **Completed**: 2026-01-26
 
-### Release Versioning System
+- [x] **TASK-422**: [Testing] Backward Compatibility Tests (Spec: [v1](../08-task/archive/TASK-422-Backward-Compatibility-Tests/v1-impl.md))
+  - **Priority**: P0 (Blocker)
+  - **Dependencies**: TASK-409 (Two-tier validation integrated)
+  - **Boundary**: `tests/e2e/f003-two-tier-validation.e2e.test.ts`
+  - **Description**: Test migration from pre-F-003 databases (without original SQL columns)
+  - **Implementation Details**:
+    - Test old databases (without original SQL columns) still work
+    - Test null handling for missing original SQL
+    - Test migration to new schema (ALTER TABLE)
+    - Test backward compatibility with simple hash comparison
+  - **DoD**:
+    - [x] Old databases work correctly without original SQL columns
+    - [x] Null values handled properly for missing original SQL
+    - [x] Migration to new schema works
+    - [x] Backward compatibility maintained
+    - [x] E2E tests pass
+  - **Estimated**: 3 hours
+  - **Completed**: 2026-01-26
 
-- [x] **TASK-009**: [Release] Design release data structures
-- [x] **TASK-010**: [Release] Implement release manager
-- [x] **TASK-011**: [Release] Implement OPFS utilities
-- [x] **TASK-012**: [Release] Implement SHA-256 hashing
-
-### Dev Tooling
-
-- [x] **TASK-013**: [DevTool] Implement devTool.release API
-- [x] **TASK-014**: [DevTool] Implement devTool.rollback API
-- [x] **TASK-015**: [DevTool] Implement metadata lock
-
-### TypeScript & Types
-
-- [x] **TASK-016**: [Types] Define main type interfaces
-- [x] **TASK-017**: [Types] Define worker event types
-
-### Testing
-
-- [x] **TASK-018**: [Test] Write mutex unit tests
-- [x] **TASK-019**: [Test] Write E2E tests for core operations
-- [x] **TASK-020**: [Test] Write E2E tests for transactions
-- [x] **TASK-021**: [Test] Write E2E tests for release versioning
-- [x] **TASK-022**: [Test] Write E2E tests for error handling
-
-### Debug & Error Handling
-
-- [x] **TASK-023**: [Debug] Implement debug logger
-- [x] **TASK-024**: [Error] Implement error handling
-
-### Build & Release
-
-- [x] **TASK-025**: [Build] Configure Vite build
-- [x] **TASK-026**: [Build] Configure TypeScript
-- [x] **TASK-027**: [Build] Configure Vitest
-- [x] **TASK-028**: [Release] Set up npm publish workflow
-- [x] **TASK-029**: [Release] Publish v1.1.2 to npm
-
-### Documentation
-
-- [x] **TASK-030**: [Docs] Write API documentation
-- [x] **TASK-031**: [Docs] Create README
-- [x] **TASK-032**: [Docs] Deploy documentation site
-
-**Total v1.1.2 Tasks Completed**: 32
-
----
-
-## Summary
-
-### v2.0.0 Task Breakdown (Consolidated)
-
-> **Note**: Tasks were consolidated from 19 to 12 tasks on 2026-01-11 to reduce fragmentation
-
-| Phase                       | Tasks  | Estimated Hours | Status                         |
-| --------------------------- | ------ | --------------- | ------------------------------ |
-| Phase 1: Registry & Lock    | 3      | 10h             | ✅ Complete (TASK-201/202/203) |
-| Phase 2: Global Namespace   | 3      | 6h              | ✅ Complete (TASK-204/205/206) |
-| Phase 3: Structured Logging | 4      | 11h             | 🔄 3/4 Complete (TASK-207-209) |
-| Phase 4: Database Events    | 1      | 8h              | Pending (TASK-221)             |
-| Phase 5: Testing & Docs     | 1      | 26h             | Pending (TASK-222)             |
-| **Total**                   | **12** | **61h**         | **9/12 Complete (75%)**        |
-
-**Previous State**: 19 tasks, 9 completed (~47%)
-**Current State**: 12 tasks, 9 completed (75%)
-
-### Consolidation Details
-
-| Original Tasks                    | Consolidated Into | Hours |
-| --------------------------------- | ----------------- | ----- |
-| TASK-210                          | TASK-220          | 2h    |
-| TASK-211, 212, 213                | TASK-221          | 8h    |
-| TASK-214, 215, 216, 217, 218, 219 | TASK-222          | 26h   |
-
-### Task Priority Distribution
-
-| Priority  | v2.0.0 Done | v2.0.0 Remaining | v1.1.x | Total  |
-| --------- | ----------- | ---------------- | ------ | ------ |
-| P0        | 9           | 1                | 1      | 11     |
-| P1        | 0           | 1                | 3      | 4      |
-| P2        | 0           | 0                | 1      | 1      |
-| **Total** | **9**       | **2**            | **5**  | **16** |
-
-### Kanban Board View
-
-**Backlog** (Ready to start):
-
-- TASK-220 (Application-Level Logging - 2h)
-- TASK-221 (Database Events System - 8h)
-- TASK-222 (Testing & Documentation Suite - 26h)
-- TASK-301, TASK-401 (Future spikes)
-
-**In Progress**:
-
-- None
-
-**Review / QA**:
-
-- None
-
-**Done**:
-
-- TASK-201, TASK-202, TASK-203 (Phase 1: Registry & Lock)
-- TASK-204, TASK-205, TASK-206 (Phase 2: Global Namespace)
-- TASK-207, TASK-208, TASK-209 (Phase 3: Structured Logging - 3/4 complete)
-- TASK-001 through TASK-032 (v1.1.2 completed)
-
----
-
-## Dependencies Graph (Updated)
-
-```mermaid
-graph TD
-    %% Phase 1
-    TASK202[TASK-202: Lock] --> TASK201[TASK-201: Registry]
-    TASK203[TASK-203: Integration] --> TASK202
-
-    %% Phase 2
-    TASK205[TASK-205: Types] --> TASK204[TASK-204: Namespace]
-    TASK206[TASK-206: Sync] --> TASK205
-    TASK206 --> TASK203
-
-    %% Phase 3
-    TASK208[TASK-208: onLog API] --> TASK207[TASK-207: Dispatcher]
-    TASK209[TASK-209: Worker Logs] --> TASK208
-    TASK220[TASK-220: App Logs] --> TASK209
-    TASK220 --> TASK206
-
-    %% Phase 4
-    TASK221[TASK-221: Events System] --> TASK220
-
-    %% Phase 5
-    TASK222[TASK-222: Tests & Docs] --> TASK221
-
-    style TASK201 fill:#e1f5fe
-    style TASK203 fill:#e1f5fe
-    style TASK206 fill:#fff3e0
-    style TASK209 fill:#a5d6a7
-    style TASK220 fill:#fff3e0
-    style TASK221 fill:#f3e5f5
-    style TASK222 fill:#e1bee7
-```
-
----
-
-## Navigation
-
-**Previous**: [01 Roadmap](./01-roadmap.md)
-
-**Up**: [Spec Index](../00-control/00-spec.md)
+- [x] **TASK-423**: [Testing] Performance Validation (Spec: [v1](../08-task/archive/TASK-423-Performance-Validation/v1-impl.md))
+  - **Priority**: P1 (Important)
+  - **Dependencies**: TASK-406 (Tier 1 implemented), TASK-407 (Tier 2 implemented)
+  - **Boundary**: `tests/e2e/hash-validation.bench.test.ts`
+  - **Description**: Benchmark Tier 1 and Tier 2 validation performance to ensure targets are met
+  - **Implementation Details**:
+    - Benchmark Tier 1 fast path (target: < 0.1ms)
+    - Benchmark Tier 2 slow path (target: 1-5ms)
+    - Test with various SQL sizes (small, medium, large)
+    - Test with and without whitespace differences
+  - **DoD**:
+    - [x] Tier 1 performance < 0.1ms
+    - [x] Tier 2 performance 1-5ms
+    - [x] Benchmark suite created
+    - [x] Performance targets verified
+    - [x] Benchmark tests pass
+  - **Estimated**: 2 hours
+  - **Completed**: 2026-01-26

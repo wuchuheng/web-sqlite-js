@@ -133,10 +133,22 @@ Error: Missing release config for 1.0.0
 
 ---
 
-#### E011: Migration SQL Hash Mismatch
+#### E011: Migration SQL Hash Mismatch (F-003 Enhanced)
 
 ```typescript
 Error: migrationSQL hash mismatch for 1.0.0
+
+The migration SQL has been modified from the original release.
+
+Original SQL (first 200 chars):
+CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT NOT NULL );
+
+Current SQL (first 200 chars):
+CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT );
+
+The SQL structure has changed. Please either:
+1. Revert to the original SQL, or
+2. Create a new version with this migration
 ```
 
 **Cause**:
@@ -144,6 +156,7 @@ Error: migrationSQL hash mismatch for 1.0.0
 - Archived release SQL differs from config
 - Release config modified after initial deployment
 - Manual SQL file modification in OPFS
+- Actual SQL structure change (not just whitespace)
 
 **Solution**:
 
@@ -151,27 +164,84 @@ Error: migrationSQL hash mismatch for 1.0.0
 - Don't modify release SQL after deployment
 - Revert to original SQL or create new version
 
-**Where**: `src/release/release-manager.ts`
+**F-003 Two-Tier Validation Behavior**:
+
+1. **Tier 1 (Fast)**: `trim()` + hash compare (< 0.1ms)
+   - If hashes match: Success (fast path)
+   - If hashes differ: Proceed to Tier 2
+
+2. **Tier 2 (Slow)**: SQLite `prepare()` normalization (1-5ms)
+   - Normalize original SQL via `prepare()`
+   - Normalize current SQL via `prepare()`
+   - If normalized SQL matches: Auto-update hash, continue
+   - If normalized SQL differs: Throw enhanced error with SQL diff
+
+**Auto-Update Scenario** (No error thrown):
+
+```typescript
+// Original SQL stored in metadata:
+"CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT NOT NULL );";
+
+// Current SQL in config (whitespace changed):
+"CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL);";
+
+// Tier 1: Hash mismatch → Tier 2
+// Tier 2: prepare() normalization → Both normalize to same SQL
+// Result: Hash auto-updated, no error thrown
+```
+
+**Enhanced Error Scenario** (Error thrown):
+
+```typescript
+// Original SQL stored in metadata:
+"CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT NOT NULL );";
+
+// Current SQL in config (structure changed):
+"CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT );";
+
+// Tier 1: Hash mismatch → Tier 2
+// Tier 2: prepare() normalization → Different SQL structure
+// Result: Enhanced error thrown with SQL diff
+```
+
+**Where**: `src/release/hash-utils-two-tier.ts` (F-003)
 
 ---
 
-#### E012: Seed SQL Hash Mismatch
+#### E012: Seed SQL Hash Mismatch (F-003 Enhanced)
 
 ```typescript
 Error: seedSQL hash mismatch for 1.0.0
+
+The seed SQL has been modified from the original release.
+
+Original SQL (first 200 chars):
+INSERT INTO users (name) VALUES ('Alice'), ('Bob');
+
+Current SQL (first 200 chars):
+INSERT INTO users (name, email) VALUES ('Alice', 'alice@example.com');
+
+The SQL structure has changed. Please either:
+1. Revert to the original SQL, or
+2. Create a new version with this migration
 ```
 
 **Cause**:
 
 - Archived seed SQL differs from config
 - Release config modified after initial deployment
+- Actual SQL structure change (not just whitespace)
 
 **Solution**:
 
 - Ensure release configs are immutable
 - Revert to original SQL or create new version
 
-**Where**: `src/release/release-manager.ts`
+**F-003 Two-Tier Validation Behavior**:
+
+Same as E011: Two-tier validation with auto-update for whitespace changes.
+
+**Where**: `src/release/hash-utils-two-tier.ts` (F-003)
 
 ---
 
@@ -667,7 +737,7 @@ Error: Unknown event: invalid_event
 
 **Solution**:
 
-- Use only valid event types (OPEN, EXECUTE, QUERY, CLOSE)
+- Use only valid event types (OPEN, EXECUTE, QUERY, CLOSE, PREPARE)
 - Ensure library versions match
 - Report bug if this occurs
 
@@ -729,6 +799,38 @@ SQL: SELCT * FROM users WHERE id = ?
 Error: Cannot rollback below the latest release version
 Target: 0.9.0
 ```
+
+### F-003 Enhanced Format
+
+**With SQL Diff**:
+
+```typescript
+Error: migrationSQL hash mismatch for 1.0.0
+
+The migration SQL has been modified from the original release.
+
+Original SQL (first 200 chars):
+CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT NOT NULL );
+
+Current SQL (first 200 chars):
+CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT );
+
+The SQL structure has changed. Please either:
+1. Revert to the original SQL, or
+2. Create a new version with this migration
+```
+
+**SQL Truncation**:
+
+- SQL truncated to 200 characters for readability
+- Ellipsis (`...`) appended if longer
+- Full SQL available in `originalMigrationSQL` Map
+
+**Field Indication**:
+
+- Error message specifies which field changed: "migrationSQL" or "seedSQL"
+- Clear indication of version with mismatch
+- Actionable guidance for resolution
 
 ### Debug Mode Logging
 
@@ -879,6 +981,59 @@ try {
 }
 ```
 
+### F-003 Two-Tier Validation Recovery
+
+**Auto-Update Hash** (No error):
+
+```typescript
+// Tier 1: Hash mismatch
+if (currentHash !== storedHash) {
+  // Tier 2: Normalize via prepare()
+  const normalizedCurrent = await normalizeSQL(currentSQL);
+  const normalizedStored = await normalizeSQL(storedSQL);
+
+  if (normalizedCurrent === normalizedStored) {
+    // Auto-update hash (whitespace-only change)
+    await updateHash(version, currentHash);
+    // Continue without error
+  } else {
+    // Throw enhanced error with SQL diff
+    throw new HashMismatchError(version, currentSQL, storedSQL);
+  }
+}
+```
+
+**Enhanced Error Generation**:
+
+```typescript
+function generateHashMismatchError(
+  version: string,
+  currentSQL: string,
+  storedSQL: string,
+): Error {
+  const truncate = (sql: string) =>
+    sql.length > 200 ? sql.substring(0, 200) + "..." : sql;
+
+  const message = `
+${sqlType} hash mismatch for ${version}
+
+The ${sqlType} has been modified from the original release.
+
+Original SQL (first 200 chars):
+${truncate(storedSQL)}
+
+Current SQL (first 200 chars):
+${truncate(currentSQL)}
+
+The SQL structure has changed. Please either:
+1. Revert to the original SQL, or
+2. Create a new version with this migration
+  `.trim();
+
+  return new Error(message);
+}
+```
+
 ### Manual Recovery
 
 **Worker Restart**:
@@ -978,7 +1133,7 @@ const withReleaseLock = async <T>(fn: () => Promise<T>): Promise<T> => {
 - Transaction rollback scenarios
 - Migration failure cleanup
 - Invalid SQL handling
-- Hash mismatch errors
+- Hash mismatch errors (F-003: both auto-update and enhanced error)
 - Lock contention scenarios
 
 ### Test Examples
@@ -1013,6 +1168,51 @@ test("migration failure removes version directory", async () => {
   // Should throw error
   // Version directory should be removed
   // Database should remain at previous version
+});
+```
+
+**F-003 Hash Mismatch Auto-Update**:
+
+```typescript
+test("hash mismatch auto-updates for whitespace changes", async () => {
+  // Original: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);"
+  // Current:  "CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT );"
+
+  // Should not throw error
+  // Hash should be auto-updated
+  const db = await openDB("test", {
+    releases: [
+      {
+        version: "1.0.0",
+        migrationSQL:
+          "CREATE TABLE users ( id INTEGER PRIMARY KEY, name TEXT );",
+      },
+    ],
+  });
+
+  expect(db).toBeDefined();
+});
+```
+
+**F-003 Hash Mismatch Enhanced Error**:
+
+```typescript
+test("hash mismatch throws enhanced error for structure changes", async () => {
+  // Original: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);"
+  // Current:  "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT);"
+
+  // Should throw enhanced error
+  await expect(
+    openDB("test", {
+      releases: [
+        {
+          version: "1.0.0",
+          migrationSQL:
+            "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT);",
+        },
+      ],
+    }),
+  ).rejects.toThrow("migrationSQL hash mismatch for 1.0.0");
 });
 ```
 
@@ -1065,8 +1265,8 @@ const db = await openDB("myapp", {
 | E002 | Invalid filename                     | Initialization     | Use non-empty string               |
 | E003 | OPFS not supported                   | Initialization     | Use modern browser                 |
 | E010 | Missing release config               | Release validation | Add missing version to config      |
-| E011 | Migration SQL hash mismatch          | Release validation | Revert SQL or create new version   |
-| E012 | Seed SQL hash mismatch               | Release validation | Revert SQL or create new version   |
+| E011 | Migration SQL hash mismatch          | Release validation | Two-tier validation (F-003)        |
+| E012 | Seed SQL hash mismatch               | Release validation | Two-tier validation (F-003)        |
 | E013 | Release config not greater           | Release validation | Use higher version number          |
 | E014 | Release config within archived range | Release validation | Maintain linear history            |
 | E020 | SQL syntax error                     | SQL execution      | Fix SQL syntax                     |
