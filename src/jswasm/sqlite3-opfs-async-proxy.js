@@ -261,7 +261,17 @@ const installAsyncProxy = function(){
       let rc = 0;
       if(fh){
         delete __openFiles[fid];
-        await closeSyncHandle(fh);
+        try{
+          await closeSyncHandle(fh);
+        }catch(e){
+          // Any failure here must still notify the waiting main thread.
+          // Without this guard an exception escapes to waitLoop(), which only
+          // logs it: the main thread's opRun() then blocks on rc === -1
+          // forever, wedging every subsequent database operation.
+          error(opName,e);
+          state.s11n.storeException(1,e);
+          rc = state.sq3Codes.SQLITE_IOERR_CLOSE;
+        }
         if(fh.deleteOnClose){
           try{ await fh.dirHandle.removeEntry(fh.filenamePart) }
           catch(e){ warn("Ignoring dirHandle.removeEntry() failure of",fh,e) }

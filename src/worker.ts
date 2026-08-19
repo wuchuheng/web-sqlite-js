@@ -228,7 +228,13 @@ const handleClose = () => {
   sqlite3 = null;
 };
 
-self.onmessage = async (msg: MessageEvent<SqliteReqMsg<unknown>>) => {
+/**
+ * Handles one worker message: executes the requested operation and posts the
+ * response. Runs on the serial message queue (see {@link self.onmessage}),
+ * never concurrently, because the SharedArrayBuffer OPFS protocol between
+ * sqlite3.mjs and the async proxy is strictly single-flight.
+ */
+const handleMessage = async (msg: MessageEvent<SqliteReqMsg<unknown>>): Promise<void> => {
   const { id, event, payload } = msg.data;
 
   // Clear logs for this request
@@ -277,6 +283,13 @@ self.onmessage = async (msg: MessageEvent<SqliteReqMsg<unknown>>) => {
   } catch (err) {
     const errorObj = err instanceof Error ? err : new Error(String(err));
 
+    // Error-level logs must be visible even when debug logging is disabled,
+    // so a failed operation leaves evidence in the worker console.
+    const errorLog = workerLogs.find((entry) => entry.level === "error");
+    if (!isDebug && errorLog) {
+      console.error("[web-sqlite-js] worker error:", errorLog.data);
+    }
+
     // Include logs in error response
     const res: SqliteResMsg<void> = {
       id,
@@ -290,4 +303,19 @@ self.onmessage = async (msg: MessageEvent<SqliteReqMsg<unknown>>) => {
     };
     self.postMessage(res);
   }
+};
+
+/**
+ * Serializes message handling so the worker never runs two operations
+ * concurrently, and clears the queue if a handler rejects. The public API
+ * already serializes via its run mutex; this queue is the worker's own
+ * guarantee so a future caller-side bypass cannot corrupt the single-flight
+ * SAB protocol.
+ */
+let messageQueue: Promise<void> = Promise.resolve();
+
+self.onmessage = (msg: MessageEvent<SqliteReqMsg<unknown>>) => {
+  messageQueue = messageQueue
+    .then(() => handleMessage(msg))
+    .catch(() => undefined);
 };

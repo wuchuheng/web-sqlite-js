@@ -11886,10 +11886,12 @@ async function sqlite3InitModule(moduleArg = {}) {
             Atomics.store(state.sabOPView, state.opIds.whichOp, opNdx);
             Atomics.notify(state.sabOPView, state.opIds.whichOp);
             const t = performance.now();
-            while (
-              "not-equal" !== Atomics.wait(state.sabOPView, state.opIds.rc, -1)
-            ) {}
-
+            // Bounded wait: if the async proxy never acknowledges (e.g. an
+            // exception escaped an operation guard and waitLoop() only logged
+            // it), fail loudly instead of wedging every subsequent database
+            // operation. 3000ms < worker-bridge timeout (5000ms) so the
+            // caller still observes a fast, explicit error.
+            Atomics.wait(state.sabOPView, state.opIds.rc, -1, 3000);
             const rc = Atomics.load(state.sabOPView, state.opIds.rc);
             metrics[op].wait += performance.now() - t;
             if (rc && state.asyncS11nExceptions) {

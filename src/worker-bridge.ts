@@ -8,6 +8,27 @@ import {
 } from "./types/message";
 import type { LogDispatcher } from "./logs/log-dispatcher";
 
+/**
+ * Default timeout for a single worker round-trip. If the worker never
+ * responds (e.g. its main thread is blocked on the SharedArrayBuffer OPFS
+ * protocol), the call rejects with this message instead of hanging forever.
+ * Must be larger than the sqlite3.mjs opRun watchdog wait (3000ms) so a
+ * wedged proxy fails loudly at the library boundary, and smaller than the
+ * extension-level request timeout (5000ms in the Dianzhi extension).
+ */
+export const DEFAULT_BRIDGE_TIMEOUT_MS = 5_000;
+
+export type WorkerBridgeOptions = {
+  /**
+   * Per-message timeout in milliseconds. Defaults to DEFAULT_BRIDGE_TIMEOUT_MS.
+   */
+  timeoutMs?: number;
+  /**
+   * Worker factory for tests and embedders. Defaults to the inline SQLite worker.
+   */
+  workerFactory?: () => Worker;
+};
+
 type Task<T> = {
   resolve: (value: T | PromiseLike<T>) => void;
   reject: (reason?: unknown) => void;
@@ -55,15 +76,27 @@ export type WorkerBridge = {
 
 export const createWorkerBridge = (
   logDispatcher: LogDispatcher,
+  options: WorkerBridgeOptions = {},
 ): WorkerBridge => {
-  const worker = new Sqlite3Worker();
+  const worker = (options.workerFactory ?? (() => new Sqlite3Worker()))();
   const idMapPromise: Map<number, Task<unknown>> = new Map();
+  const timeoutMs = options.timeoutMs ?? DEFAULT_BRIDGE_TIMEOUT_MS;
 
   worker.onmessage = (event: MessageEvent<SqliteResMsg<unknown>>) => {
     const { id, success, error, payload, logs } = event.data;
     const task = idMapPromise.get(id);
 
-    if (!task) return;
+    if (!task) {
+      // A response for a request we no longer track (already timed out or
+      // cancelled): drop it, but log it so silent losses stay observable.
+      const log = {
+        level: "error" as const,
+        data: { message: "SQLite worker responded for an unknown request id.", id },
+      };
+      logDispatcher.dispatch(log);
+      console.warn("[web-sqlite-js] worker response for unknown request id:", id);
+      return;
+    }
 
     // Dispatch logs to registered callbacks
     if (logs && logs.length > 0) {
@@ -114,9 +147,31 @@ export const createWorkerBridge = (
     };
 
     return new Promise<TRes>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        const task = idMapPromise.get(id);
+        if (!task) return;
+        idMapPromise.delete(id);
+        const reason = new Error(
+          `SQLite worker did not respond within ${timeoutMs}ms (event: ${event}). ` +
+            "The worker may be wedged; treat the database as unavailable.",
+        );
+        task.reject(reason);
+        logDispatcher.dispatch({
+          level: "error" as const,
+          data: { message: reason.message, event, id },
+        });
+      }, timeoutMs);
+
+      // Wrap resolve/reject so a successful response clears the watchdog timer.
       idMapPromise.set(id, {
-        resolve: resolve as (value: unknown) => void,
-        reject,
+        resolve: (value: unknown) => {
+          clearTimeout(timer);
+          resolve(value as TRes);
+        },
+        reject: (reason) => {
+          clearTimeout(timer);
+          reject(reason);
+        },
       });
       worker.postMessage(msg);
     });
